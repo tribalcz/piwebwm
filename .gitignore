@@ -1,0 +1,39 @@
+## .gitignore:
+```gitignore
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+/backend/main
+/backend/rpi-desktop
+
+# Go
+/backend/vendor/
+*.test
+*.out
+go.sum
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Logs
+*.log
+/logs/
+
+# Build outputs
+/dist/
+/build/
