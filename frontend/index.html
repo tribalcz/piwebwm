@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPi Desktop</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" type="text/css" href="./style.css">
 </head>
 <body>
-    <div id="desktop"></div>
+<div id="desktop"></div>
 
-    <div id="taskbar">
-        <div class="taskbar-left">
-            <button class="start-button" id="startBtn">Start</button>
-        </div>
-        <div class="taskbar-center" id="taskbar-windows"></div>
-        <div class="taskbar-right">
-            <div class="clock" id="clock">--:--:--</div>
-        </div>
+<div id="taskbar">
+    <div class="taskbar-left">
+        <button class="start-button" id="startBtn">Start</button>
     </div>
+    <div class="taskbar-center" id="taskbar-windows"></div>
+    <div class="taskbar-right">
+        <div class="clock" id="clock">--:--:--</div>
+    </div>
+</div>
 
-    <script src="/static/app.js"></script>
+<script type="module" src="./js/app.js"></script>
 </body>
 </html>
