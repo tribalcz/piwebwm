@@ -82,11 +82,38 @@ class Desktop {
                         const windowEl = e.target.parentElement;
                         const windowData = this.windows.get(windowEl.dataset.id);
 
-                        // Prevent dragging if maximized
+                        // If maximized, restore on drag
                         if (windowData && windowData.maximized) {
+                            // Calculate relative mouse position in the window header
+                            const headerRect = e.target.getBoundingClientRect();
+                            const relativeX = e.clientX - headerRect.left;
+                            const relativeRatio = relativeX / headerRect.width;
+
+                            // Restore window
+                            this.maximizeWindow(windowEl.dataset.id); // This toggles maximize off
+
+                            // Update window data after restore
+                            const restoredRect = windowEl.getBoundingClientRect();
+
+                            // Position window so mouse stays at the same relative position
+                            const newLeft = e.clientX - (restoredRect.width * relativeRatio);
+                            const newTop = e.clientY - 15; // 15px into the header
+
+                            windowEl.style.left = `${Math.max(0, newLeft)}px`;
+                            windowEl.style.top = `${Math.max(0, newTop)}px`;
+
+                            // Now start dragging
+                            this.draggedWindow = windowEl;
+                            windowEl.classList.add('dragging');
+
+                            this.dragOffset.x = e.clientX - newLeft;
+                            this.dragOffset.y = e.clientY - newTop;
+
+                            e.preventDefault();
                             return;
                         }
 
+                        // Normal dragging for non-maximized windows
                         this.draggedWindow = windowEl;
                         windowEl.classList.add('dragging');
 
@@ -97,7 +124,7 @@ class Desktop {
                         this.focusWindow(windowEl.dataset.id);
                         e.preventDefault();
                     }
-
+                    
                     // Handle window control buttons
                     if (e.target.hasAttribute('data-action')) {
                         e.stopPropagation();

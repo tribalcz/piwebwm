@@ -266,3 +266,11 @@
         .taskbar-button.active {
             background: rgba(0, 120, 212, 0.8);
         }
+
+        .window.maximized .window-header {
+            cursor: move;
+        }
+
+        .window.maximized .window-header:active {
+            cursor: grabbing;
+        }
