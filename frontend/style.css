@@ -90,6 +90,79 @@
             animation: windowOpen 0.2s ease-out;
         }
 
+        /* Resize handles */
+        .resize-handle {
+            position: absolute;
+        }
+
+        .resize-n {
+            top: 0;
+            left: 8px;
+            right: 8px;
+            height: 4px;
+            cursor: ns-resize;
+        }
+
+        .resize-s {
+            bottom: 0;
+            left: 8px;
+            right: 8px;
+            height: 4px;
+            cursor: ns-resize;
+        }
+
+        .resize-e {
+            right: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            cursor: ew-resize;
+        }
+
+        .resize-w {
+            left: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            cursor: ew-resize;
+        }
+
+        .resize-ne {
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+
+        .resize-nw {
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+
+        .resize-se {
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+
+        .resize-sw {
+            bottom: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+
+        .window.maximized .resize-handle {
+            display: none;
+        }
+
         @keyframes windowOpen {
             from {
                 transform: scale(0.9);

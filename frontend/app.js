@@ -5,6 +5,8 @@ class Desktop {
                 this.zIndex = 100;
                 this.draggedWindow = null;
                 this.dragOffset = { x: 0, y: 0 };
+                this.resizingWindow = null;
+                this.resizeData = null;
 
                 this.initClock();
                 this.initTaskbar();
@@ -48,6 +50,33 @@ class Desktop {
 
             initDragHandlers() {
                 document.addEventListener('mousedown', (e) => {
+                    // Handle resize
+                    if (e.target.classList.contains('resize-handle')) {
+                        const windowEl = e.target.parentElement;
+                        const windowData = this.windows.get(windowEl.dataset.id);
+
+                        // Prevent resizing if maximized
+                        if (windowData && windowData.maximized) {
+                            return;
+                        }
+
+                        this.resizingWindow = windowEl;
+                        const rect = windowEl.getBoundingClientRect();
+
+                        this.resizeData = {
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            startWidth: rect.width,
+                            startHeight: rect.height,
+                            startLeft: rect.left,
+                            startTop: rect.top,
+                            direction: e.target.className.split(' ')[1] // get resize direction
+                        };
+
+                        e.preventDefault();
+                        return;
+                    }
+
                     // Handle window header dragging
                     if (e.target.classList.contains('window-header')) {
                         const windowEl = e.target.parentElement;
@@ -97,6 +126,41 @@ class Desktop {
                 });
 
                 document.addEventListener('mousemove', (e) => {
+                    if (this.resizingWindow && this.resizeData) {
+                        const deltaX = e.clientX - this.resizeData.startX;
+                        const deltaY = e.clientY - this.resizeData.startY;
+                        const dir = this.resizeData.direction;
+
+                        let newWidth = this.resizeData.startWidth;
+                        let newHeight = this.resizeData.startHeight;
+                        let newLeft = this.resizeData.startLeft;
+                        let newTop = this.resizeData.startTop;
+
+                        // Handle horizontal resize
+                        if (dir.includes('e')) {
+                            newWidth = Math.max(300, this.resizeData.startWidth + deltaX);
+                        }
+                        if (dir.includes('w')) {
+                            newWidth = Math.max(300, this.resizeData.startWidth - deltaX);
+                            newLeft = this.resizeData.startLeft + (this.resizeData.startWidth - newWidth);
+                        }
+
+                        // Handle vertical resize
+                        if (dir.includes('s')) {
+                            newHeight = Math.max(200, this.resizeData.startHeight + deltaY);
+                        }
+                        if (dir.includes('n')) {
+                            newHeight = Math.max(200, this.resizeData.startHeight - deltaY);
+                            newTop = this.resizeData.startTop + (this.resizeData.startHeight - newHeight);
+                        }
+
+                        // Apply new dimensions
+                        this.resizingWindow.style.width = `${newWidth}px`;
+                        this.resizingWindow.style.height = `${newHeight}px`;
+                        this.resizingWindow.style.left = `${newLeft}px`;
+                        this.resizingWindow.style.top = `${newTop}px`;
+                    }
+
                     if (this.draggedWindow) {
                         const x = e.clientX - this.dragOffset.x;
                         const y = e.clientY - this.dragOffset.y;
@@ -110,6 +174,10 @@ class Desktop {
                     if (this.draggedWindow) {
                         this.draggedWindow.classList.remove('dragging');
                         this.draggedWindow = null;
+                    }
+                    if (this.resizingWindow) {
+                        this.resizingWindow = null;
+                        this.resizeData = null;
                     }
                 });
             }
@@ -138,6 +206,15 @@ class Desktop {
                     <div class="window-content">
                         ${config.content}
                     </div>
+                    <!-- Resize handles -->
+                    <div class="resize-handle resize-n"></div>
+                    <div class="resize-handle resize-s"></div>
+                    <div class="resize-handle resize-e"></div>
+                    <div class="resize-handle resize-w"></div>
+                    <div class="resize-handle resize-ne"></div>
+                    <div class="resize-handle resize-nw"></div>
+                    <div class="resize-handle resize-se"></div>
+                    <div class="resize-handle resize-sw"></div>
                 `;
 
                 document.getElementById('desktop').appendChild(windowEl);
