@@ -278,3 +278,32 @@
         .window-header {
             user-select: none; /* Prevent text selection on double click */
         }
+
+        /* Inactive window styling */
+        .window:not(.active) .window-header {
+            background: linear-gradient(90deg, #6b7280 0%, #4b5563 100%);
+            opacity: 0.95;
+        }
+
+        .window:not(.active) {
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Active window styling */
+        .window.active .window-header {
+            background: linear-gradient(90deg, #0078d4 0%, #0063b1 100%);
+            opacity: 1;
+        }
+
+        .window.active {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Transition for smooth color change */
+        .window-header {
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        .window {
+            transition: box-shadow 0.2s;
+        }

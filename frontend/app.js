@@ -287,6 +287,18 @@ class Desktop {
                 const window = this.windows.get(id);
                 if (!window) return;
 
+                // Remove active class from all windows and taskbar buttons
+                this.windows.forEach((win, winId) => {
+                    win.element.classList.remove('active');
+                    win.taskbarButton.classList.remove('active');
+                });
+
+                // Add active class to this window
+                window.element.classList.add('active');
+                window.element.style.zIndex = ++this.zIndex;
+                window.taskbarButton.classList.add('active');
+                this.activeWindow = id;
+
                 // Deactivate all other windows
                 this.windows.forEach((win, winId) => {
                     win.taskbarButton.classList.remove('active');
