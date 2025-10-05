@@ -171,19 +171,19 @@
 
          // Handle horizontal resize
          if (dir.includes('e')) {
-             newWidth = Math.max(300, this.resizeData.startWidth + deltaX);
+             newWidth = Math.max(400, this.resizeData.startWidth + deltaX);
          }
          if (dir.includes('w')) {
-             newWidth = Math.max(300, this.resizeData.startWidth - deltaX);
+             newWidth = Math.max(400, this.resizeData.startWidth - deltaX);
              newLeft = this.resizeData.startLeft + (this.resizeData.startWidth - newWidth);
          }
 
          // Handle vertical resize
          if (dir.includes('s')) {
-             newHeight = Math.max(200, this.resizeData.startHeight + deltaY);
+             newHeight = Math.max(300, this.resizeData.startHeight + deltaY);
          }
          if (dir.includes('n')) {
-             newHeight = Math.max(200, this.resizeData.startHeight - deltaY);
+             newHeight = Math.max(300, this.resizeData.startHeight - deltaY);
              newTop = this.resizeData.startTop + (this.resizeData.startHeight - newHeight);
          }
 
