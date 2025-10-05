@@ -274,3 +274,7 @@
         .window.maximized .window-header:active {
             cursor: grabbing;
         }
+
+        .window-header {
+            user-select: none; /* Prevent text selection on double click */
+        }

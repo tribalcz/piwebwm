@@ -49,6 +49,19 @@ class Desktop {
             }
 
             initDragHandlers() {
+                document.addEventListener('dblclick', (e) => {
+                    // Handle double click on window header
+                    if (e.target.classList.contains('window-header')) {
+                        const windowEl = e.target.parentElement;
+                        const windowId = windowEl.dataset.id;
+
+                        // Toggle maximize state
+                        this.maximizeWindow(windowId);
+
+                        e.preventDefault();
+                    }
+                });
+
                 document.addEventListener('mousedown', (e) => {
                     // Handle resize
                     if (e.target.classList.contains('resize-handle')) {
