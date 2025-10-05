@@ -16,6 +16,8 @@ export class WindowManager {
         windowEl.style.top = `${config.y}px`;
         windowEl.style.width = `${config.width}px`;
         windowEl.style.height = `${config.height}px`;
+        windowEl.style.minHeight = `300px`;
+        windowEl.style.minWidth = `400px`;
         windowEl.style.zIndex = ++this.zIndex;
 
         windowEl.innerHTML = `
