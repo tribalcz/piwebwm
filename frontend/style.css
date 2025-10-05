@@ -1,0 +1,121 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+#desktop {
+    width: 100%;
+    height: calc(100vh - 48px);
+    position: relative;
+}
+
+#taskbar {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 48px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.taskbar-left {
+    flex: 0 0 auto;
+}
+
+.taskbar-center {
+    flex: 1;
+    display: flex;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+.taskbar-right {
+    flex: 0 0 auto;
+}
+
+.start-button {
+    padding: 8px 16px;
+    background: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.start-button:hover {
+    background: #106ebe;
+}
+
+.clock {
+    color: white;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Základní styl pro okna */
+.window {
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    min-width: 300px;
+    min-height: 200px;
+}
+
+.window-header {
+    background: linear-gradient(90deg, #0078d4 0%, #0063b1 100%);
+    color: white;
+    padding: 10px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+
+.window-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.window-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.window-controls button {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.window-controls button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.window-content {
+    padding: 16px;
+}
