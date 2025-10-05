@@ -11,6 +11,17 @@ class Desktop {
                 this.initClock();
                 this.initTaskbar();
                 this.initDragHandlers();
+
+                // Enable auto-save first
+                this.enableAutoSave();
+
+                // Then restore state
+                this.restoreState();
+
+                // Save before unload
+                window.addEventListener('beforeunload', () => {
+                    this.saveState();
+                });
             }
 
             initClock() {
@@ -373,6 +384,109 @@ class Desktop {
                     window.taskbarButton.remove();
                     this.windows.delete(id);
                 }, 200);
+            }
+
+            saveState() {
+                const state = {
+                    windows: Array.from(this.windows.entries()).map(([id, win]) => ({
+                        id: id,
+                        title: win.config.title,
+                        content: win.config.content,
+                        x: parseInt(win.element.style.left),
+                        y: parseInt(win.element.style.top),
+                        width: parseInt(win.element.style.width),
+                        height: parseInt(win.element.style.height),
+                        minimized: win.minimized,
+                        maximized: win.maximized,
+                        originalPos: win.originalPos
+                    })),
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem('desktop-state', JSON.stringify(state));
+            }
+
+            restoreState() {
+                const saved = localStorage.getItem('desktop-state');
+                if (!saved) return;
+
+                try {
+                    const state = JSON.parse(saved);
+
+                    // Check if state is not too old (24 hours)
+                    if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
+                        localStorage.removeItem('desktop-state');
+                        return;
+                    }
+
+                    // Restore windows
+                    state.windows.forEach(win => {
+                        // Create window with saved config
+                        this.createWindow({
+                            title: win.title,
+                            x: win.x || 100,
+                            y: win.y || 100,
+                            width: win.width || 400,
+                            height: win.height || 300,
+                            content: win.content
+                        });
+
+                        // Get the just created window (last one)
+                        const windowId = Array.from(this.windows.keys()).pop();
+                        const windowData = this.windows.get(windowId);
+
+                        // Restore minimized/maximized state
+                        if (win.minimized) {
+                            this.minimizeWindow(windowId);
+                        }
+                        if (win.maximized) {
+                            // First restore original position if saved
+                            if (win.originalPos) {
+                                windowData.originalPos = win.originalPos;
+                            }
+                            this.maximizeWindow(windowId);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Failed to restore state:', error);
+                    localStorage.removeItem('desktop-state');
+                }
+            }
+
+            enableAutoSave() {
+                let saveTimeout;
+
+                // Debounced save function
+                const debouncedSave = () => {
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => this.saveState(), 500);
+                };
+
+                // Save after window operations
+                const originalClose = this.closeWindow.bind(this);
+                this.closeWindow = (id) => {
+                    originalClose(id);
+                    debouncedSave();
+                };
+
+                const originalMinimize = this.minimizeWindow.bind(this);
+                this.minimizeWindow = (id) => {
+                    originalMinimize(id);
+                    debouncedSave();
+                };
+
+                const originalMaximize = this.maximizeWindow.bind(this);
+                this.maximizeWindow = (id) => {
+                    originalMaximize(id);
+                    debouncedSave();
+                };
+
+                // Save on position/size changes
+                document.addEventListener('mouseup', () => {
+                    if (this.draggedWindow || this.resizingWindow) {
+                        debouncedSave();
+                    }
+                });
             }
         }
 
