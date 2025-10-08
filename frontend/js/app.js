@@ -23,7 +23,7 @@ class Desktop{
     }
 
     createWindow(config) {
-        return this.stateManager.createWindow(config);
+        return this.windowManager.createWindow(config);
     }
 
     closeAllWindow() {
