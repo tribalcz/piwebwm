@@ -64,6 +64,10 @@ export class WindowManager {
 
         this.focusWindow(id);
 
+        if (config.onCreated && typeof config.onCreated === 'function') {
+            setTimeout(() => config.onCreated(id, windowEl), 0);
+        }
+
         return id;
     }
 
