@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: backend/mock-host-agent/Dockerfile
     ports:
       - "8090:8080"
     volumes:
