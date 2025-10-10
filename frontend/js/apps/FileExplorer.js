@@ -332,7 +332,7 @@ export class FileExplorer {
     }
 
     getFileIcon(file) {
-        if (file.is_dir === 'dir') {
+        if (file.is_dir) {
             if (file.name === '..') return '⬆️';
             return '📁';
         }
