@@ -2,6 +2,7 @@ import { WindowManager } from './core/WindowManager.js';
 import { DragDropManager } from './core/DragDropManager.js';
 import { StateManager } from './core/StateManager.js';
 import { TaskBar } from './components/TaskBar.js';
+import { StartMenu } from './components/StartMenu.js';
 import { Clock } from './components/Clock.js';
 
 class Desktop{
@@ -13,6 +14,7 @@ class Desktop{
 
         //Init UI Components
         this.taskbar = new TaskBar(this.windowManager);
+        this.startMenu = new StartMenu(this.windowManager);
         this.clock = new Clock();
 
         this.stateManager.wrapWindowManagerMethods();
