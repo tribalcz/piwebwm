@@ -88,6 +88,8 @@
             min-width: 300px;
             min-height: 200px;
             animation: windowOpen 0.2s ease-out;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Resize handles */
@@ -195,10 +197,15 @@
             justify-content: space-between;
             align-items: center;
             cursor: move;
+            flex-shrink: 0;
         }
 
         .window.maximized .window-header {
             border-radius: 0;
+        }
+
+        .window.maximized .window-content {
+            overflow: auto;
         }
 
         .window-title {
@@ -238,6 +245,8 @@
         .window-content {
             padding: 16px;
             min-height: 150px;
+            flex: 1;
+            overflow: auto;
         }
 
         .window.dragging {

@@ -176,13 +176,13 @@ export class FileExplorer {
 
         const html = this.files.map(file => {
             const icon = this.getFileIcon(file);
-            const size = file.type === 'dir' ? '' : this.formatSize(file.size);
+            const size = file.is_dir ? '' : this.formatSize(file.size);
             const modified = this.formatDate(file.modified);
 
             return `
-            <div class="file-item ${file.type === 'dir' ? 'folder' : 'file'}" 
+            <div class="file-item ${file.is_dir ? 'folder' : 'file'}" 
                  data-path="${file.path}" 
-                 data-type="${file.type}">
+                 data-type="${file.is_dir ? 'dir' : 'file'}">
                 <span class="file-icon">${icon}</span>
                 <span class="file-name">${this.escapeHtml(file.name)}</span>
                 <span class="file-size">${size}</span>
@@ -194,7 +194,6 @@ export class FileExplorer {
         fileListEl.innerHTML = html;
         console.log('File list rendered successfully');
     }
-
     renderError(message) {
         const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
         if (!windowEl) return;
@@ -258,6 +257,8 @@ export class FileExplorer {
     }
 
     async handleFileDoubleClick(path, type) {
+        console.log('Double-click:', path, type);
+
         if (type === 'dir') {
             // Navigate into directory
             await this.navigate(path);
@@ -331,7 +332,7 @@ export class FileExplorer {
     }
 
     getFileIcon(file) {
-        if (file.type === 'dir') {
+        if (file.is_dir === 'dir') {
             if (file.name === '..') return '⬆️';
             return '📁';
         }
