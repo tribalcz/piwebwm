@@ -2,9 +2,13 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/mock-host-agent/Dockerfile
+      dockerfile: backend/Dockerfile
     ports:
       - "8090:8080"
     volumes:
       - ./frontend:/app/frontend:ro
+      - /var/run/webdesk.sock:/var/run/webdesk.sock
+    environment:
+      - HOST_AGENT_SOCKET=/var/run/webdesk.sock
+      - GIN_MODE=release
     restart: unless-stopped
