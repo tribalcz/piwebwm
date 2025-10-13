@@ -1,9 +1,13 @@
+import { ContextMenu } from "../components/ContextMenu.js";
+
 export class FileExplorer {
     constructor(windowManager) {
         this.windowManager = windowManager;
         this.currentPath = '/home';
         this.files = [];
         this.windowId = null;
+        this.contextMenu = new ContextMenu();
+        this.selectedItem = null;
     }
 
     async open() {
@@ -117,6 +121,21 @@ export class FileExplorer {
                 const type = fileItem.dataset.type;
                 console.log('File double-clicked:', path, type);
                 this.handleFileDoubleClick(path, type);
+            }
+        });
+
+        // Context menu for files and folders
+        fileList.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            const fileItem = e.target.closest('.file-item');
+            if (fileItem) {
+                const path = fileItem.dataset.path;
+                const type = fileItem.dataset.type;
+                const name = fileItem.querySelector('.file-name').textContent;
+
+                this.selectedItem = null;
+                this.showFolderContextMenu(e.clientX, e.clientY);
             }
         });
 
@@ -240,7 +259,7 @@ export class FileExplorer {
     }
 
     handleFileClick(path, type) {
-        // Single click - just select (visual feedback)
+        // Single click - just select
         const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
         if (!windowEl) return;
 
@@ -260,10 +279,8 @@ export class FileExplorer {
         console.log('Double-click:', path, type);
 
         if (type === 'dir') {
-            // Navigate into directory
             await this.navigate(path);
         } else {
-            // Open file (for now, just text files)
             await this.openFile(path);
         }
     }
@@ -280,7 +297,6 @@ export class FileExplorer {
 
             const data = await response.json();
 
-            // Create a new window with file content
             this.windowManager.createWindow({
                 title: path.split('/').pop(),
                 x: 200,
@@ -307,17 +323,16 @@ export class FileExplorer {
 
     navigateUp() {
         if (this.currentPath === '/' || this.currentPath === '/home') {
-            return; // Already at root
+            return;
         }
 
         const parts = this.currentPath.split('/').filter(p => p);
-        parts.pop(); // Remove last part
+        parts.pop();
         const newPath = '/' + parts.join('/');
         this.navigate(newPath || '/home');
     }
 
     navigateBack() {
-        // Simple implementation - could be enhanced with history stack
         this.navigateUp();
     }
 
@@ -395,5 +410,201 @@ export class FileExplorer {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    showContextMenu(x, y,type) {
+        const items = [];
+
+        if (type === 'dir') {
+            items.push(
+                { icon: '📂', label: 'Open', action: 'open', handler: () => this.contextOpen() },
+                { separator: true },
+                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename() },
+                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), disabled: true },
+                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), disabled: true },
+                { separator: true },
+                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete() }
+            );
+        } else {
+            items.push(
+                { icon: '📄', label: 'Open', action: 'open', handler: () => this.contextOpen() },
+                { separator: true },
+                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename() },
+                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), disabled: true },
+                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), disabled: true },
+                { separator: true },
+                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete() }
+            );
+        }
+
+        this.contextMenu.show(x, y, items);
+    }
+
+    showFolderContextMenu(x, y) {
+        const items = [
+            { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+            { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
+            { separator: true },
+            { icon: '📋', label: 'Paste', action: 'paste', handler: () => this.contextPaste(), disabled: true },
+            { separator: true },
+            { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath) }
+        ];
+
+        this.contextMenu.show(x, y, items);
+    }
+
+    contextOpen() {
+        if (!this.selectedItem) return;
+
+        if (this.selectedItem.type === 'dir') {
+            this.navigate(this.selectedItem.path);
+        } else {
+            this.openFile(this.selectedItem.path);
+        }
+    }
+
+    async contextDelete() {
+        if (!this.selectedItem) return;
+
+        const confirmMsg = this.selectedItem.type === 'dir'
+            ? `Delete folder "${this.selectedItem.name}" and all its contents?`
+            : `Delete file "${this.selectedItem.name}"?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        this.setStatus('Deleting...');
+
+        try {
+            const response = await fetch(`/api/files/delete?path=${encodeURIComponent(this.selectedItem.path)}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+
+            await this.navigate(this.currentPath);
+            this.setStatus('Deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            alert('Failed to delete: ' + error.message);
+            this.setStatus('Error');
+        }
+    }
+
+    async contextRename() {
+        if (!this.selectedItem) return;
+
+        const newName = prompt(`Rename "${this.selectedItem.name}" to:`, this.selectedItem.name);
+        if (!newName || newName === this.selectedItem.name) return;
+
+        const newPath = this.selectedItem.path.replace(/[^/]+$/, newName);
+
+        this.setStatus('Renaming...');
+
+        try {
+            const response = await fetch('/api/files/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from: this.selectedItem.path,
+                    to: newPath
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+
+            await this.navigate(this.currentPath);
+            this.setStatus('Renamed successfully');
+        } catch (error) {
+            console.error('Failed to rename:', error);
+            alert('Failed to rename: ' + error.message);
+            this.setStatus('Error');
+        }
+    }
+
+    async contextNewFile() {
+        const fileName = prompt('Enter file name:');
+        if (!fileName) return;
+
+        const filePath = `${this.currentPath}/${fileName}`;
+
+        this.setStatus('Creating file...');
+
+        try {
+            const response = await fetch('/api/files/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    path: filePath,
+                    content: '',
+                    isDir: false
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+
+            await this.navigate(this.currentPath);
+            this.setStatus('File created');
+        } catch (error) {
+            console.error('Failed to create file:', error);
+            alert('Failed to create file: ' + error.message);
+            this.setStatus('Error');
+        }
+    }
+
+    async contextNewFolder() {
+        const folderName = prompt('Enter folder name:');
+        if (!folderName) return;
+
+        const folderPath = `${this.currentPath}/${folderName}`;
+
+        this.setStatus('Creating folder...');
+
+        try {
+            const response = await fetch('/api/files/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    path: folderPath,
+                    content: '',
+                    isDir: true
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+
+            await this.navigate(this.currentPath);
+            this.setStatus('Folder created');
+        } catch (error) {
+            console.error('Failed to create folder:', error);
+            alert('Failed to create folder: ' + error.message);
+            this.setStatus('Error');
+        }
+    }
+
+    contextCopy() {
+        // TODO: Implement clipboard
+        console.log('Copy not implemented yet');
+    }
+
+    contextCut() {
+        // TODO: Implement clipboard
+        console.log('Cut not implemented yet');
+    }
+
+    contextPaste() {
+        // TODO: Implement clipboard
+        console.log('Paste not implemented yet');
     }
 }
