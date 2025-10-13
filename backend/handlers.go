@@ -88,6 +88,30 @@ func deleteFile(c *gin.Context) {
 	})
 }
 
+func moveFile(c *gin.Context) {
+	var req struct {
+		From string `json:"from"`
+		To   string `json:"to"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := hostClient.MoveFile(req.From, req.To)
+	if err != nil {
+		log.Printf("Error moving file: %v", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Moved successfully",
+	})
+}
+
 func getSystemInfo(c *gin.Context) {
 	// TODO: Implement real system info
 }

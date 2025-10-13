@@ -311,3 +311,24 @@ func (c *HostAgentClient) DeleteFile(path string) error {
 
 	return nil
 }
+
+func (c *HostAgentClient) MoveFile(from string, to string) error {
+	action := Action{
+		Type: "MoveFile",
+		Params: map[string]interface{}{
+			"from": from,
+			"to":   to,
+		},
+	}
+
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return err
+	}
+
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+
+	return nil
+}

@@ -57,6 +57,7 @@ func main() {
 			files.GET("/list", listFiles)
 			files.GET("/read", readFile)
 			files.POST("/create", createFile)
+			files.POST("/move", moveFile)
 			files.DELETE("/delete", deleteFile)
 		}
 
