@@ -7,7 +7,7 @@ export class PropertiesDialog {
             x: 250,
             y: 150,
             width: 400,
-            height: 300,
+            height: 500,
             content: content,
             persistent: false
         });
