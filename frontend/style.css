@@ -316,3 +316,8 @@
         .window {
             transition: box-shadow 0.2s;
         }
+
+        svg:not([width]):not([height]) {
+            width: 24px;
+            height: 24px;
+        }

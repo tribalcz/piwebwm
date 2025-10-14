@@ -459,6 +459,9 @@ export class FileExplorer {
         if (type === 'dir') {
             // Folder menu
             items.push(
+                { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+                { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
+                { separator: true },
                 { icon: '📂', label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
                 { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
@@ -467,7 +470,9 @@ export class FileExplorer {
                 { separator: true },
                 { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
                 { separator: true },
-                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() }
+                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
+                { separator: true },
+                { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
             );
         } else {
             // File menu
@@ -483,28 +488,6 @@ export class FileExplorer {
                 { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() }
             );
         }
-
-        this.contextMenu.show(x, y, items);
-    }
-
-    showFolderContextMenu(x, y) {
-        const canPaste = !this.clipboard.isEmpty();
-
-        const items = [
-            { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
-            { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
-            { separator: true },
-            {
-                icon: '📋',
-                label: 'Paste',
-                action: 'paste',
-                handler: () => this.contextPaste(),
-                disabled: !canPaste,
-                shortcut: 'Ctrl+V'
-            },
-            { separator: true },
-            { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
-        ];
 
         this.contextMenu.show(x, y, items);
     }
