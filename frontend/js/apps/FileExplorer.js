@@ -1,4 +1,6 @@
 import { ContextMenu } from "../components/ContextMenu.js";
+import { ClipboardManager } from '../utils/Clipboard.js';
+import { PropertiesDialog } from '../components/PropertiesDialog.js';
 
 export class FileExplorer {
     constructor(windowManager) {
@@ -7,6 +9,7 @@ export class FileExplorer {
         this.files = [];
         this.windowId = null;
         this.contextMenu = new ContextMenu();
+        this.clipboard = new ClipboardManager();
         this.selectedItem = null;
     }
 
@@ -134,8 +137,46 @@ export class FileExplorer {
                 const type = fileItem.dataset.type;
                 const name = fileItem.querySelector('.file-name').textContent;
 
-                this.selectedItem = null;
-                this.showFolderContextMenu(e.clientX, e.clientY);
+                this.selectedItem = {path, type, name};
+                this.showContextMenu(e.clientX, e.clientY, type);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            // only when the file explorer window is focused
+            const activeWindow = document.querySelector('.window.active');
+            if (!activeWindow || activeWindow.dataset.id !== this.windowId) {
+                return;
+            }
+
+            // Ctrl+C - Copy
+            if (e.ctrlKey && e.key === 'c' && this.selectedItem) {
+                e.preventDefault();
+                this.contextCopy();
+            }
+
+            // Ctrl+X - Cut
+            if (e.ctrlKey && e.key === 'x' && this.selectedItem) {
+                e.preventDefault();
+                this.contextCut();
+            }
+
+            // Ctrl+V - Paste
+            if (e.ctrlKey && e.key === 'v' && !this.clipboard.isEmpty()) {
+                e.preventDefault();
+                this.contextPaste();
+            }
+
+            // Delete - Remove
+            if (e.key === 'Delete' && this.selectedItem) {
+                e.preventDefault();
+                this.contextDelete();
+            }
+
+            // F2 - Rename
+            if (e.key === 'F2' && this.selectedItem) {
+                e.preventDefault();
+                this.contextRename();
             }
         });
 
@@ -412,28 +453,34 @@ export class FileExplorer {
         return div.innerHTML;
     }
 
-    showContextMenu(x, y,type) {
+    showContextMenu(x, y, type) {
         const items = [];
 
         if (type === 'dir') {
+            // Folder menu
             items.push(
                 { icon: '📂', label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
-                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename() },
-                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), disabled: true },
-                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), disabled: true },
+                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
+                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
+                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
                 { separator: true },
-                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete() }
+                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
+                { separator: true },
+                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() }
             );
         } else {
+            // File menu
             items.push(
                 { icon: '📄', label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
-                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename() },
-                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), disabled: true },
-                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), disabled: true },
+                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
+                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
+                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
                 { separator: true },
-                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete() }
+                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
+                { separator: true },
+                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() }
             );
         }
 
@@ -441,13 +488,22 @@ export class FileExplorer {
     }
 
     showFolderContextMenu(x, y) {
+        const canPaste = !this.clipboard.isEmpty();
+
         const items = [
             { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
             { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
             { separator: true },
-            { icon: '📋', label: 'Paste', action: 'paste', handler: () => this.contextPaste(), disabled: true },
+            {
+                icon: '📋',
+                label: 'Paste',
+                action: 'paste',
+                handler: () => this.contextPaste(),
+                disabled: !canPaste,
+                shortcut: 'Ctrl+V'
+            },
             { separator: true },
-            { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath) }
+            { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
         ];
 
         this.contextMenu.show(x, y, items);
@@ -460,6 +516,47 @@ export class FileExplorer {
             this.navigate(this.selectedItem.path);
         } else {
             this.openFile(this.selectedItem.path);
+        }
+    }
+
+    contextCopy() {
+        if (!this.selectedItem) return;
+
+        this.clipboard.copy(this.selectedItem);
+        this.setStatus(`Copied: ${this.selectedItem.name}`);
+    }
+
+    contextCut() {
+        if (!this.selectedItem) return;
+
+        this.clipboard.cut(this.selectedItem);
+        this.setStatus(`Cut: ${this.selectedItem.name}`);
+    }
+
+    async contextPaste() {
+        if (this.clipboard.isEmpty()) return;
+
+        this.setStatus('Pasting...');
+
+        try {
+            await this.clipboard.paste(this.currentPath, async () => {
+                await this.navigate(this.currentPath);
+                this.setStatus('Pasted successfully');
+            });
+        } catch (error) {
+            console.error('Failed to paste:', error);
+            alert('Failed to paste: ' + error.message);
+            this.setStatus('Error');
+        }
+    }
+
+    contextProperties() {
+        if (!this.selectedItem) return;
+
+        //full file info
+        const fileInfo = this.files.find(f => f.path === this.selectedItem.path);
+        if (fileInfo) {
+            PropertiesDialog.show(this.windowManager, fileInfo);
         }
     }
 
@@ -591,20 +688,5 @@ export class FileExplorer {
             alert('Failed to create folder: ' + error.message);
             this.setStatus('Error');
         }
-    }
-
-    contextCopy() {
-        // TODO: Implement clipboard
-        console.log('Copy not implemented yet');
-    }
-
-    contextCut() {
-        // TODO: Implement clipboard
-        console.log('Cut not implemented yet');
-    }
-
-    contextPaste() {
-        // TODO: Implement clipboard
-        console.log('Paste not implemented yet');
     }
 }
