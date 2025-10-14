@@ -477,6 +477,9 @@ export class FileExplorer {
         } else {
             // File menu
             items.push(
+                { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+                { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
+                { separator: true },
                 { icon: '📄', label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
                 { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
@@ -485,7 +488,9 @@ export class FileExplorer {
                 { separator: true },
                 { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
                 { separator: true },
-                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() }
+                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
+                { separator: true },
+                { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
             );
         }
 
