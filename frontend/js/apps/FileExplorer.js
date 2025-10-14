@@ -1,6 +1,7 @@
 import { ContextMenu } from "../components/ContextMenu.js";
 import { ClipboardManager } from '../utils/Clipboard.js';
 import { PropertiesDialog } from '../components/PropertiesDialog.js';
+import { getIcon } from '../utils/Icons.js';
 
 export class FileExplorer {
     constructor(windowManager) {
@@ -11,6 +12,7 @@ export class FileExplorer {
         this.contextMenu = new ContextMenu();
         this.clipboard = new ClipboardManager();
         this.selectedItem = null;
+        this.getIcon = getIcon;
     }
 
     async open() {
@@ -41,13 +43,13 @@ export class FileExplorer {
             <div class="file-explorer">
                 <div class="explorer-toolbar">
                     <button class="btn-back" title="Back">
-                        <span>←</span>
+                        <span>${getIcon('back', 16)}</span>
                     </button>
                     <button class="btn-up" title="Up">
-                        <span>↑</span>
+                        <span>${getIcon('up', 16)}</span>
                     </button>
                     <button class="btn-refresh" title="Refresh">
-                        <span>🔄</span>
+                        <span>${getIcon('refresh', 16)}</span>
                     </button>
                     <div class="path-breadcrumb"></div>
                 </div>
@@ -278,7 +280,8 @@ export class FileExplorer {
 
         const parts = this.currentPath.split('/').filter(p => p);
 
-        let html = '<span class="breadcrumb-item" data-path="/">🏠</span>';
+        let html = `<span class="breadcrumb-item" data-path="/">${getIcon('home')}</span>`;
+
         let currentPath = '';
 
         parts.forEach((part, index) => {
@@ -347,7 +350,7 @@ export class FileExplorer {
                 content: `
                     <div class="file-viewer">
                         <div class="file-viewer-toolbar">
-                            <span>📄 ${this.escapeHtml(path)}</span>
+                            <span>${getIcon('txt')} ${this.escapeHtml(path)}</span>
                         </div>
                         <pre class="file-content">${this.escapeHtml(data.content)}</pre>
                     </div>
@@ -389,38 +392,38 @@ export class FileExplorer {
 
     getFileIcon(file) {
         if (file.is_dir) {
-            if (file.name === '..') return '⬆️';
-            return '📁';
+            if (file.name === '..') return getIcon('up');
+            return getIcon('file');
         }
 
         const ext = file.name.split('.').pop().toLowerCase();
         const iconMap = {
-            'txt': '📄',
-            'md': '📝',
-            'pdf': '📕',
-            'doc': '📘',
-            'docx': '📘',
-            'xls': '📗',
-            'xlsx': '📗',
-            'jpg': '🖼️',
-            'jpeg': '🖼️',
-            'png': '🖼️',
-            'gif': '🖼️',
-            'mp3': '🎵',
-            'wav': '🎵',
-            'mp4': '🎬',
-            'avi': '🎬',
-            'zip': '🗜️',
-            'tar': '🗜️',
-            'gz': '🗜️',
-            'sh': '⚙️',
-            'py': '🐍',
-            'js': '📜',
-            'html': '🌐',
-            'css': '🎨',
+            'txt': getIcon('txt'),
+            'md': getIcon('md'),
+            'pdf': getIcon('pdf'),
+            'doc': getIcon('doc'),
+            'docx': getIcon('doc'),
+            'xls': getIcon('xls'),
+            'xlsx': getIcon('xls'),
+            'jpg': getIcon('jpg'),
+            'jpeg': getIcon('jpg'),
+            'png': getIcon('jpg'),
+            'gif': getIcon('jpg'),
+            'mp3': getIcon('music'),
+            'wav': getIcon('music'),
+            'mp4': getIcon('video'),
+            'avi': getIcon('video'),
+            'zip': getIcon('archive'),
+            'tar': getIcon('archive'),
+            'gz': getIcon('archive'),
+            'sh': getIcon('sh'),
+            'py': getIcon('py'),
+            'js': getIcon('js'),
+            'html': getIcon('html'),
+            'css': getIcon('css'),
         };
 
-        return iconMap[ext] || '📄';
+        return iconMap[ext] || getIcon('unknown');
     }
 
     formatSize(bytes) {
@@ -459,38 +462,38 @@ export class FileExplorer {
         if (type === 'dir') {
             // Folder menu
             items.push(
-                { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
-                { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
+                { icon: getIcon('newFile', 18), label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+                { icon: getIcon('newDir', 18), label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
                 { separator: true },
-                { icon: '📂', label: 'Open', action: 'open', handler: () => this.contextOpen() },
+                { icon: getIcon('openDir', 18), label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
-                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
-                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
-                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
+                { icon: getIcon('rename', 18), label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
+                { icon: getIcon('copy', 18), label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
+                { icon: getIcon('cut', 18), label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
                 { separator: true },
-                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
+                { icon: getIcon('delete', 18), label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
                 { separator: true },
-                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
+                { icon: getIcon('welcome', 18), label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
                 { separator: true },
-                { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
+                { icon: getIcon('refresh', 18), label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
             );
         } else {
             // File menu
             items.push(
-                { icon: '📄', label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
-                { icon: '📁', label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
+                { icon: getIcon('newFile', 18), label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+                { icon: getIcon('newFile', 18), label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
                 { separator: true },
-                { icon: '📄', label: 'Open', action: 'open', handler: () => this.contextOpen() },
+                { icon: getIcon('openFile', 18), label: 'Open', action: 'open', handler: () => this.contextOpen() },
                 { separator: true },
-                { icon: '📝', label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
-                { icon: '📋', label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
-                { icon: '✂️', label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
+                { icon: getIcon('rename', 18), label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
+                { icon: getIcon('copy', 18), label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
+                { icon: getIcon('cut', 18), label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
                 { separator: true },
-                { icon: '🗑️', label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
+                { icon: getIcon('delete', 18), label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
                 { separator: true },
-                { icon: 'ℹ️', label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
+                { icon: getIcon('welcome', 18), label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
                 { separator: true },
-                { icon: '🔄', label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
+                { icon: getIcon('refresh', 18), label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
             );
         }
 

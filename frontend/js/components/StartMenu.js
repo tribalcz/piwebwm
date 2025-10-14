@@ -1,8 +1,11 @@
+import { getIcon} from "../utils/Icons.js";
+
 export class StartMenu {
     constructor(windowManager) {
         this.windowManager = windowManager;
         this.menuElement = null;
         this.isOpen = false;
+        this.getIcon = getIcon;
 
         this.initMenu();
         this.setupEventListeners();
@@ -16,18 +19,18 @@ export class StartMenu {
 
         menu.innerHTML = `
             <div class="start-menu-header">
-                <input type="text" class="start-menu-search" placeholder="🔍 Search applications..." />
+                <input type="text" class="start-menu-search" placeholder="Search applications..." />
             </div>
             
             <div class="start-menu-content">
                 <div class="menu-section">
                     <div class="menu-section-title">Applications</div>
                     <button class="menu-item" data-app="file-explorer">
-                        <span class="menu-icon">📁</span>
+                        <span class="menu-icon">${getIcon('fileManager')}</span>
                         <span class="menu-label">File Manager</span>
                     </button>
                     <button class="menu-item" data-app="terminal">
-                        <span class="menu-icon">💻</span>
+                        <span class="menu-icon">${getIcon('terminal')}</span>
                         <span class="menu-label">Terminal</span>
                         <span class="menu-badge">Soon</span>
                     </button>
@@ -43,12 +46,12 @@ export class StartMenu {
                 <div class="menu-section">
                     <div class="menu-section-title">System</div>
                     <button class="menu-item" data-app="system-monitor">
-                        <span class="menu-icon">📊</span>
+                        <span class="menu-icon">${getIcon('systemMonitor')}</span>
                         <span class="menu-label">System Monitor</span>
                         <span class="menu-badge">Soon</span>
                     </button>
                     <button class="menu-item" data-app="settings">
-                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-icon">${getIcon('settings')}</span>
                         <span class="menu-label">Settings</span>
                         <span class="menu-badge">Soon</span>
                     </button>
@@ -59,7 +62,7 @@ export class StartMenu {
                 <div class="menu-section">
                     <div class="menu-section-title">About</div>
                     <button class="menu-item" data-app="welcome">
-                        <span class="menu-icon">ℹ️</span>
+                        <span class="menu-icon">${getIcon('welcome')}</span>
                         <span class="menu-label">Welcome</span>
                     </button>
                 </div>
@@ -67,13 +70,13 @@ export class StartMenu {
             
             <div class="start-menu-footer">
                 <button class="menu-footer-item" data-action="logout">
-                    <span>🚪</span> Logout
+                    <span>${getIcon('logout', 16)}</span> Logout
                 </button>
                 <button class="menu-footer-item" data-action="restart">
-                    <span>🔄</span> Restart
+                    <span>${getIcon('restart', 16)}</span> Restart
                 </button>
                 <button class="menu-footer-item" data-action="shutdown">
-                    <span>⏻</span> Shutdown
+                    <span>${getIcon('shutdown', 16)}</span> Shutdown
                 </button>
             </div>
         `;

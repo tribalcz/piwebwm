@@ -1,3 +1,4 @@
+import { getIcon } from '../utils/Icons.js';
 export class PropertiesDialog {
     static show(windowManager, fileInfo) {
         const content = this.renderContent(fileInfo);
@@ -22,7 +23,7 @@ export class PropertiesDialog {
         return `
             <div class="properties-dialog">
                 <div class="properties-header">
-                    <span class="properties-icon">${file.is_dir ? '📁' : '📄'}</span>
+                    <span class="properties-icon">${file.is_dir ? getIcon('file') : getIcon('txt')}</span>
                     <h3>${this.escapeHtml(file.name)}</h3>
                 </div>
                 
