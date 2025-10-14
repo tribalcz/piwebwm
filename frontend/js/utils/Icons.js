@@ -35,13 +35,12 @@ const Icons = {
         '                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="#10b981" fill="#d1fae5"/>\n' +
         '                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="#10b981"/>\n' +
         '                    </svg>',
-    cut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
-        '                        <circle cx="6" cy="6" r="3" stroke="#f59e0b" fill="#fed7aa"/>\n' +
-        '                        <circle cx="6" cy="18" r="3" stroke="#f59e0b" fill="#fed7aa"/>\n' +
-        '                        <line x1="6" y1="9" x2="6" y2="15" stroke="#f59e0b"/>\n' +
-        '                        <polyline points="9 6 21 6" stroke="#f59e0b" stroke-dasharray="3 2"/>\n' +
-        '                        <polyline points="9 18 21 18" stroke="#f59e0b" stroke-dasharray="3 2"/>\n' +
-        '                    </svg>',//TODO:
+    cut: '<svg viewBox="0 0 24 24" fill="none">\n' +
+        '                    <path d="M6 9a3 3 0 100-6 3 3 0 000 6z" stroke="#f59e0b" stroke-width="2" fill="#fed7aa"/>\n' +
+        '                    <path d="M6 21a3 3 0 100-6 3 3 0 000 6z" stroke="#f59e0b" stroke-width="2" fill="#fed7aa"/>\n' +
+        '                    <path d="M20 4L8.5 15.5M8.5 8.5L20 20" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>\n' +
+        '                    <circle cx="12" cy="12" r="1" fill="#f59e0b"/>\n' +
+        '                </svg>',
     paste: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                        <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="#8b5cf6"/>\n' +
         '                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke="#8b5cf6" fill="#ddd6fe"/>\n' +
