@@ -1,7 +1,7 @@
-import { ContextMenu } from "../components/ContextMenu.js";
-import { ClipboardManager } from '../utils/Clipboard.js';
-import { PropertiesDialog } from '../components/PropertiesDialog.js';
-import { getIcon } from '../utils/Icons.js';
+import { ContextMenu } from '@components/ContextMenu.js'
+import { ClipboardManager } from '@utils/Clipboard.js';
+import { PropertiesDialog } from '@components/PropertiesDialog.js';
+import { getIcon } from '@utils/Icons.js';
 
 export class FileExplorer {
     constructor(windowManager) {

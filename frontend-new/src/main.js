@@ -1,16 +1,16 @@
 import './style.css';
-import './styles/global.css';
-import './styles/startMenu.css';
-import './styles/context-menu.css';
+import '@css/global.css';
+import '@css/startMenu.css';
+import '@css/context-menu.css';
 
-import { WindowManager } from './core/WindowManager.js';
-import { DragDropManager } from './core/DragDropManager.js';
-import { StateManager } from './core/StateManager.js';
+import { WindowManager } from '@core/WindowManager.js';
+import { DragDropManager } from '@core/DragDropManager.js';
+import { StateManager } from '@core/StateManager.js';
 
 // Import components
-import { TaskBar } from './components/TaskBar.js';
-import { StartMenu } from './components/StartMenu.js';
-import { Clock } from './components/Clock.js';
+import { TaskBar } from '@components/TaskBar.js';
+import { StartMenu } from '@components/StartMenu.js';
+import { Clock } from '@components/Clock.js';
 
 console.log('🚀 WebDesk OS starting...');
 

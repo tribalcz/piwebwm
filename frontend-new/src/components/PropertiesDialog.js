@@ -1,4 +1,4 @@
-import { getIcon } from '../utils/Icons.js';
+import { getIcon } from '@utils/Icons.js';
 export class PropertiesDialog {
     static show(windowManager, fileInfo) {
         const content = this.renderContent(fileInfo);
