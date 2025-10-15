@@ -1,0 +1,180 @@
+/* Start Menu */
+#start-menu {
+    position: fixed;
+    width: 320px;
+    max-height: 600px;
+    background: rgba(40, 40, 40, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 20000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+#start-menu.hidden {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+#start-menu.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Header with search */
+.start-menu-header {
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.start-menu-search {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.start-menu-search::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.start-menu-search:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #0078d4;
+}
+
+/* Content area */
+.start-menu-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.start-menu-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.start-menu-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.start-menu-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+/* Menu sections */
+.menu-section {
+    margin-bottom: 8px;
+}
+
+.menu-section-title {
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.menu-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 8px 12px;
+}
+
+/* Menu items */
+.menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item:active {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(0.98);
+}
+
+.menu-item:has(.menu-badge) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.menu-item:has(.menu-badge):hover {
+    background: transparent;
+}
+
+.menu-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.menu-label {
+    flex: 1;
+}
+
+.menu-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Footer */
+.start-menu-footer {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.menu-footer-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-footer-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-footer-item span {
+    font-size: 16px;
+}
