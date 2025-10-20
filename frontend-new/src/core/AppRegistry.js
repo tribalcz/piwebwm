@@ -54,6 +54,24 @@ export class AppRegistry {
     }
 
     /**
+     * Get an application by ID
+     * @param appId
+     * @returns {Object|null}
+     */
+    get(appId) {
+        return this.apps.get(appId) || null;
+    }
+
+    /**
+     * Check if an application is registered
+     * @param appId
+     * @returns {boolean}
+     */
+    has(appId) {
+        return this.apps.has(appId);
+    }
+
+    /**
      * Get all registered applications
      * @returns {Array}
      */
