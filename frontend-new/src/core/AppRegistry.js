@@ -61,5 +61,70 @@ export class AppRegistry {
         return Array.from(this.apps.values());
     }
 
+    /**
+     * Return all apps in a specific category
+     * @param {string} category - Category name
+     * @returns {Array}
+     */
+    getByCategory(category) {
+        const appIds = this.categories.get(category) || [];
+        return appIds.map(id => this.apps.get(id)).filter(Boolean);
+    }
 
+    /**
+     * Retun all categories
+     * @returns {Array}
+     */
+    getCategorie() {
+        return this.categories;
+    }
+
+    /**
+     * earch for application by keywords
+     * @param {string}
+     * @returns {Array}
+     */
+    search(query) {
+        const lowerQuery = query.toLowerCase();
+        return this.getAll().filter(manifest => {
+            if (manifest.name?.toLowerCase().includes(lowerQuery)) return true;
+
+            if (manifest.ui?.displayName?.toLowerCase().includes(lowerQuery)) return true;
+
+            if (manifest.ui?.keywords?.some(k => k.toLowerCase().includes(lowerQuery))) return true;
+
+            if (manifest.description?.toLowerCase().includes(lowerQuery)) return true;
+
+            return false;
+        });
+    }
+
+    /**
+     * Coutn the number of registered apps
+     * @returns {number}
+     */
+    count() {
+        return this.apps.size;
+    }
+
+    /**
+     * Clear allregistered apps ( ONLY FOR TESTING )
+     * TODO: remove this method after testing
+     */
+    clear() {
+        this.apps.clear();
+        this.categories.clear();
+        console.log('AppRegistry cleared');
+    }
+
+    /**
+     * Export the registrz apps to JSON ( FOR DEBUGGING )
+     * @returns {Object}
+     */
+    toJSON() {
+        return {
+            apps: Array.from(this.apps.values()),
+            categories: Array.from(this.categories.entries())
+        };
+    }
 }
