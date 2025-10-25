@@ -102,7 +102,7 @@ export class AppManager {
 
         const errorHtml = `
             <div style="padding:20px; font-famiy:monospace;">
-                <h2 stle="color:#ef4444; margin-bottom:16px;">
+                <h2 style="color:#ef4444; margin-bottom:16px;">
                     Manifest Error
                 </h2>
                 <p style="margin-bottom: 12px">
@@ -113,7 +113,7 @@ export class AppManager {
                     <strong>Error:</strong></br> 
                     ${error.message}
                 </div>
-                <button onclick="navigator.clipboard.writeText('${error.stack}')" alert('Error copied to clipboard')>
+                <button onclick="navigator.clipboard.writeText('${error.stack}'); alert('Error copied to clipboard');">
                     Copy Error
                 </button>
                 <p style="margin-top: 16px; color: #666; font-size: 12px">
@@ -164,7 +164,7 @@ export class AppManager {
                 await appInstance.open();
             }
 
-            this,this.runningApps.set(appId, appInstance);
+            this.runningApps.set(appId, appInstance);
             this.appModules.set(appId, appModule);
 
             console.log(`Application ${appId} launched.`);
