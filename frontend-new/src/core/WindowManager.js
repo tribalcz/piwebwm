@@ -77,6 +77,15 @@ export class WindowManager {
             setTimeout(() => config.onCreated(id, windowEl), 0);
         }
 
+        if (this.eventBus) {
+            this.eventBus.emit('window:created', {
+                windowId: id,
+                title: config.title,
+                x: config.x,
+                y: config.y
+            });
+        }
+
         return id;
     }
 
@@ -95,6 +104,22 @@ export class WindowManager {
         window.element.style.zIndex = ++this.zIndex;
         window.taskbarButton.classList.add('active');
         this.activeWindow = id;
+
+        if (this.eventBus) {
+            this.eventBus.emit('window:focused', {
+                windowId: id
+            });
+        }
+
+        if (this.store) {
+            this.store.set('windows.active', id);
+        }
+
+        if (this.store) {
+            const allWindows = Array.from(this.windows.keys());
+            this.store.set('windows.all', allWindows);
+            this.store.set('windows.count', allWindows.length);
+        }
     }
 
     minimizeWindow(id) {
@@ -104,6 +129,12 @@ export class WindowManager {
         window.element.classList.add('minimized');
         window.minimized = true;
         window.taskbarButton.classList.remove('active');
+
+        if (this.eventBus) {
+            this.eventBus.emit('window:minimized', {
+                windowId: id
+            });
+        }
     }
 
     maximizeWindow(id) {
@@ -120,6 +151,12 @@ export class WindowManager {
                 window.element.style.height = window.originalPos.height;
             }
             window.maximized = false;
+
+            if (this.eventBus) {
+                this.eventBus.emit('window:restored', {
+                    windowId: id
+                });
+            }
         } else {
             // Save current position
             window.originalPos = {
@@ -132,6 +169,12 @@ export class WindowManager {
             // Maximize
             window.element.classList.add('maximized');
             window.maximized = true;
+
+            if (this.eventBus) {
+                this.eventBus.emit('window:maximized', {
+                    windowId: id
+                });
+            }
         }
     }
 
@@ -143,6 +186,12 @@ export class WindowManager {
             window.element.classList.remove('minimized');
             window.minimized = false;
             this.focusWindow(id);
+
+            if (this.eventBus) {
+                this.eventBus.emit('window:restored', {
+                    windowId: id
+                });
+            }
         } else if (this.activeWindow === id) {
             this.minimizeWindow(id);
         } else {
@@ -159,6 +208,22 @@ export class WindowManager {
             window.element.remove();
             window.taskbarButton.remove();
             this.windows.delete(id);
+
+            if (this.eventBus) {
+                this.eventBus.emit('window:closed', {
+                    windowId: id
+                });
+            }
+
+            if (this.store) {
+                const allWindows = Array.from(this.windows.keys());
+                this.store.set('windows.all', allWindows);
+                this.store.set('windows.count', allWindows.length);
+
+                if (this.store.get('windows.active') === id) {
+                    this.store.set('windows.active', null);
+                }
+            }
         }, 200);
     }
 
@@ -172,5 +237,30 @@ export class WindowManager {
 
     getActiveWindow() {
         return this.activeWindow;
+    }
+
+    /**
+     * Get window statistics
+     * @returns {Object}
+     */
+    getStats() {
+        let minimized = 0;
+        let maximized = 0;
+        let normal = 0;
+
+        this.windows.forEach((win) => {
+            if (win.minimized) minimized++;
+            else if (win.maximized) maximized++;
+            else normal++;
+        });
+
+        return {
+            total: this.windows.size,
+            active: this.activeWindow,
+            minimized,
+            maximized,
+            normal,
+            zIndex: this.zIndex
+        };
     }
 }
