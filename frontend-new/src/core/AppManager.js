@@ -8,13 +8,23 @@ import {WindowManager} from "@core/WindowManager.js";
  * Discover, validation, launch, cleanup
  */
 export class AppManager {
-    constructor(appRegistry) {
-        this.windowManager = new WindowManager;
+    constructor(eventBus = null, store = null) {
+        this.eventBus = eventBus;
+        this.store = store;
+
+        this.windowManager = new WindowManager(eventBus, store);
         this.registry = new AppRegistry;
         this.runningApps = new Map();
         this.appModules = new Map();
 
         console.log('AppManager initialized.');
+
+        if (this.eventBus) {
+            console.log('  ↳ AppManager connected to EventBus');
+        }
+        if (this.store) {
+            console.log('  ↳ AppManager connected to Store');
+        }
     }
 
     /**

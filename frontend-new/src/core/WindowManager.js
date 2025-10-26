@@ -1,9 +1,18 @@
 export class WindowManager {
-    constructor() {
+    constructor(eventBus = null, store = null) {
+        this.eventBus = eventBus;
+        this.store = store;
         this.windows = new Map();
         this.activeWindow = null;
         this.zIndex = 100;
         this.nextWindowId = 1;
+
+        if (this.eventBus) {
+            console.log('  ↳ WindowManager connected to EventBus');
+        }
+        if (this.store) {
+            console.log('  ↳ WindowManager connected to Store');
+        }
     }
 
     createWindow(config) {

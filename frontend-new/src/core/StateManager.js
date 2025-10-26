@@ -1,10 +1,23 @@
 export class StateManager {
-    constructor(windowManager) {
+    constructor(windowManager, eventBus = null, store = null) {
         this.windowManager = windowManager;
+
+        this.eventBus = eventBus;
+        this.store = store;
+
         this.storageKey = 'desktop-state';
         this.saveTimeout = null;
 
         this.initAutoSave();
+
+        this.initAutoSave();
+
+        if (this.eventBus) {
+            console.log('  ↳ StateManager connected to EventBus');
+        }
+        if (this.store) {
+            console.log('  ↳ StateManager connected to Store');
+        }
     }
 
     saveState() {

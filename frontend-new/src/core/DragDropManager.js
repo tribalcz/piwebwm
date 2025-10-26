@@ -1,12 +1,19 @@
  export class DragDropManager {
-     constructor(windowManager) {
+     constructor(windowManager, eventBus = null) {
          this.windowManager = windowManager;
+
+         this.eventBus = eventBus;
+
          this.draggedWindow = null;
          this.dragOffset = { x: 0, y: 0 };
          this.resizingWindow = null;
          this.resizeData = null;
 
          this.initEventHandlers();
+
+         if (this.eventBus) {
+             console.log('  ↳ DragDropManager connected to EventBus');
+         }
      }
 
      initEventHandlers() {
