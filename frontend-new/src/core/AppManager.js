@@ -160,6 +160,13 @@ export class AppManager {
 
         const manifest = this.registry.get(appId);
 
+        if (this.eventBus) {
+            this.eventBus.emit('app:launching', {
+                appId,
+                manifest
+            });
+        }
+
         try {
             const appModule = await this.loadAppModule(appId, manifest.entryPoint);
             const context = this.createAppContext(manifest);
@@ -179,9 +186,32 @@ export class AppManager {
 
             console.log(`Application ${appId} launched.`);
 
+            if (this.eventBus) {
+                this.eventBus.emit('app:launched', {
+                    appId,
+                    manifest,
+                    timestamp: Date.now()
+                });
+            }
+
+            if (this.store) {
+                const running = this.store.get('apps.running') || [];
+                this.store.set('apps.running', [...running, appId]);
+                this.store.set('apps.count', running.length + 1);
+            }
+
             return appInstance;
         } catch (error) {
             console.error(`Failed to launch application ${appId}: `, error);
+
+            if (this.eventBus) {
+                this.eventBus.emit('app:error', {
+                    appId,
+                    error: error.message,
+                    phase: 'launch',
+                    timestamp: Date.now()
+                });
+            }
             throw error;
         }
     }
@@ -215,11 +245,10 @@ export class AppManager {
         return {
             windowManager: this.windowManager,
             manifest: manifest,
-            //TODO: This is minimum  for this session...
-            //eventBud
-            //permissions
-            //store
-            //logger
+            eventBus: this.eventBus,
+            store: this.store,
+            logger: console,
+            appId: manifest.id
         };
     }
 
@@ -236,6 +265,12 @@ export class AppManager {
             return;
         }
 
+        if (this.eventBus) {
+            this.eventBus.emit('app:closing', {
+                appId,
+            });
+        }
+
         try {
             if (appInstance.close) {
                 await appInstance.close();
@@ -245,8 +280,31 @@ export class AppManager {
             this.appModules.delete(appId);
 
             console.log(`Application ${appId} closed.`);
+
+            if (this.eventBus) {
+                this.eventBus.emit('app:closed', {
+                    appId,
+                    timestamp: Date.now()
+                });
+            }
+
+            if (this.store) {
+                const running = this.store.get('apps.running', []);
+                const updated = running.filter(id => id !== appId);
+                this.store.set('apps.running', updated);
+                this.store.set('apps.count', updated.length);
+            }
         } catch (error) {
             console.error(`Failed to close application ${appId}:`, error);
+
+            if (this.eventBus) {
+                this.eventBus.emit('app:error', {
+                    appId,
+                    error: error.message,
+                    phase: 'close',
+                    timestamp: Date.now()
+                });
+            }
         }
     }
 
@@ -278,5 +336,18 @@ export class AppManager {
             await this.close(appId);
             console.log(`Application ${appId} killed for hot reloading.`);
         }
+    }
+
+    /**
+     * Get app statistics
+     * @returns {Object}
+     */
+    getStats() {
+        return {
+            registered: this.registry.count(),
+            running: this.runningApps.size,
+            runningApps: Array.from(this.runningApps.keys()),
+            categories: this.registry.getCategorie()
+        };
     }
 }
