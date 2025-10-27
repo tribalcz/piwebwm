@@ -1,16 +1,10 @@
 export class StateManager {
     constructor(windowManager, eventBus = null, store = null) {
         this.windowManager = windowManager;
-
         this.eventBus = eventBus;
         this.store = store;
 
-        this.storageKey = 'desktop-state';
-        this.saveTimeout = null;
-
-        this.initAutoSave();
-
-        this.initAutoSave();
+        console.log('StateManager initialized');
 
         if (this.eventBus) {
             console.log('  ↳ StateManager connected to EventBus');
@@ -18,116 +12,92 @@ export class StateManager {
         if (this.store) {
             console.log('  ↳ StateManager connected to Store');
         }
+
+        this.setupEventListeners();
+
+        this.restoreWindowState();
     }
 
-    saveState() {
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        if (!this.eventBus) return;
+
+        this.eventBus.on('window:created', () => this.saveWindowState());
+        this.eventBus.on('window:closed', () => this.saveWindowState());
+        this.eventBus.on('window:focused', () => this.saveWindowState());
+
+        console.log('  ↳ StateManager listening to window events');
+    }
+
+    /**
+     * Setup window state
+     */
+    saveWindowState() {
+        if (!this.store) return;
+
         const windows = this.windowManager.getAllWindows();
+        const windowsData = Array.from(windows.entries()).map(([id, win]) => ({
+            id: id,
+            title: win.config.title,
+            x: parseInt(win.element.style.left) || 0,
+            y: parseInt(win.element.style.top) || 0,
+            width: parseInt(win.element.style.width) || 600,
+            height: parseInt(win.element.style.height) || 400,
+            minimized: win.minimized || false,
+            maximized: win.maximized || false,
+            persistent: win.config.persistent || false
+        }));
 
-        const state = {
-            windows: Array.from(windows.entries()).map(([id, win]) => ({
-                id: id,
-                title: win.config.title,
-                content: win.config.content,
-                x: parseInt(win.element.style.left) || 0,
-                y: parseInt(win.element.style.top) || 0,
-                width: parseInt(win.element.style.width) || 400,
-                height: parseInt(win.element.style.height) || 300,
-                minimized: win.minimized,
-                maximized: win.maximized,
-                originalPos: win.originalPos
-            })),
-            timestamp: Date.now()
-        };
+        this.store.set('persistence.windows', windowsData);
 
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(state));
-        } catch (error) {
-            console.error('Failed to save state:', error);
-        }
+        console.log(`Saved ${windowsData.length} window(s) to Store`);
     }
 
-    restoreState() {
-        const saved = localStorage.getItem(this.storageKey);
-        if (!saved) return;
+    /**
+     * Restore window state from Store
+     */
+    restoreWindowState() {
+        if (!this.store) return;
 
-        try {
-            const state = JSON.parse(saved);
+        const savedWindows = this.store.get('persistence.windows', []);
 
-            if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
-                localStorage.removeItem(this.storageKey);
+        if (savedWindows.length === 0) {
+            console.log('No windows to restore');
+            return;
+        }
+
+        console.log(`📂 Restoring ${savedWindows.length} window(s)...`);
+
+        savedWindows.forEach(winData => {
+            if (!winData.persistent) {
                 return;
             }
 
-            // Restore windows
-            state.windows.forEach(win => {
-                // Create window with saved config
-                const windowId = this.windowManager.createWindow({
-                    title: win.title,
-                    x: win.x || 100,
-                    y: win.y || 100,
-                    width: win.width || 400,
-                    height: win.height || 300,
-                    content: win.content
+            try {
+                this.windowManager.createWindow({
+                    title: winData.title,
+                    x: winData.x,
+                    y: winData.y,
+                    width: winData.width,
+                    height: winData.height,
+                    content: '<div style="padding: 20px;">Restored window - content not preserved</div>',
+                    persistent: true
                 });
-
-                const windowData = this.windowManager.getWindow(windowId);
-
-                // Restore minimized/maximized state
-                if (win.minimized) {
-                    this.windowManager.minimizeWindow(windowId);
-                }
-                if (win.maximized) {
-                    // First restore original position if saved
-                    if (win.originalPos) {
-                        windowData.originalPos = win.originalPos;
-                    }
-                    this.windowManager.maximizeWindow(windowId);
-                }
-            });
-        } catch (error) {
-            console.error('Failed to restore state:', error);
-            localStorage.removeItem(this.storageKey);
-        }
-    }
-
-    clearState() {
-        localStorage.removeItem(this.storageKey);
-    }
-
-    debouncedSave() {
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(() => this.saveState(), 500);
-    }
-
-    initAutoSave() {
-        window.addEventListener('windowMoved', () => this.debouncedSave());
-        window.addEventListener('windowResized', () => this.debouncedSave());
-        window.addEventListener('windowClosed', () => this.debouncedSave());
-        window.addEventListener('windowMinimized', () => this.debouncedSave());
-        window.addEventListener('windowMaximized', () => this.debouncedSave());
-
-        window.addEventListener('beforeunload', () => {
-            this.saveState();
+            } catch (error) {
+                console.error(`Failed to restore window ${winData.id}:`, error);
+            }
         });
     }
 
-    wrapWindowManagerMethods() {
-        const originalClose = this.windowManager.closeWindow.bind(this.windowManager);
-        this.windowManager.closeWindow = (id) => {
-            originalClose(id);
-            window.dispatchEvent(new CustomEvent('windowClosed'));
-        };
+    /**
+     * Clear saved state
+     */
+    clearState() {
+        if (!this.store) return;
 
-        const originalMinimize = this.windowManager.minimizeWindow.bind(this.windowManager);
-        this.windowManager.minimizeWindow = (id) => {
-            originalMinimize(id);
-            window.dispatchEvent(new CustomEvent('windowMinimized'));
-        };
-
-        const originalMaximize = this.windowManager.maximizeWindow.bind(this.windowManager);
-        this.windowManager.maximizeWindow = (id) => {
-            originalMaximize(id);
-            window.dispatchEvent(new CustomEvent('windowMaximized'));
-        };
+        this.store.delete('persistence.windows');
+        console.log('State cleared');
     }
 }
