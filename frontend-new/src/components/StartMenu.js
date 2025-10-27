@@ -202,12 +202,23 @@ export class StartMenu {
     }
 
     launchApp(appName) {
+        //QUick fix for testing EventBus
+        if (window.webdesk?.eventBus) {
+            window.webdesk.eventBus.emit('app:launching', { appId: appName });
+        }
+
+
         switch(appName) {
             case 'file-explorer':
                 // Dynamic import to avoid circular dependency
                 import('../apps/FileExplorer.js').then(module => {
                     const fileExplorer = new module.FileExplorer(this.windowManager);
                     fileExplorer.open();
+
+                    //Quick fix for testing EventBus
+                    if (window.webdesk?.eventBus) {
+                        window.webdesk.eventBus.emit('app:launched', { appId: appName });
+                    }
                 });
                 break;
 
