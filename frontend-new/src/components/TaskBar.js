@@ -1,5 +1,3 @@
-import { FileExplorer } from '../apps/FileExplorer.js';
-
 export class TaskBar {
     constructor(windowManager) {
         this.windowManager = windowManager;
