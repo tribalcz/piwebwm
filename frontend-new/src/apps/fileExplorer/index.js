@@ -3,10 +3,21 @@ import { ClipboardManager } from '@utils/Clipboard.js';
 import { PropertiesDialog } from '@components/PropertiesDialog.js';
 import { getIcon } from '@utils/Icons.js';
 
-export class FileExplorer {
-    constructor(windowManager) {
-        this.windowManager = windowManager;
+/**
+ * File Explorer - browse and manage files and folders
+ * Part of webdesk WM
+ */
+export class Index {
+    constructor(context) {
+        this.context = context;
+        this.windowManager = context.windowManager;
+        this.eventBus = context.eventBus || null;
+        this.store = context.store || null;
+        this.manifest = context.manifest
+        ;
         this.currentPath = '/home';
+        this.history = [];
+        this.historyIndex = -1;
         this.files = [];
         this.windowId = null;
         this.contextMenu = new ContextMenu();
@@ -15,6 +26,9 @@ export class FileExplorer {
         this.getIcon = getIcon;
     }
 
+    async init() {
+        console.log("File Explorer init");
+    }
     async open() {
         this.windowId = await new Promise((resolve) => {
             const id = this.windowManager.createWindow({
@@ -31,11 +45,32 @@ export class FileExplorer {
                     resolve(windowId);
                 }
             });
+
+            if (this.eventBus) {
+                this.eventBus.emit('app:opened', {
+                    appId: this.manifest.id,
+                    windowId: this.windowId,
+                    });
+            }
         });
 
         console.log('Setting up event listeners for:', this.windowId);
         this.setupEventListeners();
         await this.navigate(this.currentPath);
+    }
+
+    async close() {
+        if (this.windowId) {
+            this.windowManager.closeWindow(this.windowId);
+        }
+
+        if (this.eventBus) {
+            this.eventBus.emit('app:closed', {
+                appId: this.manifest.id,
+            });
+        }
+
+        console.log('File Explorer closed');
     }
 
     renderSkeleton() {
