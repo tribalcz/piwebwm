@@ -211,8 +211,8 @@ export class StartMenu {
         switch(appName) {
             case 'file-explorer':
                 // Dynamic import to avoid circular dependency
-                import('../apps/FileExplorer.js').then(module => {
-                    const fileExplorer = new module.FileExplorer(this.windowManager);
+                import('@apps/fileExplorer/index.js').then(module => {
+                    const fileExplorer = new module.Index(this.windowManager);
                     fileExplorer.open();
 
                     //Quick fix for testing EventBus
@@ -232,39 +232,14 @@ export class StartMenu {
     }
 
     createWelcomeWindow() {
-        const windowCount = this.windowManager.getAllWindows().size;
-
-        this.windowManager.createWindow({
-            title: 'Welcome to WebDesk OS',
-            x: 100 + (windowCount * 30),
-            y: 100 + (windowCount * 30),
-            width: 500,
-            height: 350,
-            persistent: true,
-            content: `
-                <div style="padding: 20px;">
-                    <h2 style="margin-bottom: 16px;">🖥️ WebDesk OS</h2>
-                    <p style="margin-bottom: 16px; color: #666;">
-                        A modern web-based desktop environment for headless Linux systems.
-                    </p>
-                    
-                    <h3 style="margin-bottom: 12px; font-size: 16px;">Available Features:</h3>
-                    <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
-                        <li>✅ <strong>File Manager</strong> - Browse your filesystem</li>
-                        <li>✅ <strong>Window Management</strong> - Drag, resize, minimize</li>
-                        <li>✅ <strong>Start Menu</strong> - Quick access to applications</li>
-                    </ul>
-                    
-                    <h3 style="margin-bottom: 12px; font-size: 16px;">Coming Soon:</h3>
-                    <ul style="margin-left: 20px; line-height: 1.8;">
-                        <li>⏳ Terminal Emulator</li>
-                        <li>⏳ Text Editor</li>
-                        <li>⏳ System Monitor</li>
-                        <li>⏳ Settings Panel</li>
-                    </ul>
-                </div>
-            `
-        });
+        if (window.webdesk?.appManager) {
+            window.webdesk.appManager.launch('welcome')
+                .catch(err => {
+                    console.error('Failed to launch Welcome via AppManager:', err);
+                })
+        } else {
+            console.error('AppManager not available');
+        }
     }
 
     handleSystemAction(action) {
