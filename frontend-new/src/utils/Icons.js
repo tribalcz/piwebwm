@@ -214,6 +214,66 @@ const Icons = {
         '                        <path d="M18.36 6.64a9 9 0 11-12.73 0" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>\n' +
         '                        <line x1="12" y1="2" x2="12" y2="12" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>\n' +
         '                    </svg>',
+    //icons for process monitor
+    processMonitor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <!-- Monitor -->\n' +
+        '                        <rect x="3" y="3" width="18" height="14" rx="2"/>\n' +
+        '                        <!-- Graf uvnitř -->\n' +
+        '                        <polyline points="7 13 10 10 13 13 17 8"/>\n' +
+        '                        <!-- Podstavec -->\n' +
+        '                        <line x1="8" y1="21" x2="16" y2="21"/>\n' +
+        '                        <line x1="12" y1="17" x2="12" y2="21"/>\n' +
+        '                    </svg>',
+    exportStats:'<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <path d="M9 2v10"/>\n' +
+        '                        <path d="M5 8l4 4 4-4"/>\n' +
+        '                        <path d="M2 13v2a1 1 0 001 1h12a1 1 0 001-1v-2"/>\n' +
+        '                    </svg>',
+    clear:'<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <circle cx="9" cy="9" r="7"/>\n' +
+        '                        <line x1="12" y1="6" x2="6" y2="12"/>\n' +
+        '                        <line x1="6" y1="6" x2="12" y2="12"/>\n' +
+        '                    </svg>',
+    pause:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">\n' +
+        '                        <rect x="3" y="3" width="3" height="10" fill="currentColor" rx="0.5"/>\n' +
+        '                        <rect x="10" y="3" width="3" height="10" fill="currentColor" rx="0.5"/>\n' +
+        '                    </svg>',
+    windowsStats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <!-- Zadní okno -->\n' +
+        '                        <rect x="6" y="6" width="14" height="12" rx="1" opacity="0.4"/>\n' +
+        '                        <!-- Střední okno -->\n' +
+        '                        <rect x="4" y="4" width="14" height="12" rx="1" opacity="0.6"/>\n' +
+        '                        <!-- Přední okno (aktivní) -->\n' +
+        '                        <rect x="2" y="2" width="14" height="12" rx="1" stroke-width="2"/>\n' +
+        '                        <line x1="2" y1="5" x2="16" y2="5"/>\n' +
+        '                    </svg>',
+    appStats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">\n' +
+        '                        <!-- 3x3 mřížka -->\n' +
+        '                        <rect x="3" y="3" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="9" y="3" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="15" y="3" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="3" y="9" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/>\n' +
+        '                        <rect x="15" y="9" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="3" y="15" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="9" y="15" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                        <rect x="15" y="15" width="6" height="6" rx="1" fill="currentColor" opacity="0.2"/>\n' +
+        '                    </svg>',
+    eventStats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <!-- Centrální bod -->\n' +
+        '                        <circle cx="12" cy="12" r="2" fill="currentColor"/>\n' +
+        '                        <!-- Vyzařující kruhy -->\n' +
+        '                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" opacity="0.5"/>\n' +
+        '                        <circle cx="12" cy="12" r="8" stroke-dasharray="2 2" opacity="0.3"/>\n' +
+        '                    </svg>',
+    storeStats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <ellipse cx="12" cy="5" rx="9" ry="3"/>\n' +
+        '                        <path d="M3 5v14a3 3 0 003 3h12a3 3 0 003-3V5"/>\n' +
+        '                        <path d="M3 12a9 3 0 0018 0"/>\n' +
+        '                        <path d="M3 5a9 3 0 0018 0"/>\n' +
+        '                    </svg>'
+
+
 }
 
 export function getIcon(iconName, size = 24) {
