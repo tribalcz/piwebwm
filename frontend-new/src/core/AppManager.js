@@ -65,7 +65,7 @@ export class AppManager {
      * Validate manifest aacording to the rules
      * @param manifest
      */
-    validationManifest(manifest) {
+    validateManifest(manifest) {
         const errors = [];
 
         //Requirement fields
