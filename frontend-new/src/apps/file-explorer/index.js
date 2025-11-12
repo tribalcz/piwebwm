@@ -7,7 +7,7 @@ import { getIcon } from '@utils/Icons.js';
  * File Explorer - browse and manage files and folders
  * Part of webdesk WM
  */
-export class Index {
+export default class FileExplorer {
     constructor(context) {
         this.context = context;
         this.windowManager = context.windowManager;
