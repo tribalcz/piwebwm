@@ -17,13 +17,6 @@ import { StartMenu } from '@components/StartMenu.js';
 import { Clock } from '@components/Clock.js';
 import { AppManager } from "@core/AppManager.js";
 
-import ProcessMonitor from "@apps/process-monitor/index.js";
-import { Index } from '@apps/fileExplorer/index.js';
-import Welcome from '@apps/welcome/index.js';
-
-import {getIcon} from "@utils/Icons.js";
-console.log('WebDesk WM starting...');
-
 document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
     console.log('Init EventBus...');
     const eventBus = new EventBus();
@@ -45,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
     const stateManager = new StateManager(windowManager, eventBus, store    );
 
     console.log('Init AppManager...');
-    const appManager = new AppManager(eventBus, store);
+    const appManager = new AppManager(eventBus, store, windowManager);
 
     console.log('Running app discovery...');
     await appManager.discovery();
@@ -74,37 +67,4 @@ document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
             console.log('Event:', data);
         });
     }
-
-    const ctx = {
-        windowManager: webdesk.windowManager,
-        eventBus: webdesk.eventBus,
-        store: webdesk.store,
-        manifest: { id: 'file-explorer', window: { defaultWidth: 700, defaultHeight: 500 }}
-    };
-    const fe = new Index(ctx);
-    await fe.init();
-    await fe.open();
-
-    // Process Monitor
-    fetch('/src/apps/process-monitor/meta/manifest.json')
-        .then(r => r.json())
-        .then(m => console.log('✅ Process Monitor manifest:', m));
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    const ctxpm = {
-        windowManager: webdesk.windowManager,
-        eventBus: webdesk.eventBus,
-        store: webdesk.store,
-        appManager: webdesk.appManager,
-        manifest: {
-            id: 'process-monitor',
-            window: { defaultWidth: 650, defaultHeight: 750, persistent: false }
-        }
-    };
-
-    const pm = new ProcessMonitor(ctxpm);
-    await pm.init();
-    await pm.open();
-
 });
