@@ -1,8 +1,9 @@
 import { getIcon} from "@utils/Icons.js";
 
 export class StartMenu {
-    constructor(windowManager) {
+    constructor(windowManager, appManager = null) {
         this.windowManager = windowManager;
+        this.appManager = appManager;
         this.menuElement = null;
         this.isOpen = false;
         this.getIcon = getIcon;
@@ -12,7 +13,6 @@ export class StartMenu {
     }
 
     initMenu() {
-        // Create menu element
         const menu = document.createElement('div');
         menu.id = 'start-menu';
         menu.className = 'start-menu hidden';
@@ -23,49 +23,7 @@ export class StartMenu {
             </div>
             
             <div class="start-menu-content">
-                <div class="menu-section">
-                    <div class="menu-section-title">Applications</div>
-                    <button class="menu-item" data-app="file-explorer">
-                        <span class="menu-icon">${getIcon('fileManager')}</span>
-                        <span class="menu-label">File Manager</span>
-                    </button>
-                    <button class="menu-item" data-app="terminal">
-                        <span class="menu-icon">${getIcon('terminal')}</span>
-                        <span class="menu-label">Terminal</span>
-                        <span class="menu-badge">Soon</span>
-                    </button>
-                    <button class="menu-item" data-app="text-editor">
-                        <span class="menu-icon">📝</span>
-                        <span class="menu-label">Text Editor</span>
-                        <span class="menu-badge">Soon</span>
-                    </button>
-                </div>
-                
-                <div class="menu-separator"></div>
-                
-                <div class="menu-section">
-                    <div class="menu-section-title">System</div>
-                    <button class="menu-item" data-app="system-monitor">
-                        <span class="menu-icon">${getIcon('systemMonitor')}</span>
-                        <span class="menu-label">System Monitor</span>
-                        <span class="menu-badge">Soon</span>
-                    </button>
-                    <button class="menu-item" data-app="settings">
-                        <span class="menu-icon">${getIcon('settings')}</span>
-                        <span class="menu-label">Settings</span>
-                        <span class="menu-badge">Soon</span>
-                    </button>
-                </div>
-                
-                <div class="menu-separator"></div>
-                
-                <div class="menu-section">
-                    <div class="menu-section-title">About</div>
-                    <button class="menu-item" data-app="welcome">
-                        <span class="menu-icon">${getIcon('welcome')}</span>
-                        <span class="menu-label">Welcome</span>
-                    </button>
-                </div>
+                ${this.renderMenuContent()}
             </div>
             
             <div class="start-menu-footer">
@@ -85,6 +43,136 @@ export class StartMenu {
         this.menuElement = menu;
     }
 
+    /**
+     * Render menu content from AppRegistry
+     * @returns {string} HTML for menu sections
+     */
+    renderMenuContent() {
+        if (!this.appManager || !this.appManager.registry) {
+            return '<div class="menu-section"><div style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">No apps available</div></div>';
+        }
+
+        const apps = this.appManager.registry.getAll();
+
+        if (apps.length === 0) {
+            return '<div class="menu-section"><div style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">No apps registered</div></div>';
+        }
+
+        // Group apps by category
+        const categories = this.groupByCategory(apps);
+
+        // Render each category
+        let html = '';
+
+        // Category order and titles
+        const categoryConfig = {
+            'applications': 'Applications',
+            'system': 'System',
+            'utilities': 'Utilities',
+            'about': 'About',
+            'other': 'Other'
+        };
+
+        Object.entries(categoryConfig).forEach(([categoryId, categoryTitle]) => {
+            const categoryApps = categories[categoryId];
+
+            if (categoryApps && categoryApps.length > 0) {
+                html += `
+                <div class="menu-section" data-category="${categoryId}">
+                    <div class="menu-section-title">${categoryTitle}</div>
+                    ${categoryApps.map(app => this.renderMenuItem(app)).join('')}
+                </div>
+            `;
+
+                // Add separator between sections (except after last section)
+                if (categoryId !== 'other') {
+                    html += '<div class="menu-separator"></div>';
+                }
+            }
+        });
+
+        return html;
+    }
+
+    /**
+     * Group apps by category
+     * @param {Array} apps - Array of app manifests
+     * @returns {Object} Apps grouped by category
+     */
+    groupByCategory(apps) {
+        const groups = {};
+
+        apps.forEach(app => {
+            const category = app.ui?.category || 'other';
+
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+
+            groups[category].push(app);
+        });
+
+        return groups;
+    }
+
+    /**
+     * Render single menu item
+     * @param {Object} manifest - App manifest
+     * @returns {string} HTML for menu item
+     */
+    renderMenuItem(manifest) {
+        const icon = this.getAppIcon(manifest);
+        const badge = this.renderBadge(manifest);
+        const disabled = (!manifest.enabled || manifest.status === 'soon') ? 'disabled' : '';
+
+        return `
+        <button class="menu-item ${disabled}" data-app="${manifest.id}">
+            <span class="menu-icon">${icon}</span>
+            <span class="menu-label">${manifest.ui?.displayName || manifest.name}</span>
+            ${badge}
+        </button>
+    `;
+    }
+
+    /**
+     * Refresh menu content (after apps are discovered)
+     */
+    refreshMenu() {
+        if (!this.menuElement) return;
+
+        const contentEl = this.menuElement.querySelector('.start-menu-content');
+        if (contentEl) {
+            contentEl.innerHTML = this.renderMenuContent();
+
+            // Re-attach event listeners for new menu items
+            this.attachMenuItemListeners();
+        }
+
+        console.log('StartMenu refreshed with apps from registry');
+    }
+
+    /**
+     * Attach event listeners to menu items
+     */
+    attachMenuItemListeners() {
+        if (!this.menuElement) return;
+
+        // Handle menu item clicks
+        this.menuElement.querySelectorAll('.menu-item:not(.disabled)').forEach(item => {
+            // Remove old listeners (if any)
+            item.replaceWith(item.cloneNode(true));
+        });
+
+        // Re-attach listeners
+        this.menuElement.querySelectorAll('.menu-item:not(.disabled)').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const appId = e.currentTarget.dataset.app;
+                this.launchApp(appId);
+                this.close();
+            });
+        });
+    }
+
     setupEventListeners() {
         // Toggle menu on start button click
         const startButton = document.getElementById('startBtn');
@@ -102,22 +190,6 @@ export class StartMenu {
             }
         });
 
-        // Handle menu item clicks
-        this.menuElement.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const app = e.currentTarget.dataset.app;
-                const badge = e.currentTarget.querySelector('.menu-badge');
-
-                if (badge) {
-                    // App not available yet
-                    return;
-                }
-
-                this.launchApp(app);
-                this.close();
-            });
-        });
-
         // Handle footer actions
         this.menuElement.querySelectorAll('.menu-footer-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -133,6 +205,8 @@ export class StartMenu {
                 this.filterMenu(e.target.value);
             });
         }
+
+        this.attachMenuItemListeners();
     }
 
     toggle() {
@@ -276,5 +350,37 @@ export class StartMenu {
         }
 
         this.close();
+    }
+
+    /**
+     * Render badge based on app status
+     * @param {Object} - manifets
+     * @return {string} - HTML for badge
+     */
+    renderBadge(manifest) {
+        if (!manifest.enabled || manifest.status === 'sonn') {
+            return `<span class="menu-badge badge-soon">Sonn</span>`;
+        }
+
+        if (manifest.status === 'beta') {
+            return `<span class="menu-badge badge-beta">Beta</span>`;
+        }
+
+        if (manifest.status === 'alpha') {
+            return `<span class="menu-badge badge-alpha">Alpha</span>`;
+        }
+
+        return '';
+    }
+
+    /**
+     * Get app icon from manifest
+     * @param {Object} - manifest
+     * @param {int} - icon size
+     * @return {string|*} - icon HTML
+     */
+    getAppIcon(manifest, iconSize = 16) {
+        const iconName = manifest.ui?.icon || 'unknown';
+        return getIcon(iconName, iconSize);
     }
 }
