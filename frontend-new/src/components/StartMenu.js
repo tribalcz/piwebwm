@@ -275,44 +275,21 @@ export class StartMenu {
         });
     }
 
-    launchApp(appName) {
-        //QUick fix for testing EventBus
-        if (window.webdesk?.eventBus) {
-            window.webdesk.eventBus.emit('app:launching', { appId: appName });
+    async launchApp(appId) {
+        if (!this.appManager) {
+            console.error('AppManager is not available');
+            return;
         }
 
+        try{
+            console.log(`Launching app: ${appId}...`);
 
-        switch(appName) {
-            case 'file-explorer':
-                // Dynamic import to avoid circular dependency
-                import('@apps/fileExplorer/index.js').then(module => {
-                    const fileExplorer = new module.Index(this.windowManager);
-                    fileExplorer.open();
+            await this.appManager.launch(appId);
 
-                    //Quick fix for testing EventBus
-                    if (window.webdesk?.eventBus) {
-                        window.webdesk.eventBus.emit('app:launched', { appId: appName });
-                    }
-                });
-                break;
-
-            case 'welcome':
-                this.createWelcomeWindow();
-                break;
-
-            default:
-                console.warn('Unknown app:', appName);
-        }
-    }
-
-    createWelcomeWindow() {
-        if (window.webdesk?.appManager) {
-            window.webdesk.appManager.launch('welcome')
-                .catch(err => {
-                    console.error('Failed to launch Welcome via AppManager:', err);
-                })
-        } else {
-            console.error('AppManager not available');
+            console.log(`App ${appId} launched successfully`);
+        } catch (error) {
+            console.error(`Failed to launch app ${appId}:`, error);
+            alert(`Failed to launch ${appId}: ${error.message}`);
         }
     }
 
