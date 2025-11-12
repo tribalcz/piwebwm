@@ -16,8 +16,11 @@ export class AppManager {
         this.registry = new AppRegistry;
         this.runningApps = new Map();
         this.appModules = new Map();
+        this.windowToApp = new Map();
 
         console.log('AppManager initialized.');
+
+        this.setupEventListeners();
 
         if (this.eventBus) {
             console.log('  ↳ AppManager connected to EventBus');
@@ -309,6 +312,40 @@ export class AppManager {
                 });
             }
         }
+    }
+
+    /**
+     * Setup event listeners for window lifecycle
+     */
+    setupEventListeners() {
+        if (!this.eventBus) return;
+
+        this.eventBus.on('window:closed', (data) => {
+            const { windowId } = data;
+
+            const appId = this.windowToApp.get(windowId);
+
+            if (appId) {
+                console.log(`Window ${windowId} closed, cleaning up app ${appId}`);
+
+                this.windowToApp.delete(windowId);
+
+                this.close(appId).catch(err => {
+                    console.error(`Failed to cleanup app ${appId}:`, err);
+                });
+            }
+        });
+
+        this.eventBus.on('app:opened', (data) => {
+            const { appId, windowId } = data;
+
+            if (appId && windowId) {
+                console.log(`Tracking: window ${windowId} belongs to app ${appId}`);
+                this.windowToApp.set(windowId, appId);
+            }
+        });
+
+        console.log('  ↳ AppManager listening to window events');
     }
 
     /**
