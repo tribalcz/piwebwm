@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
     console.log('Discovered apps:', appManager.registry.getAll().map(a => a.id).join(', '))
 
     const taskBar = new TaskBar(windowManager);
-    const startMenu = new StartMenu(windowManager);
+    const startMenu = new StartMenu(windowManager, appManager);
     const clock = new Clock();
 
     clock.start();
