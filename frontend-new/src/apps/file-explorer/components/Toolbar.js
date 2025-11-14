@@ -81,7 +81,7 @@ export class Toolbar {
 
         const parts = path.split('/').filter(p => p);
 
-        let html = `<span class="breadcrumb-item" data-path="/">${getIcon('home', 16)}</span>`;
+        let html = `<span class="breadcrumb-item" data-path="/home">${getIcon('home', 16)}</span>`;
 
         let currentPath = '';
         parts.forEach((part, index) => {
