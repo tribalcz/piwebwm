@@ -1,11 +1,17 @@
-import { ContextMenu } from '@components/ContextMenu.js'
+import { ContextMenu } from '@components/ContextMenu.js';
 import { ClipboardManager } from '@utils/Clipboard.js';
 import { PropertiesDialog } from '@components/PropertiesDialog.js';
 import { getIcon } from '@utils/Icons.js';
 
+// Import new components
+import { Toolbar } from './components/Toolbar.js';
+import { FileList } from './components/FileList.js';
+import { StatusBar } from './components/StatusBar.js';
+import { FileOperations } from './utils/FileOperations.js';
+
 /**
- * File Explorer - browse and manage files and folders
- * Part of webdesk WM
+ * File Explorer - Browse and manage files and folders
+ * Modular architecture with separated components
  */
 export default class FileExplorer {
     constructor(context) {
@@ -13,189 +19,123 @@ export default class FileExplorer {
         this.windowManager = context.windowManager;
         this.eventBus = context.eventBus || null;
         this.store = context.store || null;
-        this.manifest = context.manifest
-        ;
+        this.manifest = context.manifest;
+
         this.currentPath = '/home';
-        this.history = [];
-        this.historyIndex = -1;
-        this.files = [];
         this.windowId = null;
+
+        // Components
+        this.components = {
+            toolbar: null,
+            fileList: null,
+            statusBar: null
+        };
+
+        // UI helpers
         this.contextMenu = new ContextMenu();
         this.clipboard = new ClipboardManager();
-        this.selectedItem = null;
-        this.getIcon = getIcon;
+
+        console.log('File Explorer initialized');
     }
 
     async init() {
-        console.log("File Explorer init");
+        console.log('File Explorer init');
     }
-    async open() {
-        this.windowId = await new Promise((resolve) => {
-            const id = this.windowManager.createWindow({
-                title: 'File Explorer',
-                x: 150,
-                y: 100,
-                width: 700,
-                height: 500,
-                content: this.renderSkeleton(),
-                persistent: false,
-                onCreated: (windowId, windowEl) => {
-                    console.log('Window created callback:', windowId);
-                    this.windowId = windowId;
-                    resolve(windowId);
-                }
-            });
 
-            if (this.eventBus) {
-                this.eventBus.emit('app:opened', {
-                    appId: this.manifest.id,
-                    windowId: this.windowId,
-                    });
-            }
+    async open() {
+        const windowCount = this.windowManager.getAllWindows().size;
+
+        this.windowId = this.windowManager.createWindow({
+            title: this.manifest?.ui?.displayName || 'File Explorer',
+            x: 150 + (windowCount * 25),
+            y: 100 + (windowCount * 25),
+            width: this.manifest?.window?.defaultWidth || 700,
+            height: this.manifest?.window?.defaultHeight || 500,
+            content: this.renderSkeleton(),
+            persistent: this.manifest?.window?.persistent || false,
+            onCreated: (windowId, windowEl) => this.onWindowCreated(windowId, windowEl)
         });
 
-        console.log('Setting up event listeners for:', this.windowId);
-        this.setupEventListeners();
-        await this.navigate(this.currentPath);
+        console.log('File Explorer opened, windowId:', this.windowId);
     }
 
-    async close() {
-        if (this.windowId) {
-            this.windowManager.closeWindow(this.windowId);
-        }
+    onWindowCreated(id, windowEl) {
+        this.windowId = id;
 
+        // Emit app:opened event with windowId
         if (this.eventBus) {
-            this.eventBus.emit('app:closed', {
+            this.eventBus.emit('app:opened', {
                 appId: this.manifest.id,
+                windowId: this.windowId
             });
         }
 
-        console.log('File Explorer closed');
+        // Initialize components
+        this.initializeComponents(windowEl);
+
+        // Setup keyboard shortcuts
+        this.setupKeyboardShortcuts();
+
+        // Load initial directory
+        this.navigate(this.currentPath);
     }
 
     renderSkeleton() {
         return `
             <div class="file-explorer">
-                <div class="explorer-toolbar">
-                    <button class="btn-back" title="Back">
-                        <span>${getIcon('back', 16)}</span>
-                    </button>
-                    <button class="btn-up" title="Up">
-                        <span>${getIcon('up', 16)}</span>
-                    </button>
-                    <button class="btn-refresh" title="Refresh">
-                        <span>${getIcon('refresh', 16)}</span>
-                    </button>
-                    <div class="path-breadcrumb"></div>
-                </div>
-                
-                <div class="explorer-content">
-                    <div class="file-list-header">
-                        <span class="col-name">Name</span>
-                        <span class="col-size">Size</span>
-                        <span class="col-modified">Modified</span>
-                    </div>
-                    <div class="file-list">
-                        <div class="loading">Loading...</div>
-                    </div>
-                </div>
-                
-                <div class="explorer-statusbar">
-                    <span class="status-text">Ready</span>
-                </div>
+                <div id="toolbar-container"></div>
+                <div id="filelist-container"></div>
+                <div id="statusbar-container"></div>
             </div>
         `;
     }
 
-    setupEventListeners() {
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) {
-            console.error('Window element not found:', this.windowId);
-            return;
-        }
+    initializeComponents(windowEl) {
+        const toolbarContainer = windowEl.querySelector('#toolbar-container');
+        const fileListContainer = windowEl.querySelector('#filelist-container');
+        const statusBarContainer = windowEl.querySelector('#statusbar-container');
 
-        const backBtn = windowEl.querySelector('.btn-back');
-        const upBtn = windowEl.querySelector('.btn-up');
-        const refreshBtn = windowEl.querySelector('.btn-refresh');
-        const fileList = windowEl.querySelector('.file-list');
-
-        if (!backBtn || !upBtn || !refreshBtn || !fileList) {
-            console.error('Some elements not found in window');
-            return;
-        }
-
-        // Back button
-        backBtn.addEventListener('click', () => {
-            console.log('Back clicked');
-            this.navigateBack();
+        // Initialize Toolbar
+        this.components.toolbar = new Toolbar(toolbarContainer, {
+            onBack: () => this.navigateUp(),
+            onUp: () => this.navigateUp(),
+            onRefresh: () => this.navigate(this.currentPath),
+            onNavigate: (path) => this.navigate(path),
+            onHome: () => this.navigate('/home')
         });
 
-        // Up button
-        upBtn.addEventListener('click', () => {
-            console.log('Up clicked');
-            this.navigateUp();
+        // Initialize FileList
+        this.components.fileList = new FileList(fileListContainer, {
+            onClick: (path, type) => this.handleFileClick(path, type),
+            onDoubleClick: (path, type) => this.handleFileDoubleClick(path, type),
+            onContextMenu: (x, y, type, item) => this.showContextMenu(x, y, type, item)
         });
 
-        // Refresh button
-        refreshBtn.addEventListener('click', () => {
-            console.log('Refresh clicked');
-            this.navigate(this.currentPath);
-        });
+        // Initialize StatusBar
+        this.components.statusBar = new StatusBar(statusBarContainer);
 
-        // File list clicks (delegation)
-        fileList.addEventListener('click', (e) => {
-            const fileItem = e.target.closest('.file-item');
-            if (fileItem) {
-                const path = fileItem.dataset.path;
-                const type = fileItem.dataset.type;
-                console.log('File clicked:', path, type);
-                this.handleFileClick(path, type);
-            }
-        });
+        console.log('File Explorer components initialized');
+    }
 
-        // Double click for opening
-        fileList.addEventListener('dblclick', (e) => {
-            const fileItem = e.target.closest('.file-item');
-            if (fileItem) {
-                const path = fileItem.dataset.path;
-                const type = fileItem.dataset.type;
-                console.log('File double-clicked:', path, type);
-                this.handleFileDoubleClick(path, type);
-            }
-        });
-
-        // Context menu for files and folders
-        fileList.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-
-            const fileItem = e.target.closest('.file-item');
-            if (fileItem) {
-                const path = fileItem.dataset.path;
-                const type = fileItem.dataset.type;
-                const name = fileItem.querySelector('.file-name').textContent;
-
-                this.selectedItem = {path, type, name};
-                this.showContextMenu(e.clientX, e.clientY, type);
-            }
-        });
-
+    setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // only when the file explorer window is focused
             const activeWindow = document.querySelector('.window.active');
             if (!activeWindow || activeWindow.dataset.id !== this.windowId) {
                 return;
             }
 
+            const selectedItem = this.components.fileList?.getSelectedItem();
+
             // Ctrl+C - Copy
-            if (e.ctrlKey && e.key === 'c' && this.selectedItem) {
+            if (e.ctrlKey && e.key === 'c' && selectedItem) {
                 e.preventDefault();
-                this.contextCopy();
+                this.contextCopy(selectedItem);
             }
 
             // Ctrl+X - Cut
-            if (e.ctrlKey && e.key === 'x' && this.selectedItem) {
+            if (e.ctrlKey && e.key === 'x' && selectedItem) {
                 e.preventDefault();
-                this.contextCut();
+                this.contextCut(selectedItem);
             }
 
             // Ctrl+V - Paste
@@ -204,199 +144,41 @@ export default class FileExplorer {
                 this.contextPaste();
             }
 
-            // Delete - Remove
-            if (e.key === 'Delete' && this.selectedItem) {
+            // Delete
+            if (e.key === 'Delete' && selectedItem) {
                 e.preventDefault();
-                this.contextDelete();
+                this.contextDelete(selectedItem);
             }
 
             // F2 - Rename
-            if (e.key === 'F2' && this.selectedItem) {
+            if (e.key === 'F2' && selectedItem) {
                 e.preventDefault();
-                this.contextRename();
+                this.contextRename(selectedItem);
             }
         });
-
-        console.log('Event listeners attached');
     }
 
     async navigate(path) {
         console.log('Navigating to:', path);
-        this.setStatus('Loading...');
+
+        this.components.statusBar?.showLoading();
+        this.components.fileList?.showLoading();
 
         try {
-            const url = `/api/files/list?path=${encodeURIComponent(path)}`;
-            console.log('Fetching:', url);
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('Received data:', data);
+            const data = await FileOperations.listFiles(path);
 
             this.currentPath = data.path;
-            this.files = data.files;
 
-            console.log('Rendering file list...');
-            this.renderFileList();
-            this.updateBreadcrumb();
-            this.setStatus(`${this.files.length} items`);
+            // Update components
+            this.components.toolbar?.updateBreadcrumb(this.currentPath);
+            this.components.fileList?.update(data.files);
+            this.components.statusBar?.showItemCount(data.files.length);
+
+            console.log(`Loaded ${data.files.length} items from ${this.currentPath}`);
         } catch (error) {
-            console.error('Failed to load directory:', error);
-            this.setStatus('Error loading directory');
-            this.renderError(error.message);
-        }
-    }
-
-    renderFileList() {
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) {
-            console.error('Window not found for rendering');
-            return;
-        }
-
-        const fileListEl = windowEl.querySelector('.file-list');
-        if (!fileListEl) {
-            console.error('File list element not found');
-            return;
-        }
-
-        console.log('Rendering', this.files.length, 'files');
-
-        if (this.files.length === 0) {
-            fileListEl.innerHTML = '<div class="empty-folder">Empty folder</div>';
-            return;
-        }
-
-        const html = this.files.map(file => {
-            const icon = this.getFileIcon(file);
-            const size = file.is_dir ? '' : this.formatSize(file.size);
-            const modified = this.formatDate(file.modified);
-
-            return `
-            <div class="file-item ${file.is_dir ? 'folder' : 'file'}" 
-                 data-path="${file.path}" 
-                 data-type="${file.is_dir ? 'dir' : 'file'}">
-                <span class="file-icon">${icon}</span>
-                <span class="file-name">${this.escapeHtml(file.name)}</span>
-                <span class="file-size">${size}</span>
-                <span class="file-modified">${modified}</span>
-            </div>
-        `;
-        }).join('');
-
-        fileListEl.innerHTML = html;
-        console.log('File list rendered successfully');
-    }
-    renderError(message) {
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) return;
-
-        const fileListEl = windowEl.querySelector('.file-list');
-        if (fileListEl) {
-            fileListEl.innerHTML = `
-                <div class="error-message">
-                    <span style="font-size: 48px;">⚠️</span>
-                    <p>Error: ${this.escapeHtml(message)}</p>
-                </div>
-            `;
-        }
-    }
-
-    updateBreadcrumb() {
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) return;
-
-        const breadcrumbEl = windowEl.querySelector('.path-breadcrumb');
-        if (!breadcrumbEl) return;
-
-        const parts = this.currentPath.split('/').filter(p => p);
-
-        let html = `<span class="breadcrumb-item" data-path="/">${getIcon('home')}</span>`;
-
-        let currentPath = '';
-
-        parts.forEach((part, index) => {
-            currentPath += '/' + part;
-            const isLast = index === parts.length - 1;
-            html += `<span class="breadcrumb-separator">/</span>`;
-            html += `<span class="breadcrumb-item ${isLast ? 'active' : ''}" data-path="${currentPath}">${this.escapeHtml(part)}</span>`;
-        });
-
-        breadcrumbEl.innerHTML = html;
-
-        // Add click listeners to breadcrumb items
-        breadcrumbEl.querySelectorAll('.breadcrumb-item:not(.active)').forEach(item => {
-            item.addEventListener('click', () => {
-                const path = item.dataset.path;
-                this.navigate(path);
-            });
-        });
-    }
-
-    handleFileClick(path, type) {
-        // Single click - just select
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) return;
-
-        // Remove previous selection
-        windowEl.querySelectorAll('.file-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-
-        // Add selection to clicked item
-        const clickedItem = windowEl.querySelector(`[data-path="${path}"]`);
-        if (clickedItem) {
-            clickedItem.classList.add('selected');
-        }
-    }
-
-    async handleFileDoubleClick(path, type) {
-        console.log('Double-click:', path, type);
-
-        if (type === 'dir') {
-            await this.navigate(path);
-        } else {
-            await this.openFile(path);
-        }
-    }
-
-    async openFile(path) {
-        this.setStatus('Opening file...');
-
-        try {
-            const response = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            this.windowManager.createWindow({
-                title: path.split('/').pop(),
-                x: 200,
-                y: 150,
-                width: 600,
-                height: 400,
-                content: `
-                    <div class="file-viewer">
-                        <div class="file-viewer-toolbar">
-                            <span>${getIcon('txt')} ${this.escapeHtml(path)}</span>
-                        </div>
-                        <pre class="file-content">${this.escapeHtml(data.content)}</pre>
-                    </div>
-                `
-            });
-
-            this.setStatus('Ready');
-        } catch (error) {
-            console.error('Failed to open file:', error);
-            this.setStatus('Error opening file');
-            alert('Failed to open file: ' + error.message);
+            console.error('Failed to navigate:', error);
+            this.components.statusBar?.showError(error.message);
+            this.components.fileList?.showError(error.message);
         }
     }
 
@@ -411,242 +193,168 @@ export default class FileExplorer {
         this.navigate(newPath || '/home');
     }
 
-    navigateBack() {
-        this.navigateUp();
+    handleFileClick(path, type) {
+        // Selection is handled by FileList component
+        console.log('File clicked:', path, type);
     }
 
-    setStatus(text) {
-        const windowEl = document.querySelector(`[data-id="${this.windowId}"]`);
-        if (!windowEl) return;
-
-        const statusEl = windowEl.querySelector('.status-text');
-        if (statusEl) {
-            statusEl.textContent = text;
-        }
-    }
-
-    getFileIcon(file) {
-        if (file.is_dir) {
-            if (file.name === '..') return getIcon('up');
-            return getIcon('file');
-        }
-
-        const ext = file.name.split('.').pop().toLowerCase();
-        const iconMap = {
-            'txt': getIcon('txt'),
-            'md': getIcon('md'),
-            'pdf': getIcon('pdf'),
-            'doc': getIcon('doc'),
-            'docx': getIcon('doc'),
-            'xls': getIcon('xls'),
-            'xlsx': getIcon('xls'),
-            'jpg': getIcon('jpg'),
-            'jpeg': getIcon('jpg'),
-            'png': getIcon('jpg'),
-            'gif': getIcon('jpg'),
-            'mp3': getIcon('music'),
-            'wav': getIcon('music'),
-            'mp4': getIcon('video'),
-            'avi': getIcon('video'),
-            'zip': getIcon('archive'),
-            'tar': getIcon('archive'),
-            'gz': getIcon('archive'),
-            'sh': getIcon('sh'),
-            'py': getIcon('py'),
-            'js': getIcon('js'),
-            'html': getIcon('html'),
-            'css': getIcon('css'),
-        };
-
-        return iconMap[ext] || getIcon('unknown');
-    }
-
-    formatSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    formatDate(timestamp) {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) {
-            return 'Today ' + date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
-        } else if (diffDays === 1) {
-            return 'Yesterday';
-        } else if (diffDays < 7) {
-            return diffDays + ' days ago';
-        } else {
-            return date.toLocaleDateString('cs-CZ');
-        }
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    showContextMenu(x, y, type) {
-        const items = [];
+    async handleFileDoubleClick(path, type) {
+        console.log('File double-clicked:', path, type);
 
         if (type === 'dir') {
-            // Folder menu
-            items.push(
-                { icon: getIcon('newFile', 18), label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
-                { icon: getIcon('newDir', 18), label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
-                { separator: true },
-                { icon: getIcon('openDir', 18), label: 'Open', action: 'open', handler: () => this.contextOpen() },
-                { separator: true },
-                { icon: getIcon('rename', 18), label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
-                { icon: getIcon('copy', 18), label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
-                { icon: getIcon('cut', 18), label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
-                { separator: true },
-                { icon: getIcon('delete', 18), label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
-                { separator: true },
-                { icon: getIcon('welcome', 18), label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
-                { separator: true },
-                { icon: getIcon('refresh', 18), label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
-            );
+            await this.navigate(path);
         } else {
-            // File menu
-            items.push(
-                { icon: getIcon('newFile', 18), label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
-                { icon: getIcon('newFile', 18), label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
-                { separator: true },
-                { icon: getIcon('openFile', 18), label: 'Open', action: 'open', handler: () => this.contextOpen() },
-                { separator: true },
-                { icon: getIcon('rename', 18), label: 'Rename', action: 'rename', handler: () => this.contextRename(), shortcut: 'F2' },
-                { icon: getIcon('copy', 18), label: 'Copy', action: 'copy', handler: () => this.contextCopy(), shortcut: 'Ctrl+C' },
-                { icon: getIcon('cut', 18), label: 'Cut', action: 'cut', handler: () => this.contextCut(), shortcut: 'Ctrl+X' },
-                { separator: true },
-                { icon: getIcon('delete', 18), label: 'Delete', action: 'delete', handler: () => this.contextDelete(), shortcut: 'Del' },
-                { separator: true },
-                { icon: getIcon('welcome', 18), label: 'Properties', action: 'properties', handler: () => this.contextProperties() },
-                { separator: true },
-                { icon: getIcon('refresh', 18), label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
-            );
+            await this.openFile(path);
         }
+    }
 
+    async openFile(path) {
+        this.components.statusBar?.setStatus('Opening file...');
+
+        try {
+            const content = await FileOperations.readFile(path);
+
+            this.windowManager.createWindow({
+                title: path.split('/').pop(),
+                x: 200,
+                y: 150,
+                width: 600,
+                height: 400,
+                content: `
+                    <div class="file-viewer">
+                        <div class="file-viewer-toolbar">
+                            <span>${getIcon('txt')} ${this.escapeHtml(path)}</span>
+                        </div>
+                        <pre class="file-content">${this.escapeHtml(content)}</pre>
+                    </div>
+                `
+            });
+
+            this.components.statusBar?.showReady();
+        } catch (error) {
+            console.error('Failed to open file:', error);
+            this.components.statusBar?.showError('Failed to open file');
+            alert('Failed to open file: ' + error.message);
+        }
+    }
+
+    showContextMenu(x, y, type, selectedItem) {
+        const items = this.buildContextMenuItems(type);
         this.contextMenu.show(x, y, items);
     }
 
-    contextOpen() {
-        if (!this.selectedItem) return;
+    buildContextMenuItems(type) {
+        const items = [];
+        const selectedItem = this.components.fileList?.getSelectedItem();
 
-        if (this.selectedItem.type === 'dir') {
-            this.navigate(this.selectedItem.path);
+        if (type === 'dir') {
+            items.push(
+                { icon: getIcon('newFile', 18), label: 'New File', handler: () => this.contextNewFile() },
+                { icon: getIcon('newDir', 18), label: 'New Folder', handler: () => this.contextNewFolder() },
+                { separator: true },
+                { icon: getIcon('openDir', 18), label: 'Open', handler: () => this.contextOpen(selectedItem) }
+            );
         } else {
-            this.openFile(this.selectedItem.path);
+            items.push(
+                { icon: getIcon('openFile', 18), label: 'Open', handler: () => this.contextOpen(selectedItem) }
+            );
+        }
+
+        items.push(
+            { separator: true },
+            { icon: getIcon('rename', 18), label: 'Rename', handler: () => this.contextRename(selectedItem), shortcut: 'F2' },
+            { icon: getIcon('copy', 18), label: 'Copy', handler: () => this.contextCopy(selectedItem), shortcut: 'Ctrl+C' },
+            { icon: getIcon('cut', 18), label: 'Cut', handler: () => this.contextCut(selectedItem), shortcut: 'Ctrl+X' },
+            { separator: true },
+            { icon: getIcon('delete', 18), label: 'Delete', handler: () => this.contextDelete(selectedItem), shortcut: 'Del' },
+            { separator: true },
+            { icon: getIcon('welcome', 18), label: 'Properties', handler: () => this.contextProperties(selectedItem) },
+            { separator: true },
+            { icon: getIcon('refresh', 18), label: 'Refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
+        );
+
+        return items;
+    }
+
+    contextOpen(item) {
+        if (!item) return;
+
+        if (item.type === 'dir') {
+            this.navigate(item.path);
+        } else {
+            this.openFile(item.path);
         }
     }
 
-    contextCopy() {
-        if (!this.selectedItem) return;
+    contextCopy(item) {
+        if (!item) return;
 
-        this.clipboard.copy(this.selectedItem);
-        this.setStatus(`Copied: ${this.selectedItem.name}`);
+        this.clipboard.copy(item);
+        this.components.statusBar?.setStatus(`Copied: ${item.name}`);
     }
 
-    contextCut() {
-        if (!this.selectedItem) return;
+    contextCut(item) {
+        if (!item) return;
 
-        this.clipboard.cut(this.selectedItem);
-        this.setStatus(`Cut: ${this.selectedItem.name}`);
+        this.clipboard.cut(item);
+        this.components.statusBar?.setStatus(`Cut: ${item.name}`);
     }
 
     async contextPaste() {
         if (this.clipboard.isEmpty()) return;
 
-        this.setStatus('Pasting...');
+        this.components.statusBar?.setStatus('Pasting...');
 
         try {
             await this.clipboard.paste(this.currentPath, async () => {
                 await this.navigate(this.currentPath);
-                this.setStatus('Pasted successfully');
+                this.components.statusBar?.showReady();
             });
         } catch (error) {
             console.error('Failed to paste:', error);
             alert('Failed to paste: ' + error.message);
-            this.setStatus('Error');
+            this.components.statusBar?.showError('Paste failed');
         }
     }
 
-    contextProperties() {
-        if (!this.selectedItem) return;
+    async contextDelete(item) {
+        if (!item) return;
 
-        //full file info
-        const fileInfo = this.files.find(f => f.path === this.selectedItem.path);
-        if (fileInfo) {
-            PropertiesDialog.show(this.windowManager, fileInfo);
-        }
-    }
-
-    async contextDelete() {
-        if (!this.selectedItem) return;
-
-        const confirmMsg = this.selectedItem.type === 'dir'
-            ? `Delete folder "${this.selectedItem.name}" and all its contents?`
-            : `Delete file "${this.selectedItem.name}"?`;
+        const confirmMsg = item.type === 'dir'
+            ? `Delete folder "${item.name}" and all its contents?`
+            : `Delete file "${item.name}"?`;
 
         if (!confirm(confirmMsg)) return;
 
-        this.setStatus('Deleting...');
+        this.components.statusBar?.setStatus('Deleting...');
 
         try {
-            const response = await fetch(`/api/files/delete?path=${encodeURIComponent(this.selectedItem.path)}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || `HTTP ${response.status}`);
-            }
-
+            await FileOperations.deleteFile(item.path);
             await this.navigate(this.currentPath);
-            this.setStatus('Deleted successfully');
+            this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to delete:', error);
             alert('Failed to delete: ' + error.message);
-            this.setStatus('Error');
+            this.components.statusBar?.showError('Delete failed');
         }
     }
 
-    async contextRename() {
-        if (!this.selectedItem) return;
+    async contextRename(item) {
+        if (!item) return;
 
-        const newName = prompt(`Rename "${this.selectedItem.name}" to:`, this.selectedItem.name);
-        if (!newName || newName === this.selectedItem.name) return;
+        const newName = prompt(`Rename "${item.name}" to:`, item.name);
+        if (!newName || newName === item.name) return;
 
-        const newPath = this.selectedItem.path.replace(/[^/]+$/, newName);
-
-        this.setStatus('Renaming...');
+        this.components.statusBar?.setStatus('Renaming...');
 
         try {
-            const response = await fetch('/api/files/move', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    from: this.selectedItem.path,
-                    to: newPath
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || `HTTP ${response.status}`);
-            }
-
+            await FileOperations.rename(item.path, newName);
             await this.navigate(this.currentPath);
-            this.setStatus('Renamed successfully');
+            this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to rename:', error);
             alert('Failed to rename: ' + error.message);
-            this.setStatus('Error');
+            this.components.statusBar?.showError('Rename failed');
         }
     }
 
@@ -656,30 +364,16 @@ export default class FileExplorer {
 
         const filePath = `${this.currentPath}/${fileName}`;
 
-        this.setStatus('Creating file...');
+        this.components.statusBar?.setStatus('Creating file...');
 
         try {
-            const response = await fetch('/api/files/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path: filePath,
-                    content: '',
-                    isDir: false
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || `HTTP ${response.status}`);
-            }
-
+            await FileOperations.createFile(filePath);
             await this.navigate(this.currentPath);
-            this.setStatus('File created');
+            this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to create file:', error);
             alert('Failed to create file: ' + error.message);
-            this.setStatus('Error');
+            this.components.statusBar?.showError('Create failed');
         }
     }
 
@@ -689,30 +383,57 @@ export default class FileExplorer {
 
         const folderPath = `${this.currentPath}/${folderName}`;
 
-        this.setStatus('Creating folder...');
+        this.components.statusBar?.setStatus('Creating folder...');
 
         try {
-            const response = await fetch('/api/files/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path: folderPath,
-                    content: '',
-                    isDir: true
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || `HTTP ${response.status}`);
-            }
-
+            await FileOperations.createFolder(folderPath);
             await this.navigate(this.currentPath);
-            this.setStatus('Folder created');
+            this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to create folder:', error);
             alert('Failed to create folder: ' + error.message);
-            this.setStatus('Error');
+            this.components.statusBar?.showError('Create failed');
         }
+    }
+
+    async contextProperties(item) {
+        if (!item) return;
+
+        try {
+            const fileInfo = await FileOperations.getFileInfo(item.path);
+            PropertiesDialog.show(this.windowManager, fileInfo);
+        } catch (error) {
+            console.error('Failed to get file info:', error);
+            alert('Failed to get file properties');
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async close() {
+        // Destroy components
+        Object.values(this.components).forEach(component => {
+            if (component && component.destroy) {
+                component.destroy();
+            }
+        });
+
+        // Close window
+        if (this.windowId) {
+            this.windowManager.closeWindow(this.windowId);
+        }
+
+        // Emit app:closed event
+        if (this.eventBus) {
+            this.eventBus.emit('app:closed', {
+                appId: this.manifest.id
+            });
+        }
+
+        console.log('File Explorer closed');
     }
 }
