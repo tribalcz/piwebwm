@@ -252,28 +252,29 @@ export default class FileExplorer {
 
         if (type === 'dir') {
             items.push(
-                { icon: getIcon('newFile', 18), label: 'New File', handler: () => this.contextNewFile() },
-                { icon: getIcon('newDir', 18), label: 'New Folder', handler: () => this.contextNewFolder() },
+                { icon: getIcon('newFile', 18), label: 'New File', action: 'new-file', handler: () => this.contextNewFile() },
+                { icon: getIcon('newDir', 18), label: 'New Folder', action: 'new-folder', handler: () => this.contextNewFolder() },
                 { separator: true },
-                { icon: getIcon('openDir', 18), label: 'Open', handler: () => this.contextOpen(selectedItem) }
+                { icon: getIcon('openDir', 18), label: 'Open', action: 'open', handler: () => this.contextOpen(selectedItem) }
             );
         } else {
             items.push(
-                { icon: getIcon('openFile', 18), label: 'Open', handler: () => this.contextOpen(selectedItem) }
+                { icon: getIcon('openFile', 18), label: 'Open', axtion: 'open', handler: () => this.contextOpen(selectedItem) }
             );
         }
 
         items.push(
             { separator: true },
-            { icon: getIcon('rename', 18), label: 'Rename', handler: () => this.contextRename(selectedItem), shortcut: 'F2' },
-            { icon: getIcon('copy', 18), label: 'Copy', handler: () => this.contextCopy(selectedItem), shortcut: 'Ctrl+C' },
-            { icon: getIcon('cut', 18), label: 'Cut', handler: () => this.contextCut(selectedItem), shortcut: 'Ctrl+X' },
+            { icon: getIcon('rename', 18), label: 'Rename', action: 'rename', handler: () => this.contextRename(selectedItem), shortcut: 'F2' },
+            { icon: getIcon('copy', 18), label: 'Copy', action: 'copy', handler: () => this.contextCopy(selectedItem), shortcut: 'Ctrl+C' },
+            { icon: getIcon('cut', 18), label: 'Cut', action: 'cut', handler: () => this.contextCut(selectedItem), shortcut: 'Ctrl+X' },
+            { icon: getIcon('paste', 18), label: 'Paste', action: 'paste', handler: () => this.contextPaste(), shortcut: 'Ctrl+V' },
             { separator: true },
-            { icon: getIcon('delete', 18), label: 'Delete', handler: () => this.contextDelete(selectedItem), shortcut: 'Del' },
+            { icon: getIcon('delete', 18), label: 'Delete', action: 'delete', handler: () => this.contextDelete(selectedItem), shortcut: 'Del' },
             { separator: true },
-            { icon: getIcon('welcome', 18), label: 'Properties', handler: () => this.contextProperties(selectedItem) },
+            { icon: getIcon('welcome', 18), label: 'Properties', action: 'properties', handler: () => this.contextProperties(selectedItem) },
             { separator: true },
-            { icon: getIcon('refresh', 18), label: 'Refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
+            { icon: getIcon('refresh', 18), label: 'Refresh', action: 'refresh', handler: () => this.navigate(this.currentPath), shortcut: 'F5' }
         );
 
         return items;
