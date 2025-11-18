@@ -125,11 +125,21 @@ export class StartMenu {
         const badge = this.renderBadge(manifest);
         const disabled = (!manifest.enabled || manifest.status === 'soon') ? 'disabled' : '';
 
-        return `
-        <button class="menu-item ${disabled}" data-app="${manifest.id}">
-            <span class="menu-icon">${icon}</span>
-            <span class="menu-label">${manifest.ui?.displayName || manifest.name}</span>
-            ${badge}
+        const displayName = manifest.ui?.displayName || manifest.name;
+        const description = manifest.description || '';
+        const keywords = (manifest.ui?.keywords || []).join(' ');
+        const name = manifest.name || '';
+
+        return `        
+        <button class="menu-item ${disabled}" 
+                data-app="${manifest.id}"
+                data-name="${this.escapeHtml(name)}"
+                data-display-name="${this.escapeHtml(displayName)}"
+                data-description="${this.escapeHtml(description)}"
+                data-keywords="${this.escapeHtml(keywords)}">
+                <span class="menu-icon">${icon}</span>
+                <span class="menu-label">${manifest.ui?.displayName || manifest.name}</span>
+                ${badge}
         </button>
     `;
     }
@@ -251,26 +261,27 @@ export class StartMenu {
     }
 
     filterMenu(query) {
-        const lowerQuery = query.toLowerCase();
+        const lowerQuery = query.toLowerCase().trim();
         const items = this.menuElement.querySelectorAll('.menu-item');
 
         items.forEach(item => {
-            const label = item.querySelector('.menu-label').textContent.toLowerCase();
-            if (label.includes(lowerQuery)) {
+            const displayName = (item.dataset.displayName || '').toLowerCase();
+            const name = (item.dataset.name || '').toLowerCase();
+            const description = (item.dataset.description || '').toLowerCase();
+            const keywords = (item.dataset.keywords || '').toLowerCase();
+            const appId = (item.dataset.app || '').toLowerCase();
+
+            const matches =
+                displayName.includes(lowerQuery) ||
+                name.includes(lowerQuery) ||
+                description.includes(lowerQuery) ||
+                keywords.includes(lowerQuery) ||
+                appId.includes(lowerQuery);
+
+            if (matches) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
-            }
-        });
-
-        // Hide sections if all items are hidden
-        const sections = this.menuElement.querySelectorAll('.menu-section');
-        sections.forEach(section => {
-            const visibleItems = section.querySelectorAll('.menu-item[style*="flex"]');
-            if (visibleItems.length === 0 && query !== '') {
-                section.style.display = 'none';
-            } else {
-                section.style.display = 'block';
             }
         });
     }
@@ -359,5 +370,16 @@ export class StartMenu {
     getAppIcon(manifest, iconSize = 16) {
         const iconName = manifest.ui?.icon || 'unknown';
         return getIcon(iconName, iconSize);
+    }
+
+    /**
+     * Escape HTML special characters
+     * @param {string} text - text to escape
+     * @return {string} - escaped text
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
