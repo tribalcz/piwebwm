@@ -83,9 +83,9 @@ export default class FileExplorer {
     renderSkeleton() {
         return `
             <div class="file-explorer">
-                <div id="toolbar-container"></div>
-                <div id="filelist-container"></div>
-                <div id="statusbar-container"></div>
+                <div class="explorer-toolbar" id="toolbar-container"></div>
+                <div class="explorer-content" id="filelist-container"></div>
+                <div class="explorer-statusbar" id="statusbar-container"></div>
             </div>
         `;
     }
