@@ -249,7 +249,6 @@ export default class FileExplorer {
 
     buildContextMenuItems(type, selectedItem) {
         const items = [];
-        const selectedItem = this.components.fileList?.getSelectedItem();
 
         if (type === 'dir') {
             items.push(
