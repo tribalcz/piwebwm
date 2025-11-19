@@ -17,6 +17,7 @@ export class AppManager {
         this.runningApps = new Map();
         this.appModules = new Map();
         this.windowToApp = new Map();
+        this.appStyles = new Map();
 
         console.log('AppManager initialized.');
 
@@ -175,6 +176,9 @@ export class AppManager {
 
         try {
             const appModule = await this.loadAppModule(appId, manifest.entryPoint);
+
+            await this.loadAppStyles(appId, manifest);
+
             const context = this.createAppContext(manifest);
             const appClass = appModule.default;
             const appInstance = new appClass(context);
@@ -243,6 +247,67 @@ export class AppManager {
     }
 
     /**
+     * Load app styles from manifest
+     * @param {string} appId - Application ID
+     * @param {Object} manifest - Application manifest
+     * @returns {Promise<void>}
+     */
+    async loadAppStyles(appId, manifest) {
+        const styles = manifest.styles || [];
+
+        if (styles.length === 0) {
+            return; // No styles to load
+        }
+
+        const loadedStyleElements = [];
+
+        for (const stylePath of styles) {
+            try {
+                const fullPath = `/src/apps/${appId}/${stylePath.replace('./', '')}`;
+
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = fullPath;
+                link.dataset.appId = appId;
+                link.dataset.stylePath = stylePath;
+
+                document.head.appendChild(link);
+
+                loadedStyleElements.push(link);
+
+                console.log(`  ↳ Loaded stylesheet: ${fullPath}`);
+            } catch (error) {
+                console.error(`Failed to load stylesheet ${stylePath} for ${appId}:`, error);
+            }
+        }
+
+        if (loadedStyleElements.length > 0) {
+            this.appStyles.set(appId, loadedStyleElements);
+            console.log(`  ↳ Loaded ${loadedStyleElements.length} stylesheet(s) for ${appId}`);
+        }
+    }
+
+    /**
+     * Unload app styles
+     * @param {string} appId - Application ID
+     */
+    unloadAppStyles(appId) {
+        const styleElements = this.appStyles.get(appId);
+
+        if (!styleElements || styleElements.length === 0) {
+            return; // No styles to unload
+        }
+
+        styleElements.forEach(link => {
+            link.remove();
+        });
+
+        this.appStyles.delete(appId);
+
+        console.log(`  ↳ Unloaded ${styleElements.length} stylesheet(s) for ${appId}`);
+    }
+
+    /**
      * Create the app context
      * @param {Object} manifest
      * @returns {Object}
@@ -281,6 +346,8 @@ export class AppManager {
             if (appInstance.close) {
                 await appInstance.close();
             }
+
+            this.unloadAppStyles(appId);
 
             this.runningApps.delete(appId);
             this.appModules.delete(appId);
