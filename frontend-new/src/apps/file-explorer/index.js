@@ -240,10 +240,6 @@ export default class FileExplorer {
 
     showContextMenu(x, y, type, selectedItem) {
         const items = this.buildContextMenuItems(type, selectedItem);
-        console.log('Context menu items:', items);
-        console.log('Selected item:', selectedItem);
-        console.log('Context menu type:', type);
-        console
         this.contextMenu.show(x, y, items);
     }
 
