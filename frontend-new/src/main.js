@@ -1,5 +1,4 @@
 import './style.css';
-import '@css/global.css';
 import '@css/startMenu.css';
 import '@css/context-menu.css';
 
