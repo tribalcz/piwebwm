@@ -5,6 +5,7 @@
   "description": "Browse and manage files and folders.",
   "author": "marsuch",
   "entryPoint": "index.js",
+  "styles": ["./styles/file-explorer.css","./styles/properties.css"],
   "ui": {
     "displayName": "File Manager",
     "icon": "fileManager",
