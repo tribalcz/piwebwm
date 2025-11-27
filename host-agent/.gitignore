@@ -1,0 +1,5 @@
+/target/
+/tests/
+Cargo.lock
+*.log
+config.local.yaml

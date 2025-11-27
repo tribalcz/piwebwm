@@ -1,0 +1,327 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            user-select: none;
+        }
+
+        #desktop {
+            width: 100%;
+            height: calc(100vh - 48px);
+            position: relative;
+        }
+
+        #taskbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 48px;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10000;
+        }
+
+        .taskbar-left {
+            flex: 0 0 auto;
+        }
+
+        .taskbar-center {
+            flex: 1;
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+            overflow-x: auto;
+        }
+
+        .taskbar-center::-webkit-scrollbar {
+            height: 0;
+        }
+
+        .taskbar-right {
+            flex: 0 0 auto;
+        }
+
+        .start-button {
+            padding: 8px 16px;
+            background: linear-gradient(90deg, #0078d4, #0063b1);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .start-button:hover {
+            background: linear-gradient(90deg, #106ebe, #0078d4);
+            transform: translateY(-1px);
+        }
+
+        .clock {
+            color: white;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .window {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            min-width: 300px;
+            min-height: 200px;
+            animation: windowOpen 0.2s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Resize handles */
+        .resize-handle {
+            position: absolute;
+        }
+
+        .resize-n {
+            top: 0;
+            left: 8px;
+            right: 8px;
+            height: 4px;
+            cursor: ns-resize;
+        }
+
+        .resize-s {
+            bottom: 0;
+            left: 8px;
+            right: 8px;
+            height: 4px;
+            cursor: ns-resize;
+        }
+
+        .resize-e {
+            right: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            cursor: ew-resize;
+        }
+
+        .resize-w {
+            left: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            cursor: ew-resize;
+        }
+
+        .resize-ne {
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+
+        .resize-nw {
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+
+        .resize-se {
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+
+        .resize-sw {
+            bottom: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+
+        .window.maximized .resize-handle {
+            display: none;
+        }
+
+        @keyframes windowOpen {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .window.minimized {
+            display: none;
+        }
+
+        .window.maximized {
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: calc(100vh - 48px) !important;
+            border-radius: 0;
+        }
+
+        .window-header {
+            background: linear-gradient(90deg, #0078d4 0%, #0063b1 100%);
+            color: white;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            flex-shrink: 0;
+        }
+
+        .window.maximized .window-header {
+            border-radius: 0;
+        }
+
+        .window.maximized .window-content {
+            overflow: auto;
+        }
+
+        .window-title {
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-controls button {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .window-controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .window-controls button.close:hover {
+            background: #e81123;
+        }
+
+        .window-content {
+            padding: 16px;
+            min-height: 150px;
+            flex: 1;
+            overflow: auto;
+        }
+
+        .window.dragging {
+            opacity: 0.9;
+        }
+
+        .taskbar-button {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+        }
+
+        .taskbar-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .taskbar-button.active {
+            background: rgba(0, 120, 212, 0.8);
+        }
+
+        .window.maximized .window-header {
+            cursor: move;
+        }
+
+        .window.maximized .window-header:active {
+            cursor: grabbing;
+        }
+
+        .window-header {
+            user-select: none; /* Prevent text selection on double click */
+        }
+
+        /* Inactive window styling */
+        .window:not(.active) .window-header {
+            background: linear-gradient(90deg, #6b7280 0%, #4b5563 100%);
+            opacity: 0.95;
+        }
+
+        .window:not(.active) {
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Active window styling */
+        .window.active .window-header {
+            background: linear-gradient(90deg, #0078d4 0%, #0063b1 100%);
+            opacity: 1;
+        }
+
+        .window.active {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Transition for smooth color change */
+        .window-header {
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        .window {
+            transition: box-shadow 0.2s;
+        }
+
+        svg:not([width]):not([height]) {
+            width: 24px;
+            height: 24px;
+        }
+
+        svg {
+            vertical-align: middle;
+        }

@@ -1,0 +1,29 @@
+{
+  "id": "icon-map",
+  "version": "1.0.0",
+  "name": "Icon Map",
+  "description": "Browse and search all available system icons with easy copy-to-clipboard functionality",
+  "author": ",arsuch",
+  "entryPoint": "index.js",
+  "styles": ["./styles/styles.css"],
+  "ui": {
+    "displayName": "Icon Map",
+    "icon": "search",
+    "category": "utilities",
+    "keywords": ["icons", "search", "svg", "design", "map", "dev", "development"]
+  },
+  "window": {
+    "defaultWidth": 800,
+    "defaultHeight": 600,
+    "minWidth": 600,
+    "minHeight": 400,
+    "resizable": true,
+    "persistent": false
+  },
+  "permissions": [],
+  "dependencies": {
+    "ContextMenu": "^1.0.0"
+  },
+  "status": "stable",
+  "enabled": true
+}

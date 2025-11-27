@@ -1,0 +1,32 @@
+server:
+  socket_path: "/var/run/webdesk.sock"
+  socket_permissions: 0o660
+  socket_group: "webdesk"
+
+security:
+  allowed_paths:
+    - "/home"
+    - "/media"
+    - "/mnt"
+    - "/tmp/webdesk"
+    - "/"
+
+  forbidden_patterns:
+    - ".ssh"
+    - ".gnupg"
+    - ".passwords"
+    - "id_rsa"
+    - "*.key"
+
+  max_file_size: 104857600
+  max_path_depth: 10
+  audit_enabled: true
+
+logging:
+  level: "info"
+  audit_path: "/var/log/webdesk/audit.log"
+
+performance:
+  max_concurrent_operations: 10
+  operation_timeout_secs: 30
+

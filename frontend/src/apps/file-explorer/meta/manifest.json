@@ -1,0 +1,37 @@
+{
+  "id": "file-explorer",
+  "version": "1.0.0",
+  "name": "File Explorer",
+  "description": "Browse and manage files and folders.",
+  "author": "marsuch",
+  "entryPoint": "index.js",
+  "styles": ["./styles/file-explorer.css","./styles/properties.css"],
+  "ui": {
+    "displayName": "File Manager",
+    "icon": "fileManager",
+    "category": "applications",
+    "keywords": ["files", "browser", "explorer", "folder", "filesystem"]
+  },
+  "window": {
+    "defaultWidth": 700,
+    "defaultHeight": 500,
+    "minWidth": 600,
+    "minHeight": 400,
+    "resizable": true,
+    "persistent": true
+  },
+  "permissions": [
+    "filesystem:read:/home/**",
+    "filesystem:read:/media/**",
+    "filesystem:write:/home/*/Documents/**",
+    "filesystem:write:/tmp/**",
+    "filesystem:delete:/tmp/**",
+    "clipboard"
+  ],
+  "dependencies": {
+    "ContextMenu": "^1.0.0",
+    "PropertiesDialog": "^1.0.0"
+  },
+  "status": "stable",
+  "enabled": true
+}

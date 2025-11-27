@@ -6,9 +6,32 @@ services:
     ports:
       - "8090:8080"
     volumes:
-      - ./frontend:/app/frontend:ro
+      - ./frontend-legacy:/app/frontend-legacy:ro
       - /var/run/webdesk.sock:/var/run/webdesk.sock
     environment:
       - HOST_AGENT_SOCKET=/var/run/webdesk.sock
       - GIN_MODE=release
     restart: unless-stopped
+    networks:
+      - webdesk
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: .docker/Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - webdesk
+    depends_on:
+      - backend
+
+networks:
+  webdesk:
+    driver: bridge
