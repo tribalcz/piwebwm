@@ -1,14 +1,18 @@
-import { getIcon} from "@utils/Icons.js";
+import { getIcon } from '@utils/Icons';
+import type { WindowManager } from '@core/WindowManager';
+import type { AppManager } from '@core/AppManager';
+import type { AppManifest } from '@core/types';
 
 export class StartMenu {
-    /**
-     * @param {import('@core/WindowManager').WindowManager} windowManager
-     * @param {import('@core/AppManager').AppManager | null} appManager
-     */
-    constructor(windowManager, appManager = null) {
+    private windowManager: WindowManager;
+    private appManager: AppManager | null;
+    private menuElement!: HTMLDivElement;
+    private isOpen: boolean;
+    private getIcon: typeof getIcon;
+
+    constructor(windowManager: WindowManager, appManager: AppManager | null = null) {
         this.windowManager = windowManager;
         this.appManager = appManager;
-        this.menuElement = null;
         this.isOpen = false;
         this.getIcon = getIcon;
 
@@ -16,7 +20,7 @@ export class StartMenu {
         this.setupEventListeners();
     }
 
-    initMenu() {
+    private initMenu(): void {
         const menu = document.createElement('div');
         menu.id = 'start-menu';
         menu.className = 'start-menu hidden';
@@ -25,11 +29,11 @@ export class StartMenu {
             <div class="start-menu-header">
                 <input type="text" class="start-menu-search" placeholder="Search applications..." />
             </div>
-            
+
             <div class="start-menu-content">
                 ${this.renderMenuContent()}
             </div>
-            
+
             <div class="start-menu-footer">
                 <button class="menu-footer-item" data-action="logout">
                     <span>${getIcon('logout', 16)}</span> Logout
@@ -49,9 +53,8 @@ export class StartMenu {
 
     /**
      * Render menu content from AppRegistry
-     * @returns {string} HTML for menu sections
      */
-    renderMenuContent() {
+    private renderMenuContent(): string {
         if (!this.appManager || !this.appManager.registry) {
             return '<div class="menu-section"><div style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">No apps available</div></div>';
         }
@@ -69,7 +72,7 @@ export class StartMenu {
         let html = '';
 
         // Category order and titles
-        const categoryConfig = {
+        const categoryConfig: Record<string, string> = {
             'applications': 'Applications',
             'system': 'System',
             'utilities': 'Utilities',
@@ -100,11 +103,9 @@ export class StartMenu {
 
     /**
      * Group apps by category
-     * @param {Array} apps - Array of app manifests
-     * @returns {Object} Apps grouped by category
      */
-    groupByCategory(apps) {
-        const groups = {};
+    private groupByCategory(apps: AppManifest[]): Record<string, AppManifest[]> {
+        const groups: Record<string, AppManifest[]> = {};
 
         apps.forEach(app => {
             const category = app.ui?.category || 'other';
@@ -121,10 +122,8 @@ export class StartMenu {
 
     /**
      * Render single menu item
-     * @param {Object} manifest - App manifest
-     * @returns {string} HTML for menu item
      */
-    renderMenuItem(manifest) {
+    private renderMenuItem(manifest: AppManifest): string {
         const icon = this.getAppIcon(manifest);
         const badge = this.renderBadge(manifest);
         const disabled = (!manifest.enabled || manifest.status === 'soon') ? 'disabled' : '';
@@ -134,8 +133,8 @@ export class StartMenu {
         const keywords = (manifest.ui?.keywords || []).join(' ');
         const name = manifest.name || '';
 
-        return `        
-        <button class="menu-item ${disabled}" 
+        return `
+        <button class="menu-item ${disabled}"
                 data-app="${manifest.id}"
                 data-name="${this.escapeHtml(name)}"
                 data-display-name="${this.escapeHtml(displayName)}"
@@ -151,7 +150,7 @@ export class StartMenu {
     /**
      * Refresh menu content (after apps are discovered)
      */
-    refreshMenu() {
+    refreshMenu(): void {
         if (!this.menuElement) return;
 
         const contentEl = this.menuElement.querySelector('.start-menu-content');
@@ -168,7 +167,7 @@ export class StartMenu {
     /**
      * Attach event listeners to menu items
      */
-    attachMenuItemListeners() {
+    private attachMenuItemListeners(): void {
         if (!this.menuElement) return;
 
         // Handle menu item clicks
@@ -178,16 +177,18 @@ export class StartMenu {
         });
 
         // Re-attach listeners
-        this.menuElement.querySelectorAll('.menu-item:not(.disabled)').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const appId = e.currentTarget.dataset.app;
+        this.menuElement.querySelectorAll<HTMLElement>('.menu-item:not(.disabled)').forEach(item => {
+            item.addEventListener('click', () => {
+                const appId = item.dataset.app;
+                if (!appId) return;
+
                 this.launchApp(appId);
                 this.close();
             });
         });
     }
 
-    setupEventListeners() {
+    private setupEventListeners(): void {
         // Toggle menu on start button click
         const startButton = document.getElementById('startBtn');
         if (startButton) {
@@ -199,31 +200,31 @@ export class StartMenu {
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
-            if (this.isOpen && !this.menuElement.contains(e.target)) {
+            if (this.isOpen && e.target instanceof Node && !this.menuElement.contains(e.target)) {
                 this.close();
             }
         });
 
         // Handle footer actions
-        this.menuElement.querySelectorAll('.menu-footer-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const action = e.currentTarget.dataset.action;
+        this.menuElement.querySelectorAll<HTMLElement>('.menu-footer-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const action = item.dataset.action;
                 this.handleSystemAction(action);
             });
         });
 
         // Search functionality
-        const searchInput = this.menuElement.querySelector('.start-menu-search');
+        const searchInput = this.menuElement.querySelector<HTMLInputElement>('.start-menu-search');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.filterMenu(e.target.value);
+            searchInput.addEventListener('input', () => {
+                this.filterMenu(searchInput.value);
             });
         }
 
         this.attachMenuItemListeners();
     }
 
-    toggle() {
+    toggle(): void {
         if (this.isOpen) {
             this.close();
         } else {
@@ -231,7 +232,7 @@ export class StartMenu {
         }
     }
 
-    open() {
+    open(): void {
         this.menuElement.classList.remove('hidden');
         this.menuElement.classList.add('visible');
         this.isOpen = true;
@@ -245,28 +246,28 @@ export class StartMenu {
         }
 
         // Focus search input
-        const searchInput = this.menuElement.querySelector('.start-menu-search');
+        const searchInput = this.menuElement.querySelector<HTMLInputElement>('.start-menu-search');
         if (searchInput) {
             setTimeout(() => searchInput.focus(), 100);
         }
     }
 
-    close() {
+    close(): void {
         this.menuElement.classList.remove('visible');
         this.menuElement.classList.add('hidden');
         this.isOpen = false;
 
         // Clear search
-        const searchInput = this.menuElement.querySelector('.start-menu-search');
+        const searchInput = this.menuElement.querySelector<HTMLInputElement>('.start-menu-search');
         if (searchInput) {
             searchInput.value = '';
             this.filterMenu('');
         }
     }
 
-    filterMenu(query) {
+    filterMenu(query: string): void {
         const lowerQuery = query.toLowerCase().trim();
-        const items = this.menuElement.querySelectorAll('.menu-item');
+        const items = this.menuElement.querySelectorAll<HTMLElement>('.menu-item');
 
         items.forEach(item => {
             const displayName = (item.dataset.displayName || '').toLowerCase();
@@ -290,13 +291,13 @@ export class StartMenu {
         });
     }
 
-    async launchApp(appId) {
+    async launchApp(appId: string): Promise<void> {
         if (!this.appManager) {
             console.error('AppManager is not available');
             return;
         }
 
-        try{
+        try {
             console.log(`Launching app: ${appId}...`);
 
             await this.appManager.launch(appId);
@@ -304,12 +305,13 @@ export class StartMenu {
             console.log(`App ${appId} launched successfully`);
         } catch (error) {
             console.error(`Failed to launch app ${appId}:`, error);
-            alert(`Failed to launch ${appId}: ${error.message}`);
+            const message = error instanceof Error ? error.message : String(error);
+            alert(`Failed to launch ${appId}: ${message}`);
         }
     }
 
-    handleSystemAction(action) {
-        switch(action) {
+    private handleSystemAction(action: string | undefined): void {
+        switch (action) {
             case 'logout':
                 if (confirm('Are you sure you want to logout?')) {
                     // Clear state and reload
@@ -329,8 +331,8 @@ export class StartMenu {
                 if (confirm('Are you sure you want to shutdown?')) {
                     // Show shutdown screen
                     document.body.innerHTML = `
-                        <div style="display: flex; align-items: center; justify-content: center; 
-                                    height: 100vh; background: #1a1a1a; color: white; 
+                        <div style="display: flex; align-items: center; justify-content: center;
+                                    height: 100vh; background: #1a1a1a; color: white;
                                     font-family: sans-serif; flex-direction: column; gap: 20px;">
                             <h1 style="font-size: 48px;">⏻</h1>
                             <h2>System Shutdown</h2>
@@ -346,12 +348,10 @@ export class StartMenu {
 
     /**
      * Render badge based on app status
-     * @param {Object} - manifets
-     * @return {string} - HTML for badge
      */
-    renderBadge(manifest) {
-        if (!manifest.enabled || manifest.status === 'sonn') {
-            return `<span class="menu-badge badge-soon">Sonn</span>`;
+    private renderBadge(manifest: AppManifest): string {
+        if (!manifest.enabled || manifest.status === 'soon') {
+            return `<span class="menu-badge badge-soon">Soon</span>`;
         }
 
         if (manifest.status === 'beta') {
@@ -367,21 +367,16 @@ export class StartMenu {
 
     /**
      * Get app icon from manifest
-     * @param {Object} - manifest
-     * @param {int} - icon size
-     * @return {string|*} - icon HTML
      */
-    getAppIcon(manifest, iconSize = 16) {
+    private getAppIcon(manifest: AppManifest, iconSize: number = 16): string {
         const iconName = manifest.ui?.icon || 'unknown';
         return getIcon(iconName, iconSize);
     }
 
     /**
      * Escape HTML special characters
-     * @param {string} text - text to escape
-     * @return {string} - escaped text
      */
-    escapeHtml(text) {
+    private escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;

@@ -4,7 +4,7 @@
  */
 
 import { Formatter } from '../utils/Formatter.js';
-import {getIcon} from "@utils/Icons.js";
+import {getIcon} from "@utils/Icons";
 
 export class WindowList {
     constructor(container, dataCollector) {

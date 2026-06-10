@@ -1,6 +1,9 @@
-import { getIcon } from '@utils/Icons.js';
+import { getIcon } from '@utils/Icons';
+import type { WindowManager } from '@core/WindowManager';
+import type { FileInfo } from '@/types/api';
+
 export class PropertiesDialog {
-    static show(windowManager, fileInfo) {
+    static show(windowManager: WindowManager, fileInfo: FileInfo): void {
         const content = this.renderContent(fileInfo);
 
         windowManager.createWindow({
@@ -14,7 +17,7 @@ export class PropertiesDialog {
         });
     }
 
-    static renderContent(file) {
+    static renderContent(file: FileInfo): string {
         const type = file.is_dir ? 'Folder' : 'File';
         const size = file.is_dir ? '-' : this.formatSize(file.size);
         const modified = new Date(file.modified * 1000).toLocaleString('cs-CZ');
@@ -26,34 +29,34 @@ export class PropertiesDialog {
                     <span class="properties-icon">${file.is_dir ? getIcon('file') : getIcon('txt')}</span>
                     <h3>${this.escapeHtml(file.name)}</h3>
                 </div>
-                
+
                 <div class="properties-content">
                     <div class="property-row">
                         <span class="property-label">Type:</span>
                         <span class="property-value">${type}</span>
                     </div>
-                    
+
                     <div class="property-row">
                         <span class="property-label">Location:</span>
                         <span class="property-value">${this.escapeHtml(file.path)}</span>
                     </div>
-                    
+
                     <div class="property-row">
                         <span class="property-label">Size:</span>
                         <span class="property-value">${size}</span>
                     </div>
-                    
+
                     <div class="property-row">
                         <span class="property-label">Modified:</span>
                         <span class="property-value">${modified}</span>
                     </div>
-                    
+
                     <div class="property-row">
                         <span class="property-label">Permissions:</span>
                         <span class="property-value">${permissions}</span>
                     </div>
                 </div>
-                
+
                 <div class="properties-footer">
                     <button class="btn-primary" onclick="window.closeCurrentWindow()">Close</button>
                 </div>
@@ -61,7 +64,7 @@ export class PropertiesDialog {
         `;
     }
 
-    static formatSize(bytes) {
+    static formatSize(bytes: number): string {
         if (bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -69,7 +72,7 @@ export class PropertiesDialog {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
-    static escapeHtml(text) {
+    static escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;

@@ -1,4 +1,10 @@
-const Icons = {
+export interface IconInfo {
+    name: string;
+    category: string;
+    svg: string;
+}
+
+const Icons: Record<string, string> = {
     //UI icons for windows
     back: '<svg style="transform:rotate(-90deg);transform-origin:center;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                            <circle cx="12" cy="12" r="10" fill="#f0f0f0"/>\n' +
@@ -274,7 +280,7 @@ const Icons = {
  * @param size
  * @return {*|string}
  */
-export function getIcon(iconName, size = 24) {
+export function getIcon(iconName: string, size: number = 24): string {
     const icon = Icons[iconName];
     if (!icon) {
         // Fallback icon
@@ -291,7 +297,7 @@ export function getIcon(iconName, size = 24) {
  * Get list of all available icon names
  * @returns {string[]} Array of icon names
  */
-export function getIconList() {
+export function getIconList(): string[] {
     return Object.keys(Icons);
 }
 
@@ -299,7 +305,7 @@ export function getIconList() {
  * Get icons grouped by category
  * @returns {Object} Icons organized by category
  */
-export function getIconCategories() {
+export function getIconCategories(): Record<string, string[]> {
     return {
         'UI Icons': ['back', 'up', 'home', 'refresh'],
         'Context Menu': ['openDir', 'openFile', 'rename', 'copy', 'cut', 'paste', 'delete', 'newDir', 'newFile'],
@@ -313,9 +319,9 @@ export function getIconCategories() {
  * Get all icons with metadata
  * @returns {Object[]} Array of icon objects with name, category, and preview
  */
-export function getAllIcons() {
+export function getAllIcons(): IconInfo[] {
     const categories = getIconCategories();
-    const result = [];
+    const result: IconInfo[] = [];
 
     Object.entries(categories).forEach(([category, iconNames]) => {
         iconNames.forEach(iconName => {
@@ -337,7 +343,7 @@ export function getAllIcons() {
  * @param {string} query - Search query
  * @returns {Object[]} Array of matching icon objects
  */
-export function searchIcons(query) {
+export function searchIcons(query: string): IconInfo[] {
     if (!query || query.trim() === '') {
         return getAllIcons();
     }
@@ -356,6 +362,6 @@ export function searchIcons(query) {
  * @param {string} iconName - Icon name to check
  * @returns {boolean} True if icon exists
  */
-export function hasIcon(iconName) {
+export function hasIcon(iconName: string): boolean {
     return iconName in Icons;
 }

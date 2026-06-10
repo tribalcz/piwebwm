@@ -1,5 +1,5 @@
-import { getIcon, getAllIcons } from '@utils/Icons.js';
-import { ClipboardManager } from '@utils/Clipboard.js';
+import { getIcon, getAllIcons } from '@utils/Icons';
+import { ClipboardManager } from '@utils/Clipboard';
 
 /**
  * IconGrid Component

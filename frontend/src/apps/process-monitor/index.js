@@ -8,7 +8,7 @@ import { AppList } from './components/AppList.js';
 import { WindowList } from './components/WindowList.js';
 import { EventLog } from './components/EventLog.js';
 import { DataCollector } from './utils/DataCollector.js';
-import {getIcon} from "@utils/Icons.js";
+import {getIcon} from "@utils/Icons";
 
 export default class ProcessMonitor {
     constructor(context) {

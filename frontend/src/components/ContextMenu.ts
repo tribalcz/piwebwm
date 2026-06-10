@@ -1,6 +1,19 @@
-export class ContextMenu{
-    constructor(){
-        this.menuElement = null;
+export interface ContextMenuItem {
+    label?: string;
+    action?: string;
+    icon?: string;
+    shortcut?: string;
+    disabled?: boolean;
+    separator?: boolean;
+    handler?: () => void;
+}
+
+export class ContextMenu {
+    private menuElement!: HTMLDivElement;
+    private isOpen: boolean;
+    private items: ContextMenuItem[];
+
+    constructor() {
         this.isOpen = false;
         this.items = [];
 
@@ -8,7 +21,7 @@ export class ContextMenu{
         this.setupGlobalListeners();
     }
 
-    createMenu(){
+    private createMenu(): void {
         const menu = document.createElement('div');
         menu.id = 'context-menu';
         menu.className = 'context-menu hidden';
@@ -16,10 +29,10 @@ export class ContextMenu{
         this.menuElement = menu;
     }
 
-    setupGlobalListeners(){
+    private setupGlobalListeners(): void {
         document.addEventListener('click', (e) => {
-            if (this.isOpen && !this.menuElement.contains(e.target)) {
-                this.close()
+            if (this.isOpen && e.target instanceof Node && !this.menuElement.contains(e.target)) {
+                this.close();
             }
         });
 
@@ -36,7 +49,7 @@ export class ContextMenu{
         }, true);
     }
 
-    show(x, y, items){
+    show(x: number, y: number, items: ContextMenuItem[]): void {
         this.items = items;
         this.renderItems();
 
@@ -48,10 +61,10 @@ export class ContextMenu{
         this.isOpen = true;
     }
 
-    renderItems(){
+    private renderItems(): void {
         const html = this.items.map(item => {
             if (item.separator) {
-                return '<div class="context-menu-separator"></div>'
+                return '<div class="context-menu-separator"></div>';
             }
 
             const disabled = item.disabled ? 'disabled' : '';
@@ -60,7 +73,7 @@ export class ContextMenu{
             return `
             <div class="context-menu-item ${disabled}" data-action="${item.action || ''}">
                 ${icon}
-                <soan class="context-menu-label">${item.label}</soan>
+                <span class="context-menu-label">${item.label}</span>
                 ${item.shortcut ? `<span class="context-menu-shortcut">${item.shortcut}</span>` : ''}
             </div>
             `;
@@ -68,7 +81,7 @@ export class ContextMenu{
 
         this.menuElement.innerHTML = html;
 
-        this.menuElement.querySelectorAll('.context-menu-item:not(.disabled)').forEach(item => {
+        this.menuElement.querySelectorAll<HTMLElement>('.context-menu-item:not(.disabled)').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const action = item.dataset.action;
@@ -83,7 +96,7 @@ export class ContextMenu{
         });
     }
 
-    adjustPosition(){
+    adjustPosition(): void {
         const rect = this.menuElement.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
@@ -93,11 +106,11 @@ export class ContextMenu{
         }
 
         if (rect.bottom > viewportHeight) {
-            this.menuElement.style.top = `${rect.top - rect.height -5}px`;
+            this.menuElement.style.top = `${rect.top - rect.height - 5}px`;
         }
     }
 
-    close(){
+    close(): void {
         this.menuElement.classList.remove('visible');
         this.menuElement.classList.add('hidden');
         this.isOpen = false;

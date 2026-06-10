@@ -10,10 +10,10 @@ import { EventBus } from '@core/EventBus';
 import { Store } from '@core/Store';
 import { AppManager } from '@core/AppManager';
 
-// Import components (still plain JS)
-import { TaskBar } from '@components/TaskBar.js';
-import { StartMenu } from '@components/StartMenu.js';
-import { Clock } from '@components/Clock.js';
+// Import components
+import { TaskBar } from '@components/TaskBar';
+import { StartMenu } from '@components/StartMenu';
+import { Clock } from '@components/Clock';
 
 declare global {
     interface Window {

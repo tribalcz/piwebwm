@@ -1,5 +1,5 @@
-import { ContextMenu } from '@components/ContextMenu.js';
-import { getIcon } from '@utils/Icons.js';
+import { ContextMenu } from '@components/ContextMenu';
+import { getIcon } from '@utils/Icons';
 
 import { SearchBar } from './components/SearchBar.js';
 import { IconGrid } from './components/IconGrid.js';

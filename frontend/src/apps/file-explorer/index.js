@@ -1,7 +1,7 @@
-import { ContextMenu } from '@components/ContextMenu.js';
-import { ClipboardManager } from '@utils/Clipboard.js';
-import { PropertiesDialog } from '@components/PropertiesDialog.js';
-import { getIcon } from '@utils/Icons.js';
+import { ContextMenu } from '@components/ContextMenu';
+import { ClipboardManager } from '@utils/Clipboard';
+import { PropertiesDialog } from '@components/PropertiesDialog';
+import { getIcon } from '@utils/Icons';
 
 // Import new components
 import { Toolbar } from './components/Toolbar.js';

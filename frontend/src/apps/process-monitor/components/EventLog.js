@@ -4,7 +4,7 @@
  */
 
 import {Formatter} from "@apps/process-monitor/utils/Formatter.js";
-import {getIcon} from "@utils/Icons.js";
+import {getIcon} from "@utils/Icons";
 
 export class EventLog {
     constructor(container, eventBus) {
