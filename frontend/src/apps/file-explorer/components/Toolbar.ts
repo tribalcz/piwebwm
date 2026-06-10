@@ -1,11 +1,23 @@
-import {getIcon} from "@utils/Icons";
+import { getIcon } from '@utils/Icons';
+
+export interface ToolbarCallbacks {
+    onBack?: () => void;
+    onUp?: () => void;
+    onRefresh?: () => void;
+    onNavigate?: (path: string) => void;
+    onHome?: () => void;
+}
 
 /**
  * Toolbar Component
  * Navigation buttons and breadcrumb
  */
 export class Toolbar {
-    constructor(container, callbacks) {
+    private container: Element;
+    private callbacks: ToolbarCallbacks;
+    private currentPath: string;
+
+    constructor(container: Element, callbacks?: ToolbarCallbacks) {
         this.container = container;
         this.callbacks = callbacks || {};
         this.currentPath = '/';
@@ -19,7 +31,7 @@ export class Toolbar {
     /**
      * Render toolbar HTML
      */
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="explorer-toolbar">
                 <button class="btn-back" title="Back">
@@ -39,7 +51,7 @@ export class Toolbar {
     /**
      * Setup event listeners for button
      */
-    setupEventListeners() {
+    private setupEventListeners(): void {
         const backBtn = this.container.querySelector('.btn-back');
         const upBtn = this.container.querySelector('.btn-up');
         const refreshBtn = this.container.querySelector('.btn-refresh');
@@ -71,13 +83,12 @@ export class Toolbar {
 
     /**
      * Update breadcrumb display
-     * @param {string} path - Current directory path
      */
-    updateBreadcrumb(path) {
+    updateBreadcrumb(path: string): void {
         this.currentPath = path;
 
         const breadcrumbEl = this.container.querySelector('.path-breadcrumb');
-        if(!breadcrumbEl) return;
+        if (!breadcrumbEl) return;
 
         const parts = path.split('/').filter(p => p);
 
@@ -97,10 +108,10 @@ export class Toolbar {
         breadcrumbEl.innerHTML = html;
 
         //Click listeners for breadcrumb items
-        breadcrumbEl.querySelectorAll('.breadcrumb-item:not(.active)').forEach(item => {
+        breadcrumbEl.querySelectorAll<HTMLElement>('.breadcrumb-item:not(.active)').forEach(item => {
             item.addEventListener('click', () => {
                 const targetPath = item.dataset.path;
-                if (this.callbacks.onNavigate) {
+                if (targetPath && this.callbacks.onNavigate) {
                     this.callbacks.onNavigate(targetPath);
                 }
             });
@@ -109,10 +120,8 @@ export class Toolbar {
 
     /**
      * Escape HTML to prevent XSS
-     * @param {string} text
-     * @returns {string}
      */
-    escapeHtml(text) {
+    private escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -121,7 +130,7 @@ export class Toolbar {
     /**
      * Cleanup
      */
-    destroy() {
+    destroy(): void {
         console.log('Toolbar component destroyed');
     }
 }

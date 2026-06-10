@@ -8,7 +8,7 @@ interface Listener {
     once: boolean;
 }
 
-interface EventLogEntry {
+export interface EventLogEntry {
     event: string;
     data: unknown;
     timestamp: number;

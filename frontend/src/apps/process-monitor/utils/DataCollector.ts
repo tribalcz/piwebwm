@@ -1,10 +1,65 @@
+import type { WindowManager } from '@core/WindowManager';
+import type { EventBus, EventBusStats, EventLogEntry } from '@core/EventBus';
+import type { Store, StoreStats } from '@core/Store';
+import type { AppManager } from '@core/AppManager';
+
+export interface DataCollectorDeps {
+    windowManager: WindowManager | null;
+    eventBus: EventBus | null;
+    store: Store | null;
+    appManager: AppManager | null;
+}
+
+export interface WindowStatsView {
+    total: number;
+    active: string | null;
+    minimized: number;
+    maximized: number;
+    normal: number;
+    zIndex?: number;
+}
+
+export interface AppStatsView {
+    registered: number;
+    running: number;
+    runningApps: string[];
+    categories?: Map<string, string[]>;
+}
+
+export interface SystemStatsView {
+    windows: WindowStatsView;
+    apps: AppStatsView;
+    events: EventBusStats;
+    store: StoreStats;
+    timestamp: number;
+}
+
+export interface RunningAppView {
+    id: string;
+    name: string;
+    status: string;
+    startTime: number;
+}
+
+export interface ActiveWindowView {
+    id: string;
+    title: string;
+    state: 'normal' | 'minimized' | 'maximized';
+    zIndex: string | number;
+    persistent: boolean;
+}
+
 /**
  * Data Collector - Centralized data collection and processing
- * Colets data from eventBus, store, app manager window manager
+ * Collects data from eventBus, store, app manager, window manager
  */
-
 export class DataCollector {
-    constructor({ windowManager, eventBus, store, appManager }) {
+    private windowManager: WindowManager | null;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private appManager: AppManager | null;
+
+    constructor({ windowManager, eventBus, store, appManager }: DataCollectorDeps) {
         this.windowManager = windowManager;
         this.eventBus = eventBus;
         this.store = store;
@@ -16,13 +71,14 @@ export class DataCollector {
     /**
      * Get system statistic from all managers
      */
-    getSystemStats() {
-        const stats = {windows: this.getWindowStats(),
+    getSystemStats(): SystemStatsView {
+        const stats: SystemStatsView = {
+            windows: this.getWindowStats(),
             apps: this.getAppStats(),
             events: this.getEventStats(),
             store: this.getStoreStats(),
             timestamp: Date.now()
-        }
+        };
 
         return stats;
     }
@@ -30,15 +86,15 @@ export class DataCollector {
     /**
      * Get window statistic from window manager
      */
-    getWindowStats() {
-        if (!this.windowManager || !this.windowManager.getStats) {
+    getWindowStats(): WindowStatsView {
+        if (!this.windowManager) {
             return {
                 total: 0,
                 active: null,
                 minimized: 0,
                 maximized: 0,
                 normal: 0,
-            }
+            };
         }
 
         return this.windowManager.getStats();
@@ -47,8 +103,8 @@ export class DataCollector {
     /**
      * Get app statistic from app manager
      */
-    getAppStats() {
-        if (!this.appManager || !this.appManager.getStats) {
+    getAppStats(): AppStatsView {
+        if (!this.appManager) {
             return {
                 registered: 0,
                 running: 0,
@@ -62,12 +118,13 @@ export class DataCollector {
     /**
      * Get event statistic from event bus
      */
-    getEventStats() {
-        if (!this.eventBus || !this.eventBus.getStats) {
+    getEventStats(): EventBusStats {
+        if (!this.eventBus) {
             return {
                 events: 0,
                 totalListeners: 0,
-                logSize: 0 };
+                logSize: 0
+            };
         }
 
         return this.eventBus.getStats();
@@ -76,8 +133,8 @@ export class DataCollector {
     /**
      * Get store statistic from store
      */
-    getStoreStats() {
-        if (!this.store || !this.store.getStats) {
+    getStoreStats(): StoreStats {
+        if (!this.store) {
             return {
                 keys: 0,
                 totalKeys: 0,
@@ -92,23 +149,21 @@ export class DataCollector {
     /**
      * Get list of running apps with metadata
      */
-    getRunningApps() {
+    getRunningApps(): RunningAppView[] {
         if (!this.appManager) {
             return [];
         }
 
-        const runningIds = this.appManager.getRunningApps ?
-            this.appManager.getRunningApps() : [];
+        const runningIds = this.appManager.getRunningApps();
 
         return runningIds.map(id => {
-            const appInstance = this.appManager.runningApps?.get(id);
-            const manifest = this.appManager.registry?.get(id);
+            const manifest = this.appManager?.registry.get(id);
 
             return {
                 id,
                 name: manifest?.name || id,
                 status: 'active',
-                startTime: appInstance?.startTime || Date.now() - 60000 // Mock for now
+                startTime: Date.now() - 60000 // Mock for now - apps do not track start time yet
             };
         });
     }
@@ -116,15 +171,15 @@ export class DataCollector {
     /**
      * Get list of active windows with state
      */
-    getActiveWindows() {
-        if (!this.windowManager || !this.windowManager.getAllWindows) {
+    getActiveWindows(): ActiveWindowView[] {
+        if (!this.windowManager) {
             return [];
         }
 
         const windows = this.windowManager.getAllWindows();
 
         return Array.from(windows.entries()).map(([id, win]) => {
-            let state = 'normal';
+            let state: ActiveWindowView['state'] = 'normal';
             if (win.minimized) state = 'minimized';
             else if (win.maximized) state = 'maximized';
 
@@ -141,8 +196,8 @@ export class DataCollector {
     /**
      * Get recent events from EventBus log
      */
-    getRecentEvents(limit = 50) {
-        if (!this.eventBus || !this.eventBus.getLog) {
+    getRecentEvents(limit: number = 50): EventLogEntry[] {
+        if (!this.eventBus) {
             return [];
         }
 

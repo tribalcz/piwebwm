@@ -3,11 +3,16 @@
  * Displays running applications with status and uptime
  */
 
-import { Formatter } from '../utils/Formatter.js';
-import {getIcon} from "@utils/Icons";
+import { Formatter } from '../utils/Formatter';
+import { getIcon } from '@utils/Icons';
+import type { DataCollector } from '../utils/DataCollector';
 
 export class AppList {
-    constructor(container, dataCollector) {
+    private container: Element;
+    private dataCollector: DataCollector;
+    private tbody: Element | null = null;
+
+    constructor(container: Element, dataCollector: DataCollector) {
         this.container = container;
         this.dataCollector = dataCollector;
 
@@ -15,7 +20,7 @@ export class AppList {
         console.log('AppList component initialized');
     }
 
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="app-list-panel" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
                 <div style="padding: 12px 16px; background: #f9f9f9; border-bottom: 1px solid #e0e0e0;">
@@ -42,7 +47,9 @@ export class AppList {
         this.tbody = this.container.querySelector('#app-tbody');
     }
 
-    update() {
+    update(): void {
+        if (!this.tbody) return;
+
         const apps = this.dataCollector.getRunningApps();
 
         if (apps.length === 0) {
@@ -76,7 +83,7 @@ export class AppList {
         `).join('');
     }
 
-    destroy() {
+    destroy(): void {
         console.log('AppList component destroyed');
     }
 }

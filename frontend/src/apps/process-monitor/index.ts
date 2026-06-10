@@ -3,15 +3,38 @@
  * Monitors WebDesk WM processes, events and resources
  */
 
-import { SystemStats } from './components/SystemStats.js';
-import { AppList } from './components/AppList.js';
-import { WindowList } from './components/WindowList.js';
-import { EventLog } from './components/EventLog.js';
-import { DataCollector } from './utils/DataCollector.js';
-import {getIcon} from "@utils/Icons";
+import { SystemStats } from './components/SystemStats';
+import { AppList } from './components/AppList';
+import { WindowList } from './components/WindowList';
+import { EventLog } from './components/EventLog';
+import { DataCollector } from './utils/DataCollector';
+import { getIcon } from '@utils/Icons';
+import type { AppContext, AppManifest, WebDeskApp } from '@core/types';
+import type { WindowManager } from '@core/WindowManager';
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
+import type { AppManager } from '@core/AppManager';
 
-export default class ProcessMonitor {
-    constructor(context) {
+export default class ProcessMonitor implements WebDeskApp {
+    private context: AppContext;
+    private windowManager: WindowManager;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private manifest: AppManifest;
+    private appManager: AppManager | null;
+
+    private windowId: string | null;
+    private refreshInterval: ReturnType<typeof setInterval> | null;
+    private dataCollector: DataCollector | null;
+
+    private components: {
+        systemStats: SystemStats | null;
+        appList: AppList | null;
+        windowList: WindowList | null;
+        eventLog: EventLog | null;
+    };
+
+    constructor(context: AppContext) {
         this.context = context;
         this.windowManager = context.windowManager;
         this.eventBus = context.eventBus || null;
@@ -33,7 +56,7 @@ export default class ProcessMonitor {
         console.log('Process Monitor App initialized');
     }
 
-    async init() {
+    async init(): Promise<void> {
         this.dataCollector = new DataCollector({
             windowManager: this.windowManager,
             eventBus: this.eventBus,
@@ -44,7 +67,7 @@ export default class ProcessMonitor {
         console.log('Process Monitor App init complete');
     }
 
-    async open() {
+    async open(): Promise<void> {
         const windowCount = this.windowManager.getAllWindows().size;
 
         this.windowId = this.windowManager.createWindow({
@@ -68,7 +91,7 @@ export default class ProcessMonitor {
         console.log('Process Monitor App opened');
     }
 
-    createLayout() {
+    private createLayout(): string {
         return `
             <div class="process-monitor" style="padding: 16px; height: 100%; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
                 <div id="system-stats" style="flex-shrink: 0;"></div>
@@ -84,8 +107,12 @@ export default class ProcessMonitor {
         `;
     }
 
-    onWindowCreated(id, windowEl) {
+    private onWindowCreated(id: string, windowEl: HTMLElement): void {
         const contentEl = windowEl.querySelector('.window-content');
+        if (!contentEl) {
+            console.error('Window content element not found');
+            return;
+        }
 
         this.initializeComponents(contentEl);
 
@@ -96,7 +123,7 @@ export default class ProcessMonitor {
         console.log('ProcessMonitor window created and components initialized');
     }
 
-    initializeComponents(contentEl) {
+    private initializeComponents(contentEl: Element): void {
         console.log('=== Initializing Components ===');
 
         if (!this.dataCollector) {
@@ -111,22 +138,22 @@ export default class ProcessMonitor {
 
         try {
             this.components.systemStats = new SystemStats(
-                contentEl.querySelector('#system-stats'),
+                contentEl.querySelector('#system-stats')!,
                 this.dataCollector
             );
 
             this.components.appList = new AppList(
-                contentEl.querySelector('#app-list'),
+                contentEl.querySelector('#app-list')!,
                 this.dataCollector
             );
 
             this.components.windowList = new WindowList(
-                contentEl.querySelector('#window-list'),
+                contentEl.querySelector('#window-list')!,
                 this.dataCollector
             );
 
             this.components.eventLog = new EventLog(
-                contentEl.querySelector('#event-log'),
+                contentEl.querySelector('#event-log')!,
                 this.eventBus
             );
 
@@ -136,7 +163,7 @@ export default class ProcessMonitor {
         }
     }
 
-    setupActions(contentEl) {
+    private setupActions(contentEl: Element): void {
         const btnExport = contentEl.querySelector('#btn-export');
         const btnClear = contentEl.querySelector('#btn-clear');
         const btnPause = contentEl.querySelector('#btn-pause');
@@ -154,15 +181,16 @@ export default class ProcessMonitor {
         }
     }
 
-    startMonitoring() {
+    private startMonitoring(): void {
         this.refreshInterval = setInterval(() => {
             this.updateAllComponents();
         }, 1000);
     }
 
-    updateAllComponents() {
-        Object.values(this.components).forEach(component => {
-            if (component && component.update && typeof component.update === 'function') {
+    private updateAllComponents(): void {
+        const components = Object.values(this.components) as ({ update?: () => void } | null)[];
+        components.forEach(component => {
+            if (component && typeof component.update === 'function') {
                 try {
                     component.update();
                 } catch (error) {
@@ -172,7 +200,9 @@ export default class ProcessMonitor {
         });
     }
 
-    exportStats() {
+    private exportStats(): void {
+        if (!this.dataCollector) return;
+
         const stats = this.dataCollector.getSystemStats();
         const data = JSON.stringify(stats, null, 2);
 
@@ -187,14 +217,14 @@ export default class ProcessMonitor {
         console.log('Stats exported');
     }
 
-    clearEvents() {
-        if (this.components.eventLog && this.components.eventLog.clear) {
+    private clearEvents(): void {
+        if (this.components.eventLog) {
             this.components.eventLog.clear();
         }
         console.log('Events cleared');
     }
 
-    togglePause() {
+    private togglePause(): void {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
@@ -205,14 +235,14 @@ export default class ProcessMonitor {
         }
     }
 
-    async close() {
+    async close(): Promise<void> {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
         }
 
         Object.values(this.components).forEach(component => {
-            if (component && component.destroy && typeof component.destroy === 'function') {
+            if (component && typeof component.destroy === 'function') {
                 try {
                     component.destroy();
                 } catch (error) {
@@ -223,7 +253,8 @@ export default class ProcessMonitor {
 
         if (this.eventBus) {
             this.eventBus.emit('app:closed', {
-                appId: this.manifest.id
+                appId: this.manifest.id,
+                timestamp: Date.now()
             });
         }
 

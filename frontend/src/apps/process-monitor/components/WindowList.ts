@@ -3,11 +3,16 @@
  * Displays active windows with state and z-index
  */
 
-import { Formatter } from '../utils/Formatter.js';
-import {getIcon} from "@utils/Icons";
+import { Formatter } from '../utils/Formatter';
+import { getIcon } from '@utils/Icons';
+import type { DataCollector } from '../utils/DataCollector';
 
 export class WindowList {
-    constructor(container, dataCollector) {
+    private container: Element;
+    private dataCollector: DataCollector;
+    private tbody: Element | null = null;
+
+    constructor(container: Element, dataCollector: DataCollector) {
         this.container = container;
         this.dataCollector = dataCollector;
 
@@ -15,7 +20,7 @@ export class WindowList {
         console.log('WindowList component initialized');
     }
 
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="window-list-panel" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
                 <div style="padding: 12px 16px; background: #f9f9f9; border-bottom: 1px solid #e0e0e0;">
@@ -42,7 +47,9 @@ export class WindowList {
         this.tbody = this.container.querySelector('#window-tbody');
     }
 
-    update() {
+    update(): void {
+        if (!this.tbody) return;
+
         const windows = this.dataCollector.getActiveWindows();
 
         if (windows.length === 0) {
@@ -82,8 +89,8 @@ export class WindowList {
         }).join('');
     }
 
-    getStateColor(state) {
-        switch(state) {
+    private getStateColor(state: string): string {
+        switch (state) {
             case 'normal': return '#22c55e';
             case 'minimized': return '#666';
             case 'maximized': return '#3b82f6';
@@ -91,8 +98,8 @@ export class WindowList {
         }
     }
 
-    getStateBg(state) {
-        switch(state) {
+    private getStateBg(state: string): string {
+        switch (state) {
             case 'normal': return '#dcfce7';
             case 'minimized': return '#f3f4f6';
             case 'maximized': return '#dbeafe';
@@ -100,7 +107,7 @@ export class WindowList {
         }
     }
 
-    destroy() {
+    destroy(): void {
         console.log('WindowList component destroyed');
     }
 }

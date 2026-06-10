@@ -1,11 +1,28 @@
 import { getIcon } from '@utils/Icons';
 
+export interface SearchFilters {
+    query: string;
+    category: string;
+}
+
+export interface SearchBarCallbacks {
+    onChange?: (filters: SearchFilters) => void;
+}
+
 /**
  * SearchBar Component
  * Search input with category filter
  */
 export class SearchBar {
-    constructor(container, callbacks) {
+    private container: Element;
+    private callbacks: SearchBarCallbacks;
+    private searchQuery: string;
+    private selectedCategory: string;
+    private searchInput!: HTMLInputElement;
+    private clearBtn!: HTMLElement;
+    private categorySelect!: HTMLSelectElement;
+
+    constructor(container: Element, callbacks?: SearchBarCallbacks) {
         this.container = container;
         this.callbacks = callbacks || {};
         this.searchQuery = '';
@@ -20,14 +37,14 @@ export class SearchBar {
     /**
      * Render search bar HTML
      */
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="icon-map-search-bar">
                 <div class="search-input-wrapper">
                     <span class="search-icon">${getIcon('search', 20)}</span>
-                    <input 
-                        type="text" 
-                        class="search-input" 
+                    <input
+                        type="text"
+                        class="search-input"
                         placeholder="Search icons by name or category..."
                         autocomplete="off"
                     />
@@ -35,7 +52,7 @@ export class SearchBar {
                         <span>${getIcon('clear', 16)}</span>
                     </button>
                 </div>
-                
+
                 <div class="category-filter">
                     <select class="category-select">
                         <option value="all">All Categories</option>
@@ -49,17 +66,17 @@ export class SearchBar {
             </div>
         `;
 
-        this.searchInput = this.container.querySelector('.search-input');
-        this.clearBtn = this.container.querySelector('.clear-search');
-        this.categorySelect = this.container.querySelector('.category-select');
+        this.searchInput = this.container.querySelector<HTMLInputElement>('.search-input')!;
+        this.clearBtn = this.container.querySelector<HTMLElement>('.clear-search')!;
+        this.categorySelect = this.container.querySelector<HTMLSelectElement>('.category-select')!;
     }
 
     /**
      * Setup event listeners
      */
-    setupEventListeners() {
-        this.searchInput.addEventListener('input', (e) => {
-            this.searchQuery = e.target.value;
+    private setupEventListeners(): void {
+        this.searchInput.addEventListener('input', () => {
+            this.searchQuery = this.searchInput.value;
             this.updateClearButton();
             this.notifyChange();
         });
@@ -72,8 +89,8 @@ export class SearchBar {
             this.notifyChange();
         });
 
-        this.categorySelect.addEventListener('change', (e) => {
-            this.selectedCategory = e.target.value;
+        this.categorySelect.addEventListener('change', () => {
+            this.selectedCategory = this.categorySelect.value;
             this.notifyChange();
         });
 
@@ -96,7 +113,7 @@ export class SearchBar {
     /**
      * Update clear button visibility
      */
-    updateClearButton() {
+    private updateClearButton(): void {
         if (this.searchQuery.length > 0) {
             this.clearBtn.style.display = 'flex';
         } else {
@@ -107,7 +124,7 @@ export class SearchBar {
     /**
      * Notify parent about changes
      */
-    notifyChange() {
+    private notifyChange(): void {
         if (this.callbacks.onChange) {
             this.callbacks.onChange({
                 query: this.searchQuery,
@@ -119,28 +136,28 @@ export class SearchBar {
     /**
      * Get current search query
      */
-    getQuery() {
+    getQuery(): string {
         return this.searchQuery;
     }
 
     /**
      * Get current category
      */
-    getCategory() {
+    getCategory(): string {
         return this.selectedCategory;
     }
 
     /**
      * Focus search input
      */
-    focus() {
+    focus(): void {
         this.searchInput.focus();
     }
 
     /**
      * Cleanup
      */
-    destroy() {
+    destroy(): void {
         console.log('SearchBar component destroyed');
     }
 }

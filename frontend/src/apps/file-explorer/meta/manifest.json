@@ -4,7 +4,7 @@
   "name": "File Explorer",
   "description": "Browse and manage files and folders.",
   "author": "marsuch",
-  "entryPoint": "index.js",
+  "entryPoint": "index.ts",
   "styles": ["./styles/file-explorer.css","./styles/properties.css"],
   "ui": {
     "displayName": "File Manager",

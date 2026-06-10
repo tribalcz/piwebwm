@@ -3,11 +3,16 @@
  * Displays system-wide statistics in a grid layout
  */
 
-import { Formatter } from '../utils/Formatter.js';
-import {getIcon} from "@utils/Icons";
+import { Formatter } from '../utils/Formatter';
+import { getIcon } from '@utils/Icons';
+import type { DataCollector } from '../utils/DataCollector';
 
 export class SystemStats {
-    constructor(container, dataCollector) {
+    private container: Element;
+    private dataCollector: DataCollector;
+    private statsGrid: Element | null = null;
+
+    constructor(container: Element, dataCollector: DataCollector) {
         this.container = container;
         this.dataCollector = dataCollector;
 
@@ -15,7 +20,7 @@ export class SystemStats {
         console.log('SystemStats component initialized');
     }
 
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="stats-panel" style="background: #f9f9f9; padding: 16px; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #333;">
@@ -28,7 +33,9 @@ export class SystemStats {
         this.statsGrid = this.container.querySelector('#stats-grid');
     }
 
-    update() {
+    update(): void {
+        if (!this.statsGrid) return;
+
         const stats = this.dataCollector.getSystemStats();
 
         this.statsGrid.innerHTML = `
@@ -44,7 +51,7 @@ export class SystemStats {
                     ${stats?.windows?.minimized || 0} min, ${stats?.windows?.maximized || 0} max
                 </div>
             </div>
-                
+
             <div class="stat-item" style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e5e5;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                     <span style="font-size: 18px;">${getIcon('appStats', 20)}</span>
@@ -57,7 +64,7 @@ export class SystemStats {
                     ${stats.apps.registered || 0} registered
                 </div>
             </div>
-            
+
             <div class="stat-item" style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e5e5;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                     <span style="font-size: 18px;">${getIcon('eventStats', 20)}</span>
@@ -70,7 +77,7 @@ export class SystemStats {
                     ${stats.events.events || 0} types
                 </div>
             </div>
-            
+
             <div class="stat-item" style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e5e5;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                     <span style="font-size: 18px;">${getIcon('storeStats', 20)}</span>
@@ -86,7 +93,7 @@ export class SystemStats {
         `;
     }
 
-    destroy() {
+    destroy(): void {
         console.log('SystemStats component destroyed');
     }
 }

@@ -6,10 +6,8 @@
 export class Formatter {
     /**
      * Format uptime (milliseconds to human readable)
-     * @param {number} startTime - Timestamp when started
-     * @returns {string} Formatted uptime (e.g., "2m 34s")
      */
-    static uptime(startTime) {
+    static uptime(startTime: number): string {
         const diff = Date.now() - startTime;
         const seconds = Math.floor(diff / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -24,10 +22,8 @@ export class Formatter {
 
     /**
      * Format time ago (e.g., "2s ago", "5m ago")
-     * @param {number} timestamp - Unix timestamp
-     * @returns {string} Time ago string
      */
-    static timeAgo(timestamp) {
+    static timeAgo(timestamp: number): string {
         const diff = Date.now() - timestamp;
         const seconds = Math.floor(diff / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -42,10 +38,8 @@ export class Formatter {
 
     /**
      * Format bytes to human readable
-     * @param {number} bytes
-     * @returns {string} Formatted bytes (e.g., "1.5 MB")
      */
-    static bytes(bytes) {
+    static bytes(bytes: number): string {
         if (bytes === 0) return '0 B';
         if (!bytes || bytes < 0) return 'N/A';
 
@@ -58,21 +52,16 @@ export class Formatter {
 
     /**
      * Format number with thousands separator
-     * @param {number} num
-     * @returns {string} Formatted number (e.g., "1,234")
      */
-    static number(num) {
+    static number(num: number | null | undefined): string {
         if (num === null || num === undefined) return '0';
         return num.toLocaleString();
     }
 
     /**
      * Truncate string with ellipsis
-     * @param {string} str
-     * @param {number} maxLength
-     * @returns {string} Truncated string
      */
-    static truncate(str, maxLength = 30) {
+    static truncate(str: string, maxLength: number = 30): string {
         if (!str) return '';
         if (str.length <= maxLength) return str;
         return str.substring(0, maxLength - 3) + '...';
@@ -80,30 +69,23 @@ export class Formatter {
 
     /**
      * Format timestamp to time string
-     * @param {number} timestamp
-     * @returns {string} Formatted time (e.g., "14:23:45")
      */
-    static time(timestamp) {
+    static time(timestamp: number): string {
         return new Date(timestamp).toLocaleTimeString('cs-CZ');
     }
 
     /**
      * Format percentage
-     * @param {number} value
-     * @param {number} total
-     * @returns {string} Percentage (e.g., "75%")
      */
-    static percentage(value, total) {
+    static percentage(value: number, total: number): string {
         if (!total || total === 0) return '0%';
         return Math.round((value / total) * 100) + '%';
     }
 
     /**
      * Escape HTML to prevent XSS
-     * @param {string} text
-     * @returns {string} Escaped text
      */
-    static escapeHtml(text) {
+    static escapeHtml(text: string): string {
         if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;

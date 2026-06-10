@@ -1,20 +1,46 @@
-import { ContextMenu } from '@components/ContextMenu';
+import { ContextMenu, type ContextMenuItem } from '@components/ContextMenu';
 import { ClipboardManager } from '@utils/Clipboard';
 import { PropertiesDialog } from '@components/PropertiesDialog';
 import { getIcon } from '@utils/Icons';
+import type { AppContext, AppManifest, WebDeskApp } from '@core/types';
+import type { WindowManager } from '@core/WindowManager';
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
 
 // Import new components
-import { Toolbar } from './components/Toolbar.js';
-import { FileList } from './components/FileList.js';
-import { StatusBar } from './components/StatusBar.js';
-import { FileOperations } from './utils/FileOperations.js';
+import { Toolbar } from './components/Toolbar';
+import { FileList, type SelectedFileItem } from './components/FileList';
+import { StatusBar } from './components/StatusBar';
+import { FileOperations } from './utils/FileOperations';
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * File Explorer - Browse and manage files and folders
  * Modular architecture with separated components
  */
-export default class FileExplorer {
-    constructor(context) {
+export default class FileExplorer implements WebDeskApp {
+    private context: AppContext;
+    private windowManager: WindowManager;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private manifest: AppManifest;
+
+    private currentPath: string;
+    private windowId: string | null;
+
+    private components: {
+        toolbar: Toolbar | null;
+        fileList: FileList | null;
+        statusBar: StatusBar | null;
+    };
+
+    private contextMenu: ContextMenu;
+    private clipboard: ClipboardManager;
+
+    constructor(context: AppContext) {
         this.context = context;
         this.windowManager = context.windowManager;
         this.eventBus = context.eventBus || null;
@@ -38,11 +64,11 @@ export default class FileExplorer {
         console.log('File Explorer initialized');
     }
 
-    async init() {
+    async init(): Promise<void> {
         console.log('File Explorer init');
     }
 
-    async open() {
+    async open(): Promise<void> {
         const windowCount = this.windowManager.getAllWindows().size;
 
         this.windowId = this.windowManager.createWindow({
@@ -59,7 +85,7 @@ export default class FileExplorer {
         console.log('File Explorer opened, windowId:', this.windowId);
     }
 
-    onWindowCreated(id, windowEl) {
+    private onWindowCreated(id: string, windowEl: HTMLElement): void {
         this.windowId = id;
 
         // Emit app:opened event with windowId
@@ -80,7 +106,7 @@ export default class FileExplorer {
         this.navigate(this.currentPath);
     }
 
-    renderSkeleton() {
+    private renderSkeleton(): string {
         return `
             <div class="file-explorer">
                 <div class="explorer-toolbar" id="toolbar-container"></div>
@@ -90,10 +116,15 @@ export default class FileExplorer {
         `;
     }
 
-    initializeComponents(windowEl) {
+    private initializeComponents(windowEl: HTMLElement): void {
         const toolbarContainer = windowEl.querySelector('#toolbar-container');
         const fileListContainer = windowEl.querySelector('#filelist-container');
         const statusBarContainer = windowEl.querySelector('#statusbar-container');
+
+        if (!toolbarContainer || !fileListContainer || !statusBarContainer) {
+            console.error('File Explorer containers not found in window');
+            return;
+        }
 
         // Initialize Toolbar
         this.components.toolbar = new Toolbar(toolbarContainer, {
@@ -117,9 +148,9 @@ export default class FileExplorer {
         console.log('File Explorer components initialized');
     }
 
-    setupKeyboardShortcuts() {
+    private setupKeyboardShortcuts(): void {
         document.addEventListener('keydown', (e) => {
-            const activeWindow = document.querySelector('.window.active');
+            const activeWindow = document.querySelector<HTMLElement>('.window.active');
             if (!activeWindow || activeWindow.dataset.id !== this.windowId) {
                 return;
             }
@@ -158,7 +189,7 @@ export default class FileExplorer {
         });
     }
 
-    async navigate(path) {
+    async navigate(path: string): Promise<void> {
         console.log('Navigating to:', path);
 
         this.components.statusBar?.showLoading();
@@ -177,12 +208,12 @@ export default class FileExplorer {
             console.log(`Loaded ${data.files.length} items from ${this.currentPath}`);
         } catch (error) {
             console.error('Failed to navigate:', error);
-            this.components.statusBar?.showError(error.message);
-            this.components.fileList?.showError(error.message);
+            this.components.statusBar?.showError(errorMessage(error));
+            this.components.fileList?.showError(errorMessage(error));
         }
     }
 
-    navigateUp() {
+    navigateUp(): void {
         if (this.currentPath === '/' || this.currentPath === '/home') {
             return;
         }
@@ -193,12 +224,12 @@ export default class FileExplorer {
         this.navigate(newPath || '/home');
     }
 
-    handleFileClick(path, type) {
+    private handleFileClick(path: string, type: string): void {
         // Selection is handled by FileList component
         console.log('File clicked:', path, type);
     }
 
-    async handleFileDoubleClick(path, type) {
+    private async handleFileDoubleClick(path: string, type: string): Promise<void> {
         console.log('File double-clicked:', path, type);
 
         if (type === 'dir') {
@@ -208,14 +239,14 @@ export default class FileExplorer {
         }
     }
 
-    async openFile(path) {
+    private async openFile(path: string): Promise<void> {
         this.components.statusBar?.setStatus('Opening file...');
 
         try {
             const content = await FileOperations.readFile(path);
 
             this.windowManager.createWindow({
-                title: path.split('/').pop(),
+                title: path.split('/').pop() || path,
                 x: 200,
                 y: 150,
                 width: 600,
@@ -234,17 +265,17 @@ export default class FileExplorer {
         } catch (error) {
             console.error('Failed to open file:', error);
             this.components.statusBar?.showError('Failed to open file');
-            alert('Failed to open file: ' + error.message);
+            alert('Failed to open file: ' + errorMessage(error));
         }
     }
 
-    showContextMenu(x, y, type, selectedItem) {
+    private showContextMenu(x: number, y: number, type: string, selectedItem: SelectedFileItem | null): void {
         const items = this.buildContextMenuItems(type, selectedItem);
         this.contextMenu.show(x, y, items);
     }
 
-    buildContextMenuItems(type, selectedItem) {
-        const items = [];
+    private buildContextMenuItems(type: string, selectedItem: SelectedFileItem | null): ContextMenuItem[] {
+        const items: ContextMenuItem[] = [];
 
         if (type === 'dir') {
             items.push(
@@ -255,7 +286,7 @@ export default class FileExplorer {
             );
         } else {
             items.push(
-                { icon: getIcon('openFile', 18), label: 'Open', axtion: 'open', handler: () => this.contextOpen(selectedItem) }
+                { icon: getIcon('openFile', 18), label: 'Open', action: 'open', handler: () => this.contextOpen(selectedItem) }
             );
         }
 
@@ -276,7 +307,7 @@ export default class FileExplorer {
         return items;
     }
 
-    contextOpen(item) {
+    private contextOpen(item: SelectedFileItem | null): void {
         if (!item) return;
 
         if (item.type === 'dir') {
@@ -286,21 +317,21 @@ export default class FileExplorer {
         }
     }
 
-    contextCopy(item) {
+    private contextCopy(item: SelectedFileItem | null): void {
         if (!item) return;
 
         this.clipboard.copy(item);
         this.components.statusBar?.setStatus(`Copied: ${item.name}`);
     }
 
-    contextCut(item) {
+    private contextCut(item: SelectedFileItem | null): void {
         if (!item) return;
 
         this.clipboard.cut(item);
         this.components.statusBar?.setStatus(`Cut: ${item.name}`);
     }
 
-    async contextPaste() {
+    private async contextPaste(): Promise<void> {
         if (this.clipboard.isEmpty()) return;
 
         this.components.statusBar?.setStatus('Pasting...');
@@ -312,12 +343,12 @@ export default class FileExplorer {
             });
         } catch (error) {
             console.error('Failed to paste:', error);
-            alert('Failed to paste: ' + error.message);
+            alert('Failed to paste: ' + errorMessage(error));
             this.components.statusBar?.showError('Paste failed');
         }
     }
 
-    async contextDelete(item) {
+    private async contextDelete(item: SelectedFileItem | null): Promise<void> {
         if (!item) return;
 
         const confirmMsg = item.type === 'dir'
@@ -334,12 +365,12 @@ export default class FileExplorer {
             this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to delete:', error);
-            alert('Failed to delete: ' + error.message);
+            alert('Failed to delete: ' + errorMessage(error));
             this.components.statusBar?.showError('Delete failed');
         }
     }
 
-    async contextRename(item) {
+    private async contextRename(item: SelectedFileItem | null): Promise<void> {
         if (!item) return;
 
         const newName = prompt(`Rename "${item.name}" to:`, item.name);
@@ -353,12 +384,12 @@ export default class FileExplorer {
             this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to rename:', error);
-            alert('Failed to rename: ' + error.message);
+            alert('Failed to rename: ' + errorMessage(error));
             this.components.statusBar?.showError('Rename failed');
         }
     }
 
-    async contextNewFile() {
+    private async contextNewFile(): Promise<void> {
         const fileName = prompt('Enter file name:');
         if (!fileName) return;
 
@@ -372,12 +403,12 @@ export default class FileExplorer {
             this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to create file:', error);
-            alert('Failed to create file: ' + error.message);
+            alert('Failed to create file: ' + errorMessage(error));
             this.components.statusBar?.showError('Create failed');
         }
     }
 
-    async contextNewFolder() {
+    private async contextNewFolder(): Promise<void> {
         const folderName = prompt('Enter folder name:');
         if (!folderName) return;
 
@@ -391,12 +422,12 @@ export default class FileExplorer {
             this.components.statusBar?.showReady();
         } catch (error) {
             console.error('Failed to create folder:', error);
-            alert('Failed to create folder: ' + error.message);
+            alert('Failed to create folder: ' + errorMessage(error));
             this.components.statusBar?.showError('Create failed');
         }
     }
 
-    async contextProperties(item) {
+    private async contextProperties(item: SelectedFileItem | null): Promise<void> {
         if (!item) return;
 
         try {
@@ -408,13 +439,13 @@ export default class FileExplorer {
         }
     }
 
-    escapeHtml(text) {
+    private escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    async close() {
+    async close(): Promise<void> {
         // Destroy components
         Object.values(this.components).forEach(component => {
             if (component && component.destroy) {
@@ -430,7 +461,8 @@ export default class FileExplorer {
         // Emit app:closed event
         if (this.eventBus) {
             this.eventBus.emit('app:closed', {
-                appId: this.manifest.id
+                appId: this.manifest.id,
+                timestamp: Date.now()
             });
         }
 

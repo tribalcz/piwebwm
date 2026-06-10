@@ -3,7 +3,11 @@
  * Displays status messages at the bottom of the file explorer
  */
 export class StatusBar {
-    constructor(container) {
+    private container: Element;
+    private statusText: string;
+    private statusTextEl: Element | null = null;
+
+    constructor(container: Element) {
         this.container = container;
         this.statusText = 'Ready';
 
@@ -15,7 +19,7 @@ export class StatusBar {
     /**
      * Render status bar HTML
      */
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="explorer-statusbar">
                 <span class="status-text">${this.statusText}</span>
@@ -27,9 +31,8 @@ export class StatusBar {
 
     /**
      * Set status message
-     * @param {string} text - Status message
      */
-    setStatus(text) {
+    setStatus(text: string): void {
         this.statusText = text;
 
         if (this.statusTextEl) {
@@ -40,37 +43,35 @@ export class StatusBar {
     /**
      * Show loading status
      */
-    showLoading() {
+    showLoading(): void {
         this.setStatus('Loading...');
     }
 
     /**
      * Show ready status
      */
-    showReady() {
+    showReady(): void {
         this.setStatus('Ready');
     }
 
     /**
      * Show file count
-     * @param {number} count - Number of items
      */
-    showItemCount(count) {
+    showItemCount(count: number): void {
         this.setStatus(`${count} item${count !== 1 ? 's' : ''}`);
     }
 
     /**
      * Show error status
-     * @param {string} error - Error message
      */
-    showError(error) {
+    showError(error: string): void {
         this.setStatus(`Error: ${error}`);
     }
 
     /**
      * Cleanup
      */
-    destroy() {
+    destroy(): void {
         console.log('StatusBar component destroyed');
     }
 }

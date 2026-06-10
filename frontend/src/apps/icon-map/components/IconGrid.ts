@@ -1,17 +1,28 @@
-import { getIcon, getAllIcons } from '@utils/Icons';
+import { getIcon, getAllIcons, type IconInfo } from '@utils/Icons';
 import { ClipboardManager } from '@utils/Clipboard';
+
+export interface IconGridCallbacks {
+    onContextMenu?: (x: number, y: number, iconName: string) => void;
+}
 
 /**
  * IconGrid Component
  * Displays icons in a grid layout with click-to-copy functionality
  */
 export class IconGrid {
-    constructor(container, callbacks) {
+    private container: Element;
+    private callbacks: IconGridCallbacks;
+    private allIcons: IconInfo[];
+    private filteredIcons: IconInfo[];
+    private clipboard: ClipboardManager;
+    private gridEl!: HTMLElement;
+    private statsCount!: HTMLElement;
+
+    constructor(container: Element, callbacks?: IconGridCallbacks) {
         this.container = container;
         this.callbacks = callbacks || {};
         this.allIcons = getAllIcons();
         this.filteredIcons = this.allIcons;
-        this.selectedIcon = null;
         this.clipboard = new ClipboardManager();
 
         this.render();
@@ -23,7 +34,7 @@ export class IconGrid {
     /**
      * Render grid structure
      */
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="icon-grid-wrapper">
                 <div class="icon-grid-stats">
@@ -35,8 +46,8 @@ export class IconGrid {
             </div>
         `;
 
-        this.gridEl = this.container.querySelector('.icon-grid');
-        this.statsCount = this.container.querySelector('.stats-count');
+        this.gridEl = this.container.querySelector<HTMLElement>('.icon-grid')!;
+        this.statsCount = this.container.querySelector<HTMLElement>('.stats-count')!;
 
         this.renderIcons();
     }
@@ -44,31 +55,38 @@ export class IconGrid {
     /**
      * Setup event listeners
      */
-    setupEventListeners() {
+    private setupEventListeners(): void {
         this.gridEl.addEventListener('click', (e) => {
-            const iconCard = e.target.closest('.icon-card');
+            if (!(e.target instanceof Element)) return;
+
+            const iconCard = e.target.closest<HTMLElement>('.icon-card');
             if (iconCard) {
                 const iconName = iconCard.dataset.icon;
-                this.handleIconClick(iconName);
+                if (iconName) {
+                    this.handleIconClick(iconName);
+                }
             }
         });
 
         this.gridEl.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            const iconCard = e.target.closest('.icon-card');
+
+            if (!(e.target instanceof Element)) return;
+
+            const iconCard = e.target.closest<HTMLElement>('.icon-card');
             if (iconCard) {
                 const iconName = iconCard.dataset.icon;
-                this.handleIconContextMenu(e.clientX, e.clientY, iconName);
+                if (iconName) {
+                    this.handleIconContextMenu(e.clientX, e.clientY, iconName);
+                }
             }
         });
     }
 
     /**
      * Filter icons based on search query and category
-     * @param {string} query - Search query
-     * @param {string} category - Category filter
      */
-    filter(query, category) {
+    filter(query: string, category: string): void {
         const lowerQuery = query.toLowerCase().trim();
 
         this.filteredIcons = this.allIcons.filter(icon => {
@@ -87,7 +105,7 @@ export class IconGrid {
     /**
      * Render icons to grid
      */
-    renderIcons() {
+    private renderIcons(): void {
         if (this.filteredIcons.length === 0) {
             this.gridEl.innerHTML = `
                 <div class="empty-state">
@@ -102,17 +120,15 @@ export class IconGrid {
 
         const html = this.filteredIcons.map(icon => this.renderIconCard(icon)).join('');
         this.gridEl.innerHTML = html;
-        this.statsCount.textContent = this.filteredIcons.length;
+        this.statsCount.textContent = String(this.filteredIcons.length);
 
         console.log(`Rendered ${this.filteredIcons.length} icons`);
     }
 
     /**
      * Render single icon card
-     * @param {Object} icon - Icon object
-     * @returns {string} HTML string
      */
-    renderIconCard(icon) {
+    private renderIconCard(icon: IconInfo): string {
         return `
             <div class="icon-card" data-icon="${icon.name}" title="Click to copy name">
                 <div class="icon-preview">
@@ -128,9 +144,8 @@ export class IconGrid {
 
     /**
      * Handle icon click - copy name to clipboard
-     * @param {string} iconName - Icon name
      */
-    handleIconClick(iconName) {
+    private handleIconClick(iconName: string): void {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(iconName)
                 .then(() => {
@@ -147,11 +162,8 @@ export class IconGrid {
 
     /**
      * Handle icon context menu - show options
-     * @param {number} x - Mouse X position
-     * @param {number} y - Mouse Y position
-     * @param {string} iconName - Icon name
      */
-    handleIconContextMenu(x, y, iconName) {
+    private handleIconContextMenu(x: number, y: number, iconName: string): void {
         if (this.callbacks.onContextMenu) {
             this.callbacks.onContextMenu(x, y, iconName);
         }
@@ -159,9 +171,8 @@ export class IconGrid {
 
     /**
      * Copy SVG code to clipboard
-     * @param {string} iconName - Icon name
      */
-    copySvgCode(iconName) {
+    copySvgCode(iconName: string): void {
         const iconObj = this.allIcons.find(i => i.name === iconName);
         if (!iconObj) return;
 
@@ -181,10 +192,8 @@ export class IconGrid {
 
     /**
      * Show copy feedback
-     * @param {string} iconName - Icon name
-     * @param {string} type - 'name' or 'svg'
      */
-    showCopyFeedback(iconName, type) {
+    private showCopyFeedback(iconName: string, type: 'name' | 'svg'): void {
         const card = this.gridEl.querySelector(`[data-icon="${iconName}"]`);
         if (!card) return;
 
@@ -208,9 +217,8 @@ export class IconGrid {
 
     /**
      * Fallback copy method for older browsers
-     * @param {string} text - Text to copy
      */
-    fallbackCopy(text) {
+    private fallbackCopy(text: string): void {
         const textarea = document.createElement('textarea');
         textarea.value = text;
         textarea.style.position = 'fixed';
@@ -231,10 +239,8 @@ export class IconGrid {
 
     /**
      * Escape HTML
-     * @param {string} text
-     * @returns {string}
      */
-    escapeHtml(text) {
+    private escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -242,16 +248,15 @@ export class IconGrid {
 
     /**
      * Get all icons
-     * @returns {Array}
      */
-    getAllIcons() {
+    getAllIcons(): IconInfo[] {
         return this.allIcons;
     }
 
     /**
      * Cleanup
      */
-    destroy() {
+    destroy(): void {
         console.log('IconGrid component destroyed');
     }
 }

@@ -14,10 +14,7 @@
     "resolveJsonModule": true,
     "useDefineForClassFields": true,
 
-    "allowJs": true,
-    "checkJs": false,
-
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
 
     "baseUrl": ".",
     "paths": {
@@ -29,5 +26,5 @@
       "@utils/*": ["src/utils/*"]
     }
   },
-  "include": ["src", "vite.config.js"]
+  "include": ["src", "vite.config.ts"]
 }

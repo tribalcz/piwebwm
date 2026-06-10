@@ -1,15 +1,34 @@
-import { ContextMenu } from '@components/ContextMenu';
+import { ContextMenu, type ContextMenuItem } from '@components/ContextMenu';
 import { getIcon } from '@utils/Icons';
+import type { AppContext, AppManifest, WebDeskApp } from '@core/types';
+import type { WindowManager } from '@core/WindowManager';
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
 
-import { SearchBar } from './components/SearchBar.js';
-import { IconGrid } from './components/IconGrid.js';
+import { SearchBar, type SearchFilters } from './components/SearchBar';
+import { IconGrid } from './components/IconGrid';
 
 /**
  * Icon Map - Browse and search system icons
  * Modular architecture with SearchBar and IconGrid components
  */
-export default class IconMap {
-    constructor(context) {
+export default class IconMap implements WebDeskApp {
+    private context: AppContext;
+    private windowManager: WindowManager;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private manifest: AppManifest;
+
+    private windowId: string | null;
+
+    private components: {
+        searchBar: SearchBar | null;
+        iconGrid: IconGrid | null;
+    };
+
+    private contextMenu: ContextMenu;
+
+    constructor(context: AppContext) {
         this.context = context;
         this.windowManager = context.windowManager;
         this.eventBus = context.eventBus || null;
@@ -28,11 +47,11 @@ export default class IconMap {
         console.log('Icon Map initialized');
     }
 
-    async init() {
+    async init(): Promise<void> {
         console.log('Icon Map init');
     }
 
-    async open() {
+    async open(): Promise<void> {
         const windowCount = this.windowManager.getAllWindows().size;
 
         this.windowId = this.windowManager.createWindow({
@@ -49,7 +68,7 @@ export default class IconMap {
         console.log('Icon Map opened, windowId:', this.windowId);
     }
 
-    onWindowCreated(id, windowEl) {
+    private onWindowCreated(id: string, windowEl: HTMLElement): void {
         this.windowId = id;
 
         if (this.eventBus) {
@@ -64,12 +83,12 @@ export default class IconMap {
         this.setupKeyboardShortcuts();
     }
 
-    renderSkeleton() {
+    private renderSkeleton(): string {
         return `
             <div class="icon-map-app">
                 <div class="icon-map-search" id="search-container"></div>
                 <div class="icon-map-content" id="grid-container"></div>
-                
+
                 <div class="icon-map-footer">
                     <div class="footer-hint">
                         Click [<span>${getIcon('copy', 16)}</span>] to copy icon name • Right-click for more options
@@ -79,9 +98,14 @@ export default class IconMap {
         `;
     }
 
-    initializeComponents(windowEl) {
+    private initializeComponents(windowEl: HTMLElement): void {
         const searchContainer = windowEl.querySelector('#search-container');
         const gridContainer = windowEl.querySelector('#grid-container');
+
+        if (!searchContainer || !gridContainer) {
+            console.error('Icon Map containers not found in window');
+            return;
+        }
 
         this.components.searchBar = new SearchBar(searchContainer, {
             onChange: (filters) => this.handleSearchChange(filters)
@@ -94,16 +118,16 @@ export default class IconMap {
         console.log('Icon Map components initialized');
     }
 
-    setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            const activeWindow = document.querySelector('.window.active');
+    private setupKeyboardShortcuts(): void {
+        document.addEventListener('keydown', () => {
+            const activeWindow = document.querySelector<HTMLElement>('.window.active');
             if (!activeWindow || activeWindow.dataset.id !== this.windowId) {
                 return;
             }
         });
     }
 
-    handleSearchChange(filters) {
+    private handleSearchChange(filters: SearchFilters): void {
         const { query, category } = filters;
 
         if (this.components.iconGrid) {
@@ -113,8 +137,8 @@ export default class IconMap {
         console.log('Search filters changed:', filters);
     }
 
-    showContextMenu(x, y, iconName) {
-        const items = [
+    private showContextMenu(x: number, y: number, iconName: string): void {
+        const items: ContextMenuItem[] = [
             {
                 icon: getIcon('copy', 18),
                 label: 'Copy Icon Name',
@@ -139,7 +163,7 @@ export default class IconMap {
         this.contextMenu.show(x, y, items);
     }
 
-    copyIconName(iconName) {
+    private copyIconName(iconName: string): void {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(iconName)
                 .then(() => {
@@ -151,13 +175,13 @@ export default class IconMap {
         }
     }
 
-    copySvgCode(iconName) {
+    private copySvgCode(iconName: string): void {
         if (this.components.iconGrid) {
             this.components.iconGrid.copySvgCode(iconName);
         }
     }
 
-    async close() {
+    async close(): Promise<void> {
         Object.values(this.components).forEach(component => {
             if (component && component.destroy) {
                 component.destroy();
@@ -170,7 +194,8 @@ export default class IconMap {
 
         if (this.eventBus) {
             this.eventBus.emit('app:closed', {
-                appId: this.manifest.id
+                appId: this.manifest.id,
+                timestamp: Date.now()
             });
         }
 

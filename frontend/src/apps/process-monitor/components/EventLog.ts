@@ -3,11 +3,21 @@
  * Displays live event stream with filtering and auto-scroll
  */
 
-import {Formatter} from "@apps/process-monitor/utils/Formatter.js";
-import {getIcon} from "@utils/Icons";
+import { Formatter } from '../utils/Formatter';
+import { getIcon } from '@utils/Icons';
+import type { EventBus, EventLogEntry } from '@core/EventBus';
 
 export class EventLog {
-    constructor(container, eventBus) {
+    private container: Element;
+    private eventBus: EventBus | null;
+    private events: EventLogEntry[];
+    private maxEvents: number;
+    private paused: boolean;
+    private eventList: HTMLElement | null = null;
+    private unsubscribe: (() => void) | null = null;
+    private pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    constructor(container: Element, eventBus: EventBus | null) {
         this.container = container;
         this.eventBus = eventBus;
         this.events = [];
@@ -15,14 +25,12 @@ export class EventLog {
         this.paused = false;
 
         this.render();
-
-        this.setupEventListener = this.setupEventListener.bind(this);
         this.setupEventListener();
 
         console.log('EventLog component initialized');
     }
 
-    render() {
+    private render(): void {
         this.container.innerHTML = `
             <div class="event-log-panel" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; height: 100%; display: flex; flex-direction: column;">
                 <div style="padding: 12px 16px; background: #f9f9f9; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;">
@@ -34,29 +42,22 @@ export class EventLog {
             </div>
         `;
 
-        this.eventList = this.container.querySelector('#event-list');
+        this.eventList = this.container.querySelector<HTMLElement>('#event-list');
     }
 
-    setupEventListener() {
-
-
+    private setupEventListener(): void {
         if (!this.eventBus) {
-            console.warn('EventBus not available for EventLog');
-            return;
-        }
-
-
-        if (typeof this.eventBus.on !== 'function') {;
+            console.warn('EventBus not available for EventLog, trying fallback');
             this.eventBus = window.webdesk?.eventBus || null;
 
-            if (!this.eventBus || typeof this.eventBus.on !== 'function') {
+            if (!this.eventBus) {
                 console.error('Fallback failed too!');
                 return;
             }
             console.log('Fallback successful!');
         }
 
-        this.unsubscribe = this.eventBus.on('*', (data) => {
+        this.unsubscribe = this.eventBus.on('*', () => {
             this.addEventFromLog();
         });
 
@@ -65,10 +66,11 @@ export class EventLog {
         }, 1000);
     }
 
-    updateFromLog() {
+    private updateFromLog(): void {
         if (this.paused) return;
+        if (!this.eventBus) return;
 
-        const recentEvents = this.eventBus.getLog ? this.eventBus.getLog(this.maxEvents) : [];
+        const recentEvents = this.eventBus.getLog(this.maxEvents);
 
         if (recentEvents.length > 0) {
             this.events = recentEvents;
@@ -76,11 +78,13 @@ export class EventLog {
         }
     }
 
-    addEventFromLog() {
+    private addEventFromLog(): void {
         this.updateFromLog();
     }
 
-    renderEvents() {
+    private renderEvents(): void {
+        if (!this.eventList) return;
+
         if (this.events.length === 0) {
             this.eventList.innerHTML = `
                 <div style="padding: 24px; text-align: center; color: #999; font-size: 13px;">
@@ -112,7 +116,7 @@ export class EventLog {
         this.eventList.scrollTop = 0; // Scroll to top when new events are added
     }
 
-    getEventIcon(eventName) {
+    private getEventIcon(eventName: string): string {
         if (eventName.startsWith('window:')) return getIcon('windowsStats', 16);
         if (eventName.startsWith('app:')) return getIcon('appStats', 16);
         if (eventName.startsWith('store:')) return getIcon('storeStats', 16);
@@ -120,28 +124,28 @@ export class EventLog {
         return '📡';
     }
 
-    getEventColor(eventName) {
+    private getEventColor(eventName: string): string {
         if (eventName.includes('error')) return '#ef4444';
         if (eventName.includes('closed') || eventName.includes('closing')) return '#f59e0b';
         if (eventName.includes('created') || eventName.includes('launched')) return '#22c55e';
         return '#3b82f6';
     }
 
-    clear() {
+    clear(): void {
         this.events = [];
         this.renderEvents();
         console.log('Event log cleared');
     }
 
-    pause() {
+    pause(): void {
         this.paused = true;
     }
 
-    resume() {
+    resume(): void {
         this.paused = false;
     }
 
-    destroy() {
+    destroy(): void {
         if (this.unsubscribe) {
             this.unsubscribe();
         }

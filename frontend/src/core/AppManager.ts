@@ -255,6 +255,13 @@ export class AppManager {
     }
 
     /**
+     * Lazy importers for app entry points, resolved at build time so the
+     * modules are part of the bundle (a raw dynamic import would only
+     * work against the dev server).
+     */
+    private static readonly appEntryModules = import.meta.glob('/src/apps/*/*.{js,ts}');
+
+    /**
      * Load the app module (dynamic import)
      */
     async loadAppModule(appId: string, entryPoint: string): Promise<AppModule> {
@@ -262,8 +269,22 @@ export class AppManager {
 
         console.log(`Loading app module from ${modulePath}`);
 
+        // Tolerate a stale extension in the manifest (index.js vs index.ts)
+        const candidates = [
+            modulePath,
+            modulePath.replace(/\.js$/, '.ts'),
+            modulePath.replace(/\.ts$/, '.js'),
+        ];
+        const importer = candidates
+            .map(path => AppManager.appEntryModules[path])
+            .find(Boolean);
+
+        if (!importer) {
+            throw new Error(`Failed to load app module ${modulePath}: entry point not found`);
+        }
+
         try {
-            const module = await import(/* @vite-ignore */ modulePath);
+            const module = await importer();
             return module as AppModule;
         } catch (error) {
             console.error(`Failed to load module ${modulePath}:`, error);

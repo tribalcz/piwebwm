@@ -5,7 +5,7 @@
     "description": "Welcome screen introducing WebDesk OS features and capabilities",
     "author": "marsuch",
 
-    "entryPoint": "index.js",
+    "entryPoint": "index.ts",
 
     "ui": {
     "displayName": "Welcome to WebDesk OS",
