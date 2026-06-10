@@ -40,7 +40,7 @@ func main() {
 		} else {
 			log.Println("⚠️  Host Agent socket exists but ping failed:", err)
 			log.Println("📦 Using MOCK data")
-			useMock = false
+			useMock = true
 		}
 	} else {
 		log.Println("⚠️  Host Agent socket not found at", socketPath)

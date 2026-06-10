@@ -9,7 +9,6 @@ security:
     - "/media"
     - "/mnt"
     - "/tmp/webdesk"
-    - "/"
 
   forbidden_patterns:
     - ".ssh"
