@@ -1,6 +1,10 @@
 import { getIcon} from "@utils/Icons.js";
 
 export class StartMenu {
+    /**
+     * @param {import('@core/WindowManager').WindowManager} windowManager
+     * @param {import('@core/AppManager').AppManager | null} appManager
+     */
     constructor(windowManager, appManager = null) {
         this.windowManager = windowManager;
         this.appManager = appManager;

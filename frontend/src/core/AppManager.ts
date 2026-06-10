@@ -1,6 +1,23 @@
-import { AppRegistry} from "@core/AppRegistry.js";
-import {WindowManager} from "@core/WindowManager.js";
+import { AppRegistry } from '@core/AppRegistry';
+import { WindowManager } from '@core/WindowManager';
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
+import type { AppContext, AppManifest, WebDeskApp, WebDeskAppConstructor } from '@core/types';
 
+interface AppModule {
+    default: WebDeskAppConstructor;
+}
+
+export interface AppManagerStats {
+    registered: number;
+    running: number;
+    runningApps: string[];
+    categories: Map<string, string[]>;
+}
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * App Manager
@@ -8,12 +25,25 @@ import {WindowManager} from "@core/WindowManager.js";
  * Discover, validation, launch, cleanup
  */
 export class AppManager {
-    constructor(eventBus = null, store = null, windowManager = null) {
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    readonly windowManager: WindowManager;
+    readonly registry: AppRegistry;
+    private runningApps: Map<string, WebDeskApp>;
+    private appModules: Map<string, AppModule>;
+    private windowToApp: Map<string, string>;
+    private appStyles: Map<string, HTMLLinkElement[]>;
+
+    constructor(
+        eventBus: EventBus | null = null,
+        store: Store | null = null,
+        windowManager: WindowManager | null = null
+    ) {
         this.eventBus = eventBus;
         this.store = store;
 
         this.windowManager = windowManager || new WindowManager(eventBus, store);
-        this.registry = new AppRegistry;
+        this.registry = new AppRegistry();
         this.runningApps = new Map();
         this.appModules = new Map();
         this.windowToApp = new Map();
@@ -37,7 +67,7 @@ export class AppManager {
     /**
      * Search the apps directory and find all applications (manifests)
      */
-    async discovery() {
+    async discovery(): Promise<void> {
         console.log('Searching for applications...');
 
         try {
@@ -48,18 +78,20 @@ export class AppManager {
             for (const [path, importFn] of Object.entries(manifestModules)) {
                 try {
                     console.log(`Loading application from ${path}`);
-                    const manifest = await importFn();
+                    const module = await importFn() as { default?: AppManifest };
 
-                    this.validateManifest(manifest.default || manifest);
+                    const manifest = module.default ?? (module as AppManifest);
 
-                    this.registry.register(manifest.default || manifest);
+                    this.validateManifest(manifest);
+
+                    this.registry.register(manifest);
                 } catch (error) {
                     console.error(`Failed to load ${path}:`, error);
                     this.showManifestError(path, error);
                 }
             }
 
-            console.log(`All applications (${this.registry.count()}) loaded.`)
+            console.log(`All applications (${this.registry.count()}) loaded.`);
 
             this.registry.getAll();
         } catch (error) {
@@ -69,11 +101,10 @@ export class AppManager {
     }
 
     /**
-     * Validate manifest aacording to the rules
-     * @param manifest
+     * Validate manifest according to the rules
      */
-    validateManifest(manifest) {
-        const errors = [];
+    validateManifest(manifest: AppManifest): void {
+        const errors: string[] = [];
 
         //Requirement fields
         if (!manifest.id) errors.push('Missing "id" field in manifest.');
@@ -111,11 +142,10 @@ export class AppManager {
 
     /**
      * Show error message for manifest
-     * @param {string} path
-     * @param {Error} error
      */
-    showManifestError(path, error) {
+    showManifestError(path: string, error: unknown): void {
         const appId = path.match(/apps\/([^/]+)\//)?.[1] || 'unknown';
+        const err = error instanceof Error ? error : new Error(String(error));
 
         const errorHtml = `
             <div style="padding:20px; font-famiy:monospace;">
@@ -127,14 +157,14 @@ export class AppManager {
                     <strong>File:</strong> ${path}
                 </p>
                 <div style="background: #fee; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
-                    <strong>Error:</strong></br> 
-                    ${error.message}
+                    <strong>Error:</strong></br>
+                    ${err.message}
                 </div>
-                <button onclick="navigator.clipboard.writeText('${error.stack}'); alert('Error copied to clipboard');">
+                <button onclick="navigator.clipboard.writeText('${err.stack}'); alert('Error copied to clipboard');">
                     Copy Error
                 </button>
                 <p style="margin-top: 16px; color: #666; font-size: 12px">
-                    This app will not be available until the manifest is fixed.                
+                    This app will not be available until the manifest is fixed.
                 </p>
             </div>
         `;
@@ -152,20 +182,18 @@ export class AppManager {
 
     /**
      * Launch the application
-     * @param {string} appId
-     * @param {Promise<Object>} Instance of the application
      */
-    async launch(appId) {
-        if (!this.registry.has(appId)) {
+    async launch(appId: string): Promise<WebDeskApp> {
+        const manifest = this.registry.get(appId);
+        if (!manifest) {
             throw new Error(`Application not found: ${appId}`);
         }
 
-        if (this.runningApps.has(appId)) {
+        const alreadyRunning = this.runningApps.get(appId);
+        if (alreadyRunning) {
             console.log(`Application ${appId} is already running.`);
-            return this.runningApps.get(appId);
+            return alreadyRunning;
         }
-
-        const manifest = this.registry.get(appId);
 
         if (this.eventBus) {
             this.eventBus.emit('app:launching', {
@@ -180,8 +208,8 @@ export class AppManager {
             await this.loadAppStyles(appId, manifest);
 
             const context = this.createAppContext(manifest);
-            const appClass = appModule.default;
-            const appInstance = new appClass(context);
+            const AppClass = appModule.default;
+            const appInstance = new AppClass(context);
 
             if (appInstance.init) {
                 await appInstance.init();
@@ -205,7 +233,7 @@ export class AppManager {
             }
 
             if (this.store) {
-                const running = this.store.get('apps.running') || [];
+                const running = this.store.get<string[]>('apps.running') || [];
                 this.store.set('apps.running', [...running, appId]);
                 this.store.set('apps.count', running.length + 1);
             }
@@ -217,7 +245,7 @@ export class AppManager {
             if (this.eventBus) {
                 this.eventBus.emit('app:error', {
                     appId,
-                    error: error.message,
+                    error: errorMessage(error),
                     phase: 'launch',
                     timestamp: Date.now()
                 });
@@ -228,38 +256,32 @@ export class AppManager {
 
     /**
      * Load the app module (dynamic import)
-     * @param {string} appId
-     * @param {string} entryPoint
-     * @returns {Promise<module>}
      */
-    async loadAppModule(appId, entryPoint){
+    async loadAppModule(appId: string, entryPoint: string): Promise<AppModule> {
         const modulePath = `/src/apps/${appId}/${entryPoint}`;
 
         console.log(`Loading app module from ${modulePath}`);
 
         try {
-            const module = await import(/* @vite-ignore*/ modulePath);
-            return module
+            const module = await import(/* @vite-ignore */ modulePath);
+            return module as AppModule;
         } catch (error) {
             console.error(`Failed to load module ${modulePath}:`, error);
-            throw new Error(`Failed to load app module ${modulePath}: ${error.message}`);
+            throw new Error(`Failed to load app module ${modulePath}: ${errorMessage(error)}`);
         }
     }
 
     /**
      * Load app styles from manifest
-     * @param {string} appId - Application ID
-     * @param {Object} manifest - Application manifest
-     * @returns {Promise<void>}
      */
-    async loadAppStyles(appId, manifest) {
+    async loadAppStyles(appId: string, manifest: AppManifest): Promise<void> {
         const styles = manifest.styles || [];
 
         if (styles.length === 0) {
             return; // No styles to load
         }
 
-        const loadedStyleElements = [];
+        const loadedStyleElements: HTMLLinkElement[] = [];
 
         for (const stylePath of styles) {
             try {
@@ -289,9 +311,8 @@ export class AppManager {
 
     /**
      * Unload app styles
-     * @param {string} appId - Application ID
      */
-    unloadAppStyles(appId) {
+    unloadAppStyles(appId: string): void {
         const styleElements = this.appStyles.get(appId);
 
         if (!styleElements || styleElements.length === 0) {
@@ -309,10 +330,8 @@ export class AppManager {
 
     /**
      * Create the app context
-     * @param {Object} manifest
-     * @returns {Object}
      */
-    createAppContext(manifest) {
+    createAppContext(manifest: AppManifest): AppContext {
         return {
             windowManager: this.windowManager,
             manifest: manifest,
@@ -325,9 +344,8 @@ export class AppManager {
 
     /**
      * Close the application
-     * @param {string} appId
      */
-    async close(appId) {
+    async close(appId: string): Promise<void> {
         console.log(`Closing application ${appId}`);
 
         const appInstance = this.runningApps.get(appId);
@@ -362,7 +380,7 @@ export class AppManager {
             }
 
             if (this.store) {
-                const running = this.store.get('apps.running', []);
+                const running = this.store.get<string[]>('apps.running', []);
                 const updated = running.filter(id => id !== appId);
                 this.store.set('apps.running', updated);
                 this.store.set('apps.count', updated.length);
@@ -373,7 +391,7 @@ export class AppManager {
             if (this.eventBus) {
                 this.eventBus.emit('app:error', {
                     appId,
-                    error: error.message,
+                    error: errorMessage(error),
                     phase: 'close',
                     timestamp: Date.now()
                 });
@@ -384,7 +402,7 @@ export class AppManager {
     /**
      * Setup event listeners for window lifecycle
      */
-    setupEventListeners() {
+    private setupEventListeners(): void {
         if (!this.eventBus) return;
 
         this.eventBus.on('window:closed', (data) => {
@@ -417,26 +435,22 @@ export class AppManager {
 
     /**
      * Return all running apps
-     * @returns {Array}
      */
-    getRunningApps() {
+    getRunningApps(): string[] {
         return Array.from(this.runningApps.keys());
     }
 
     /**
-     * Check of the apps is running
-     * @param {string} appId
-     * @return {boolean}
+     * Check if the app is running
      */
-    isRunning(appId) {
+    isRunning(appId: string): boolean {
         return this.runningApps.has(appId);
     }
 
     /**
      * hot reload handler
-     * @param appId
      */
-    async hotReload(appId) {
+    async hotReload(appId: string): Promise<void> {
         console.log(`Hot Reloading: ${appId}`);
 
         if (this.isRunning(appId)) {
@@ -447,9 +461,8 @@ export class AppManager {
 
     /**
      * Get app statistics
-     * @returns {Object}
      */
-    getStats() {
+    getStats(): AppManagerStats {
         return {
             registered: this.registry.count(),
             running: this.runningApps.size,

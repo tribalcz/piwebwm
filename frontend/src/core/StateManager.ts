@@ -1,5 +1,25 @@
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
+import type { WindowManager } from '@core/WindowManager';
+
+interface PersistedWindow {
+    id: string;
+    title: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    minimized: boolean;
+    maximized: boolean;
+    persistent: boolean;
+}
+
 export class StateManager {
-    constructor(windowManager, eventBus = null, store = null) {
+    private windowManager: WindowManager;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+
+    constructor(windowManager: WindowManager, eventBus: EventBus | null = null, store: Store | null = null) {
         this.windowManager = windowManager;
         this.eventBus = eventBus;
         this.store = store;
@@ -21,7 +41,7 @@ export class StateManager {
     /**
      * Setup event listeners
      */
-    setupEventListeners() {
+    private setupEventListeners(): void {
         if (!this.eventBus) return;
 
         this.eventBus.on('window:created', () => this.saveWindowState());
@@ -32,13 +52,13 @@ export class StateManager {
     }
 
     /**
-     * Setup window state
+     * Save window state
      */
-    saveWindowState() {
+    saveWindowState(): void {
         if (!this.store) return;
 
         const windows = this.windowManager.getAllWindows();
-        const windowsData = Array.from(windows.entries()).map(([id, win]) => ({
+        const windowsData: PersistedWindow[] = Array.from(windows.entries()).map(([id, win]) => ({
             id: id,
             title: win.config.title,
             x: parseInt(win.element.style.left) || 0,
@@ -58,10 +78,10 @@ export class StateManager {
     /**
      * Restore window state from Store
      */
-    restoreWindowState() {
+    restoreWindowState(): void {
         if (!this.store) return;
 
-        const savedWindows = this.store.get('persistence.windows', []);
+        const savedWindows = this.store.get<PersistedWindow[]>('persistence.windows', []);
 
         if (savedWindows.length === 0) {
             console.log('No windows to restore');
@@ -94,7 +114,7 @@ export class StateManager {
     /**
      * Clear saved state
      */
-    clearState() {
+    clearState(): void {
         if (!this.store) return;
 
         this.store.delete('persistence.windows');

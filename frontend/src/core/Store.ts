@@ -1,24 +1,40 @@
+type StoreState = Record<string, unknown>;
+
+type StoreCallback = (newValue: unknown, oldValue: unknown, key?: string) => void;
+
+export interface StoreStats {
+    keys: number;
+    totalKeys: number;
+    subscribers: number;
+    autoPersist: boolean;
+}
+
 /**
  * Centralized state manager
  */
-
 export class Store {
+    private state: StoreState;
+    private subscribers: Map<string, StoreCallback[]>;
+    private storageKey: string;
+    private autoPersist: boolean;
+    private persistTimeout: ReturnType<typeof setTimeout> | null;
+    private persistDebounce: number;
+
     constructor() {
         this.state = {};
         this.subscribers = new Map();
         this.storageKey = 'webdesk-store';
         this.autoPersist = false;
         this.persistTimeout = null;
+        this.persistDebounce = 500;
 
         console.log('Store initialized');
     }
 
     /**
      * Set value in the store
-     * @param {string} key
-     * @param {*}value
      */
-    set(key, value) {
+    set(key: string, value: unknown): void {
         const oldValue = this.get(key);
 
         if (key.includes('.')) {
@@ -36,36 +52,34 @@ export class Store {
 
     /**
      * Get a value from the store
-     * @param {string} key
-     * @param {*} defaultValue
-     * @return {*}
      */
-    get(key, defaultValue = null) {
+    get<T = unknown>(key: string): T | null;
+    get<T>(key: string, defaultValue: T): T;
+    get(key: string, defaultValue: unknown = null): unknown {
         if (key.includes('.')) {
             return this.getNested(key, defaultValue);
         }
 
-        return this.state.hasOwnProperty(key) ? this.state[key] : defaultValue;
+        return Object.prototype.hasOwnProperty.call(this.state, key)
+            ? this.state[key]
+            : defaultValue;
     }
 
     /**
-     * chack if key exists
-     * @param {string} key
-     * @return {boolean}
+     * Check if key exists
      */
-    has(key) {
+    has(key: string): boolean {
         if (key.includes('.')) {
             return this.getNested(key, undefined) !== undefined;
         }
 
-        return this.state.hasOwnProperty(key);
+        return Object.prototype.hasOwnProperty.call(this.state, key);
     }
 
     /**
      * Delete a key
-     * @param {string} key
      */
-    delete(key) {
+    delete(key: string): void {
         const oldValue = this.get(key);
 
         if (key.includes('.')) {
@@ -84,7 +98,7 @@ export class Store {
     /**
      * Clear all state
      */
-    clear() {
+    clear(): void {
         const oldState = { ...this.state };
         this.state = {};
 
@@ -101,26 +115,21 @@ export class Store {
 
     /**
      * Subscribe to a key change
-     * @param {string} key
-     * @param {Function} callback
-     * @return {Function}
      */
-    subscribe(key, callback) {
+    subscribe(key: string, callback: StoreCallback): () => void {
         if (!this.subscribers.has(key)) {
             this.subscribers.set(key, []);
         }
 
-        this.subscribers.get(key).push(callback);
+        this.subscribers.get(key)!.push(callback);
 
         return () => this.unsubscribe(key, callback);
     }
 
     /**
      * Unsubscribe from a key change
-     * @param {string} key
-     * @param {Function} callback
      */
-    unsubscribe(key, callback = null) {
+    unsubscribe(key: string, callback: StoreCallback | null = null): void {
         if (!this.subscribers.has(key)) return;
 
         if (callback === null) {
@@ -128,7 +137,7 @@ export class Store {
             return;
         }
 
-        const callbacks = this.subscribers.get(key);
+        const callbacks = this.subscribers.get(key)!;
         const filtered = callbacks.filter(cb => cb !== callback);
 
         if (filtered.length === 0) {
@@ -139,13 +148,9 @@ export class Store {
     }
 
     /**
-     * Notify osubsriber of a change
-     * @param {string} key
-     * @param {*} newValue
-     * @param {*} oldValue
-     * @private
+     * Notify subscribers of a change
      */
-    notify(key, newValue, oldValue) {
+    private notify(key: string, newValue: unknown, oldValue: unknown): void {
         if (newValue === oldValue) return;
 
         const callbacks = this.subscribers.get(key) || [];
@@ -185,13 +190,10 @@ export class Store {
 
     /**
      * Set nested value using dot notation
-     * @param {string} key
-     * @param {*} value
-     * @private
      */
-    setNested(key, value) {
+    private setNested(key: string, value: unknown): void {
         const parts = key.split('.');
-        let current = this.state;
+        let current: Record<string, unknown> = this.state;
 
         for (let i = 0; i < parts.length - 1; i++) {
             const part = parts[i];
@@ -200,7 +202,7 @@ export class Store {
                 current[part] = {};
             }
 
-            current = current[part];
+            current = current[part] as Record<string, unknown>;
         }
 
         current[parts[parts.length - 1]] = value;
@@ -208,18 +210,14 @@ export class Store {
 
     /**
      * Get nested value using dot notation
-     * @param {string} key
-     * @param {*} defaultValue
-     * @return {*}
-     * @private
      */
-    getNested(key, defaultValue = null) {
+    private getNested(key: string, defaultValue: unknown = null): unknown {
         const parts = key.split('.');
-        let current = this.state;
+        let current: unknown = this.state;
 
         for (const part of parts) {
             if (current && typeof current === 'object' && part in current) {
-                current = current[part];
+                current = (current as Record<string, unknown>)[part];
             } else {
                 return defaultValue;
             }
@@ -229,13 +227,11 @@ export class Store {
     }
 
     /**
-     * Delete nested kez
-     * @param {string} key
-     * @private
+     * Delete nested key
      */
-    deleteNested(key) {
+    private deleteNested(key: string): void {
         const parts = key.split('.');
-        let current = this.state;
+        let current: Record<string, unknown> = this.state;
 
         for (let i = 0; i < parts.length - 1; i++) {
             const part = parts[i];
@@ -244,7 +240,7 @@ export class Store {
                 return;
             }
 
-            current = current[part];
+            current = current[part] as Record<string, unknown>;
         }
 
         delete current[parts[parts.length - 1]];
@@ -252,17 +248,15 @@ export class Store {
 
     /**
      * Get all states
-     * @return {Object}
      */
-    getAll() {
-        return JSON.parse(JSON.stringify(this.state));
+    getAll(): StoreState {
+        return JSON.parse(JSON.stringify(this.state)) as StoreState;
     }
 
     /**
      * Set multiple values at once
-     * @param {Object} values - Object with key-value pairs
      */
-    setMultiple(values) {
+    setMultiple(values: StoreState): void {
         Object.entries(values).forEach(([key, value]) => {
             this.set(key, value);
         });
@@ -271,7 +265,7 @@ export class Store {
     /**
      * Persist state to local storage
      */
-    persist() {
+    persist(): void {
         try {
             const serialized = JSON.stringify({
                 state: this.state,
@@ -288,7 +282,7 @@ export class Store {
     /**
      * Restore state from local storage
      */
-    restore() {
+    restore(): boolean {
         try {
             const serialized = localStorage.getItem(this.storageKey);
 
@@ -297,7 +291,10 @@ export class Store {
                 return false;
             }
 
-            const { state, timestamp } = JSON.parse(serialized);
+            const { state, timestamp } = JSON.parse(serialized) as {
+                state: StoreState;
+                timestamp: number;
+            };
 
             const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
             if (Date.now() - timestamp > maxAge) {
@@ -318,10 +315,9 @@ export class Store {
     }
 
     /**
-     * Enable ayto persistance
-     * @paramn {Object} options
+     * Enable auto persistence
      */
-    enableAutoPersist(options = {}) {
+    enableAutoPersist(options: { debounce?: number } = {}): void {
         this.autoPersist = true;
         this.persistDebounce = options.debounce || 500;
 
@@ -331,7 +327,7 @@ export class Store {
     /**
      * Disable auto-persist
      */
-    disableAutoPersist() {
+    disableAutoPersist(): void {
         this.autoPersist = false;
 
         if (this.persistTimeout) {
@@ -344,9 +340,8 @@ export class Store {
 
     /**
      * Debounced persist (waits for inactivity before saving)
-     * @private
      */
-    debouncedPersist() {
+    private debouncedPersist(): void {
         if (this.persistTimeout) {
             clearTimeout(this.persistTimeout);
         }
@@ -358,15 +353,15 @@ export class Store {
 
     /**
      * Get statistics
-     * @returns {Object}
      */
-    getStats() {
-        const countKeys = (obj) => {
+    getStats(): StoreStats {
+        const countKeys = (obj: Record<string, unknown>): number => {
             let count = 0;
             for (const key in obj) {
                 count++;
-                if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    count += countKeys(obj[key]);
+                const value = obj[key];
+                if (typeof value === 'object' && value !== null) {
+                    count += countKeys(value as Record<string, unknown>);
                 }
             }
             return count;
@@ -383,7 +378,7 @@ export class Store {
     /**
      * Debug: Print current state and subscribers
      */
-    debug() {
+    debug(): void {
         console.log('=== Store Debug ===');
         console.log('Stats:', this.getStats());
         console.log('State:', this.getAll());

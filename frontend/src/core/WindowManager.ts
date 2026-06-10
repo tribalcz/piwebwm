@@ -1,5 +1,25 @@
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
+import type { WindowConfig, WindowData } from '@core/types';
+
+export interface WindowManagerStats {
+    total: number;
+    active: string | null;
+    minimized: number;
+    maximized: number;
+    normal: number;
+    zIndex: number;
+}
+
 export class WindowManager {
-    constructor(eventBus = null, store = null) {
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private windows: Map<string, WindowData>;
+    private activeWindow: string | null;
+    private zIndex: number;
+    private nextWindowId: number;
+
+    constructor(eventBus: EventBus | null = null, store: Store | null = null) {
         this.eventBus = eventBus;
         this.store = store;
         this.windows = new Map();
@@ -15,7 +35,7 @@ export class WindowManager {
         }
     }
 
-    createWindow(config) {
+    createWindow(config: WindowConfig): string {
         const id = Date.now().toString();
 
         const windowEl = document.createElement('div');
@@ -27,7 +47,7 @@ export class WindowManager {
         windowEl.style.height = `${config.height}px`;
         windowEl.style.minHeight = `300px`;
         windowEl.style.minWidth = `400px`;
-        windowEl.style.zIndex = ++this.zIndex;
+        windowEl.style.zIndex = String(++this.zIndex);
 
         windowEl.innerHTML = `
             <div class="window-header">
@@ -52,14 +72,23 @@ export class WindowManager {
             <div class="resize-handle resize-sw"></div>
         `;
 
-        document.getElementById('desktop').appendChild(windowEl);
+        const desktop = document.getElementById('desktop');
+        if (!desktop) {
+            throw new Error('Desktop element (#desktop) not found');
+        }
+        desktop.appendChild(windowEl);
 
         // Create taskbar button
         const taskbarButton = document.createElement('button');
         taskbarButton.className = 'taskbar-button active';
         taskbarButton.textContent = config.title;
         taskbarButton.dataset.windowId = id;
-        document.getElementById('taskbar-windows').appendChild(taskbarButton);
+
+        const taskbarWindows = document.getElementById('taskbar-windows');
+        if (!taskbarWindows) {
+            throw new Error('Taskbar element (#taskbar-windows) not found');
+        }
+        taskbarWindows.appendChild(taskbarButton);
 
         // Store window data
         this.windows.set(id, {
@@ -73,8 +102,9 @@ export class WindowManager {
 
         this.focusWindow(id);
 
-        if (config.onCreated && typeof config.onCreated === 'function') {
-            setTimeout(() => config.onCreated(id, windowEl), 0);
+        const onCreated = config.onCreated;
+        if (onCreated && typeof onCreated === 'function') {
+            setTimeout(() => onCreated(id, windowEl), 0);
         }
 
         if (this.eventBus) {
@@ -89,7 +119,7 @@ export class WindowManager {
         return id;
     }
 
-    focusWindow(id) {
+    focusWindow(id: string): void {
         const window = this.windows.get(id);
         if (!window) return;
 
@@ -101,7 +131,7 @@ export class WindowManager {
 
         // Add active class to this window
         window.element.classList.add('active');
-        window.element.style.zIndex = ++this.zIndex;
+        window.element.style.zIndex = String(++this.zIndex);
         window.taskbarButton.classList.add('active');
         this.activeWindow = id;
 
@@ -122,7 +152,7 @@ export class WindowManager {
         }
     }
 
-    minimizeWindow(id) {
+    minimizeWindow(id: string): void {
         const window = this.windows.get(id);
         if (!window) return;
 
@@ -137,7 +167,7 @@ export class WindowManager {
         }
     }
 
-    maximizeWindow(id) {
+    maximizeWindow(id: string): void {
         const window = this.windows.get(id);
         if (!window) return;
 
@@ -178,7 +208,7 @@ export class WindowManager {
         }
     }
 
-    toggleWindow(id) {
+    toggleWindow(id: string): void {
         const window = this.windows.get(id);
         if (!window) return;
 
@@ -199,7 +229,7 @@ export class WindowManager {
         }
     }
 
-    closeWindow(id) {
+    closeWindow(id: string): void {
         const window = this.windows.get(id);
         if (!window) return;
 
@@ -227,23 +257,22 @@ export class WindowManager {
         }, 200);
     }
 
-    getWindow(id) {
+    getWindow(id: string): WindowData | undefined {
         return this.windows.get(id);
     }
 
-    getAllWindows() {
+    getAllWindows(): Map<string, WindowData> {
         return this.windows;
     }
 
-    getActiveWindow() {
+    getActiveWindow(): string | null {
         return this.activeWindow;
     }
 
     /**
      * Get window statistics
-     * @returns {Object}
      */
-    getStats() {
+    getStats(): WindowManagerStats {
         let minimized = 0;
         let maximized = 0;
         let normal = 0;

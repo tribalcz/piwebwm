@@ -3,20 +3,31 @@ import '@css/startMenu.css';
 import '@css/context-menu.css';
 
 // Import modules
-import { WindowManager } from '@core/WindowManager.js';
-import { DragDropManager } from '@core/DragDropManager.js';
-import { StateManager } from '@core/StateManager.js';
-import { AppRegistry} from "@core/AppRegistry.js";
-import { EventBus } from '@core/EventBus.js';
-import { Store } from '@core/Store.js';
+import { WindowManager } from '@core/WindowManager';
+import { DragDropManager } from '@core/DragDropManager';
+import { StateManager } from '@core/StateManager';
+import { EventBus } from '@core/EventBus';
+import { Store } from '@core/Store';
+import { AppManager } from '@core/AppManager';
 
-// Import components
+// Import components (still plain JS)
 import { TaskBar } from '@components/TaskBar.js';
 import { StartMenu } from '@components/StartMenu.js';
 import { Clock } from '@components/Clock.js';
-import { AppManager } from "@core/AppManager.js";
 
-document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
+declare global {
+    interface Window {
+        webdesk: {
+            eventBus: EventBus;
+            store: Store;
+            windowManager: WindowManager;
+            appManager: AppManager;
+            stateManager: StateManager;
+        };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('Init EventBus...');
     const eventBus = new EventBus();
 
@@ -25,16 +36,16 @@ document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
 
     store.restore();
 
-    store.enableAutoPersist({debounce: 500});
+    store.enableAutoPersist({ debounce: 500 });
 
     console.log('Init WindowManager...');
     const windowManager = new WindowManager(eventBus, store);
 
     console.log('Init DragDropManager...');
-    const dragDropManager = new DragDropManager(windowManager, eventBus);
+    new DragDropManager(windowManager, eventBus);
 
     console.log('Init StateManager...');
-    const stateManager = new StateManager(windowManager, eventBus, store    );
+    const stateManager = new StateManager(windowManager, eventBus, store);
 
     console.log('Init AppManager...');
     const appManager = new AppManager(eventBus, store, windowManager);
@@ -42,10 +53,10 @@ document.addEventListener('DOMContentLoaded', async () => {  // ✅ async
     console.log('Running app discovery...');
     await appManager.discovery();
 
-    console.log('Discovered apps:', appManager.registry.getAll().map(a => a.id).join(', '))
+    console.log('Discovered apps:', appManager.registry.getAll().map(a => a.id).join(', '));
 
-    const taskBar = new TaskBar(windowManager);
-    const startMenu = new StartMenu(windowManager, appManager);
+    new TaskBar(windowManager);
+    new StartMenu(windowManager, appManager);
     const clock = new Clock();
 
     clock.start();

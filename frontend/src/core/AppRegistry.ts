@@ -1,9 +1,13 @@
+import type { AppManifest } from '@core/types';
 
 /**
  * AppRegistry - Central repository for application metadata
  * Provides a query API for searching and filtering
  */
 export class AppRegistry {
+    private apps: Map<string, AppManifest>;
+    private categories: Map<string, string[]>;
+
     constructor() {
         this.apps = new Map();
         this.categories = new Map();
@@ -12,9 +16,8 @@ export class AppRegistry {
 
     /**
      * Register an application
-     * @param {Object} manifest - Application manifest
      */
-    register(manifest) {
+    register(manifest: AppManifest): void {
         if (!manifest || !manifest.id) {
             throw new Error('Invalid manifest: missing id');
         }
@@ -27,22 +30,21 @@ export class AppRegistry {
         if (!this.categories.has(category)) {
             this.categories.set(category, []);
         }
-        this.categories.get(category).push(appId);
+        this.categories.get(category)!.push(appId);
 
         console.log(`App registered: ${appId} (${category})`);
     }
 
     /**
      * Unregister an application
-     * @param {string} appId - Application ID
      */
-    unregister(appId) {
+    unregister(appId: string): void {
         const manifest = this.apps.get(appId);
         if (!manifest) return;
 
-        const cateogory = manifest.ui?.category || 'other';
-        if (this.categories.has(cateogory)) {
-            const apps = this.categories.get(cateogory);
+        const category = manifest.ui?.category || 'other';
+        const apps = this.categories.get(category);
+        if (apps) {
             const index = apps.indexOf(appId);
             if (index > -1) {
                 apps.splice(index, 1);
@@ -55,54 +57,46 @@ export class AppRegistry {
 
     /**
      * Get an application by ID
-     * @param appId
-     * @returns {Object|null}
      */
-    get(appId) {
+    get(appId: string): AppManifest | null {
         return this.apps.get(appId) || null;
     }
 
     /**
      * Check if an application is registered
-     * @param appId
-     * @returns {boolean}
      */
-    has(appId) {
+    has(appId: string): boolean {
         return this.apps.has(appId);
     }
 
     /**
      * Get all registered applications
-     * @returns {Array}
      */
-    getAll() {
+    getAll(): AppManifest[] {
         return Array.from(this.apps.values());
     }
 
     /**
      * Return all apps in a specific category
-     * @param {string} category - Category name
-     * @returns {Array}
      */
-    getByCategory(category) {
+    getByCategory(category: string): AppManifest[] {
         const appIds = this.categories.get(category) || [];
-        return appIds.map(id => this.apps.get(id)).filter(Boolean);
+        return appIds
+            .map(id => this.apps.get(id))
+            .filter((manifest): manifest is AppManifest => Boolean(manifest));
     }
 
     /**
-     * Retun all categories
-     * @returns {Array}
+     * Return all categories
      */
-    getCategorie() {
+    getCategorie(): Map<string, string[]> {
         return this.categories;
     }
 
     /**
-     * earch for application by keywords
-     * @param {string}
-     * @returns {Array}
+     * Search for application by keywords
      */
-    search(query) {
+    search(query: string): AppManifest[] {
         const lowerQuery = query.toLowerCase();
         return this.getAll().filter(manifest => {
             if (manifest.name?.toLowerCase().includes(lowerQuery)) return true;
@@ -118,28 +112,26 @@ export class AppRegistry {
     }
 
     /**
-     * Coutn the number of registered apps
-     * @returns {number}
+     * Count the number of registered apps
      */
-    count() {
+    count(): number {
         return this.apps.size;
     }
 
     /**
-     * Clear allregistered apps ( ONLY FOR TESTING )
+     * Clear all registered apps ( ONLY FOR TESTING )
      * TODO: remove this method after testing
      */
-    clear() {
+    clear(): void {
         this.apps.clear();
         this.categories.clear();
         console.log('AppRegistry cleared');
     }
 
     /**
-     * Export the registrz apps to JSON ( FOR DEBUGGING )
-     * @returns {Object}
+     * Export the registry apps to JSON ( FOR DEBUGGING )
      */
-    toJSON() {
+    toJSON(): { apps: AppManifest[]; categories: [string, string[]][] } {
         return {
             apps: Array.from(this.apps.values()),
             categories: Array.from(this.categories.entries())
