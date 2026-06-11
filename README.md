@@ -15,8 +15,13 @@ A modern web-based desktop environment designed for headless Linux systems, part
 ```bash
 git clone https://github.com/[username]/webdesk-os.git
 cd webdesk-os
-docker-compose up -d
+./install.sh          # check prerequisites (Docker, Compose, ports, …)
+./install.sh --start  # check, then bring the stack up
 ```
+
+`install.sh` only inspects the system unless you pass `--start`; it reports each
+prerequisite as `[ OK ] / [WARN] / [FAIL]` and refuses to start if anything
+hard-fails. You can also start manually with `docker-compose up -d`.
 
 ## Authentication
 
