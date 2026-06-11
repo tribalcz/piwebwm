@@ -1,0 +1,12 @@
+{
+  "id": "word-count",
+  "type": "notepad-module",
+  "host": "notepad",
+  "version": "1.0.0",
+  "name": "Word Count",
+  "description": "Shows live word and character counts in the status bar.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "slots": ["statusbar"],
+  "enabledByDefault": true
+}

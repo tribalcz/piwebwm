@@ -1,0 +1,31 @@
+{
+  "id": "notepad",
+  "version": "1.0.0",
+  "name": "Notepad",
+  "description": "A basic rich-text notepad, extensible through modules.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "styles": ["./styles/notepad.css"],
+  "ui": {
+    "displayName": "Notepad",
+    "icon": "txt",
+    "category": "applications",
+    "keywords": ["notepad", "notes", "editor", "text", "write", "modules"]
+  },
+  "window": {
+    "defaultWidth": 640,
+    "defaultHeight": 480,
+    "minWidth": 480,
+    "minHeight": 320,
+    "resizable": true,
+    "persistent": true
+  },
+  "permissions": [
+    "clipboard"
+  ],
+  "dependencies": {
+    "ContextMenu": "^1.0.0"
+  },
+  "status": "stable",
+  "enabled": true
+}

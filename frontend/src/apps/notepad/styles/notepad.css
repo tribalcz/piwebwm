@@ -1,0 +1,201 @@
+.notepad {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Toolbar */
+.notepad-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f7f7f7;
+    flex-wrap: wrap;
+}
+
+.np-toolbar-format,
+.np-toolbar-modules {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.np-toolbar-modules:not(:empty) {
+    padding-left: 4px;
+    margin-left: 4px;
+    border-left: 1px solid #ddd;
+}
+
+.np-toolbar-spacer {
+    flex: 1;
+}
+
+.np-tool-btn {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: #333;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.np-tool-btn:hover {
+    background: #e8e8e8;
+    border-color: #ddd;
+}
+
+.np-modules-btn {
+    color: #555;
+}
+
+/* Editor */
+.notepad-editor-host {
+    flex: 1;
+    overflow: auto;
+}
+
+.notepad-editor {
+    min-height: 100%;
+    padding: 16px 20px;
+    outline: none;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #222;
+}
+
+.notepad-editor h1 { font-size: 22px; margin: 0.4em 0; }
+.notepad-editor h2 { font-size: 18px; margin: 0.4em 0; }
+.notepad-editor p { margin: 0.3em 0; }
+.notepad-editor ul,
+.notepad-editor ol { margin: 0.3em 0 0.3em 1.4em; }
+
+/* Status bar */
+.notepad-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 10px;
+    border-top: 1px solid #e0e0e0;
+    background: #f7f7f7;
+    font-size: 12px;
+    color: #666;
+}
+
+.np-status-message {
+    flex: 1;
+}
+
+.np-status-modules {
+    display: flex;
+    gap: 12px;
+}
+
+.np-status-item {
+    color: #555;
+}
+
+/* Modules dialog */
+.np-modules-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 48px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.np-modules-panel {
+    width: 360px;
+    max-width: calc(100% - 32px);
+    max-height: calc(100% - 80px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.np-modules-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.np-modules-header h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #333;
+}
+
+.np-modules-close {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #888;
+}
+
+.np-modules-list {
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.np-modules-empty {
+    padding: 24px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.np-module-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.np-module-row:hover {
+    background: #f5f5f5;
+}
+
+.np-module-row input {
+    margin-top: 2px;
+}
+
+.np-module-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.np-module-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.np-module-name small {
+    font-weight: 400;
+    color: #999;
+}
+
+.np-module-desc {
+    font-size: 12px;
+    color: #777;
+}
