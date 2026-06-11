@@ -35,6 +35,9 @@
 }
 
 .np-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     min-width: 28px;
     height: 28px;
     padding: 0 8px;
@@ -45,6 +48,11 @@
     font-size: 13px;
     cursor: pointer;
     line-height: 1;
+}
+
+.np-btn-icon {
+    display: inline-flex;
+    align-items: center;
 }
 
 .np-tool-btn:hover {

@@ -1,3 +1,4 @@
+import { getIcon } from '@utils/Icons';
 import type { Disposable, ToolbarItem } from '../core/types';
 
 export interface ToolbarCallbacks {
@@ -21,7 +22,7 @@ const FORMAT_BUTTONS: FormatButton[] = [
     { label: '¶', title: 'Paragraph', command: 'formatBlock', value: 'p' },
     { label: '• List', title: 'Bulleted list', command: 'insertUnorderedList' },
     { label: '1. List', title: 'Numbered list', command: 'insertOrderedList' },
-    { label: '⌫ Clear', title: 'Clear formatting', command: 'removeFormat' },
+    { label: `<span class="np-btn-icon">${getIcon('clearFormat', 14)}</span> Clear`, title: 'Clear formatting', command: 'removeFormat' },
 ];
 
 /**
@@ -52,7 +53,7 @@ export class Toolbar {
                 <div class="np-toolbar-format">${formatHtml}</div>
                 <div class="np-toolbar-modules"></div>
                 <div class="np-toolbar-spacer"></div>
-                <button class="np-tool-btn np-modules-btn" title="Manage modules">⚙ Modules</button>
+                <button class="np-tool-btn np-modules-btn" title="Manage modules"><span class="np-btn-icon">${getIcon('settings', 14)}</span> Modules</button>
             </div>
         `;
 

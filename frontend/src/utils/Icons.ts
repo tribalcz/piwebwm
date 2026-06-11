@@ -23,6 +23,12 @@ const Icons: Record<string, string> = {
         '                        <polyline points="1 20 1 14 7 14" stroke="#10b981"/>\n' +
         '                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke="#10b981"/>\n' +
         '                    </svg>',
+    clearFormat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <path d="M5 5h11" stroke="#6b7280"/>\n' +
+        '                        <path d="M11 5L8 16" stroke="#6b7280"/>\n' +
+        '                        <line x1="14" y1="14" x2="21" y2="21" stroke="#ef4444"/>\n' +
+        '                        <line x1="21" y1="14" x2="14" y2="21" stroke="#ef4444"/>\n' +
+        '                    </svg>',
     //Icons for context menu
     openDir: ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" fill="#fbbf24" stroke="#f59e0b"/>\n' +
@@ -307,7 +313,7 @@ export function getIconList(): string[] {
  */
 export function getIconCategories(): Record<string, string[]> {
     return {
-        'UI Icons': ['back', 'up', 'home', 'refresh'],
+        'UI Icons': ['back', 'up', 'home', 'refresh', 'clearFormat'],
         'Context Menu': ['openDir', 'openFile', 'rename', 'copy', 'cut', 'paste', 'delete', 'newDir', 'newFile'],
         'File Types': ['file', 'txt', 'md', 'pdf', 'doc', 'xls', 'jpg', 'music', 'video', 'archive', 'sh', 'py', 'js', 'html', 'css', 'unknown'],
         'System': ['welcome', 'search', 'logout', 'restart', 'shutdown'],
