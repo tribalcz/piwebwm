@@ -17,6 +17,8 @@ export interface AppManifest {
     dependencies?: Record<string, string>;
     status?: string;
     enabled?: boolean;
+    /** Whether the app can be uninstalled from the App Store. Defaults to true. */
+    removable?: boolean;
     ui?: {
         displayName?: string;
         icon?: string;
@@ -107,6 +109,8 @@ export interface WebDeskEventMap {
     'app:closed': { appId: string; timestamp: number };
     'app:opened': { appId: string; windowId: string };
     'app:error': { appId: string; error: string; phase: 'launch' | 'close'; timestamp: number };
+    'app:installed': { appId: string };
+    'app:uninstalled': { appId: string };
     'error': { event: string; error: unknown; data: unknown };
 }
 

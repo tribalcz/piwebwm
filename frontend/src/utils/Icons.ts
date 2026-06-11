@@ -29,6 +29,16 @@ const Icons: Record<string, string> = {
         '                        <line x1="14" y1="14" x2="21" y2="21" stroke="#ef4444"/>\n' +
         '                        <line x1="21" y1="14" x2="14" y2="21" stroke="#ef4444"/>\n' +
         '                    </svg>',
+    install: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <path d="M12 3v10"/>\n' +
+        '                        <path d="M8 9l4 4 4-4"/>\n' +
+        '                        <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>\n' +
+        '                    </svg>',
+    appStore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <path d="M5 7l1.5-3h11L19 7v1a2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2V7z" fill="#dbeafe" stroke="#3b82f6"/>\n' +
+        '                        <path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9" stroke="#3b82f6"/>\n' +
+        '                        <path d="M10 20v-5h4v5" stroke="#3b82f6"/>\n' +
+        '                    </svg>',
     //Icons for context menu
     openDir: ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" fill="#fbbf24" stroke="#f59e0b"/>\n' +
@@ -313,10 +323,10 @@ export function getIconList(): string[] {
  */
 export function getIconCategories(): Record<string, string[]> {
     return {
-        'UI Icons': ['back', 'up', 'home', 'refresh', 'clearFormat'],
+        'UI Icons': ['back', 'up', 'home', 'refresh', 'clearFormat', 'install'],
         'Context Menu': ['openDir', 'openFile', 'rename', 'copy', 'cut', 'paste', 'delete', 'newDir', 'newFile'],
         'File Types': ['file', 'txt', 'md', 'pdf', 'doc', 'xls', 'jpg', 'music', 'video', 'archive', 'sh', 'py', 'js', 'html', 'css', 'unknown'],
-        'System': ['welcome', 'search', 'logout', 'restart', 'shutdown'],
+        'System': ['welcome', 'search', 'logout', 'restart', 'shutdown', 'appStore'],
         'Process Monitor': ['processMonitor', 'exportStats', 'clear', 'pause', 'windowsStats', 'appStats', 'eventStats', 'storeStats']
     };
 }

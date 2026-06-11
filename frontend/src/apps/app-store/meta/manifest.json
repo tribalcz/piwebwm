@@ -1,0 +1,28 @@
+{
+  "id": "app-store",
+  "version": "1.0.0",
+  "name": "App Store",
+  "description": "Browse, install and uninstall applications and Notepad modules.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "styles": ["./styles/app-store.css"],
+  "ui": {
+    "displayName": "App Store",
+    "icon": "appStore",
+    "category": "system",
+    "keywords": ["store", "apps", "install", "uninstall", "modules", "manage", "catalog"]
+  },
+  "window": {
+    "defaultWidth": 760,
+    "defaultHeight": 520,
+    "minWidth": 560,
+    "minHeight": 380,
+    "resizable": true,
+    "persistent": false
+  },
+  "permissions": [],
+  "dependencies": {},
+  "status": "stable",
+  "enabled": true,
+  "removable": false
+}

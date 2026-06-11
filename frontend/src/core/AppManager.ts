@@ -181,12 +181,45 @@ export class AppManager {
     }
 
     /**
+     * Whether an application is installed (available on the desktop). Backed by
+     * the Store; defaults to the manifest's `enabled` flag. "Uninstalling" only
+     * flips this flag — bundled code is never removed.
+     */
+    isAppInstalled(appId: string): boolean {
+        const manifest = this.registry.get(appId);
+        if (!manifest) return false;
+        const fallback = manifest.enabled !== false;
+        if (!this.store) return fallback;
+        return this.store.get<boolean>(`apps.${appId}.installed`, fallback);
+    }
+
+    /**
+     * Install or uninstall an application (persisted), emitting an event so the
+     * Start menu can refresh. Refuses to uninstall apps marked non-removable.
+     */
+    setAppInstalled(appId: string, installed: boolean): void {
+        const manifest = this.registry.get(appId);
+        if (!manifest) return;
+        if (!installed && manifest.removable === false) {
+            throw new Error(`Application ${appId} cannot be uninstalled`);
+        }
+        this.store?.set(`apps.${appId}.installed`, installed);
+        if (this.eventBus) {
+            this.eventBus.emit(installed ? 'app:installed' : 'app:uninstalled', { appId });
+        }
+    }
+
+    /**
      * Launch the application
      */
     async launch(appId: string): Promise<WebDeskApp> {
         const manifest = this.registry.get(appId);
         if (!manifest) {
             throw new Error(`Application not found: ${appId}`);
+        }
+
+        if (!this.isAppInstalled(appId)) {
+            throw new Error(`Application not installed: ${appId}`);
         }
 
         const alreadyRunning = this.runningApps.get(appId);

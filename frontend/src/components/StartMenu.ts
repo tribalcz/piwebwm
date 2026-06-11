@@ -2,23 +2,34 @@ import { getIcon } from '@utils/Icons';
 import { logout } from '@core/AuthGate';
 import type { WindowManager } from '@core/WindowManager';
 import type { AppManager } from '@core/AppManager';
+import type { EventBus } from '@core/EventBus';
 import type { AppManifest } from '@core/types';
 
 export class StartMenu {
     private windowManager: WindowManager;
     private appManager: AppManager | null;
+    private eventBus: EventBus | null;
     private menuElement!: HTMLDivElement;
     private isOpen: boolean;
     private getIcon: typeof getIcon;
 
-    constructor(windowManager: WindowManager, appManager: AppManager | null = null) {
+    constructor(
+        windowManager: WindowManager,
+        appManager: AppManager | null = null,
+        eventBus: EventBus | null = null
+    ) {
         this.windowManager = windowManager;
         this.appManager = appManager;
+        this.eventBus = eventBus;
         this.isOpen = false;
         this.getIcon = getIcon;
 
         this.initMenu();
         this.setupEventListeners();
+
+        // Keep the menu in sync when apps are installed/uninstalled.
+        this.eventBus?.on('app:installed', () => this.refreshMenu());
+        this.eventBus?.on('app:uninstalled', () => this.refreshMenu());
     }
 
     private initMenu(): void {
@@ -60,7 +71,9 @@ export class StartMenu {
             return '<div class="menu-section"><div style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">No apps available</div></div>';
         }
 
-        const apps = this.appManager.registry.getAll();
+        // Only show installed apps (uninstalled ones stay registered but hidden).
+        const appManager = this.appManager;
+        const apps = appManager.registry.getAll().filter(a => appManager.isAppInstalled(a.id));
 
         if (apps.length === 0) {
             return '<div class="menu-section"><div style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">No apps registered</div></div>';
