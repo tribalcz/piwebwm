@@ -2,37 +2,59 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+// requireHostAgent guards handlers that need the host agent. When the agent is
+// unavailable (mock mode), hostClient is nil; calling through it would panic,
+// so we return a clean 503 instead.
+func requireHostAgent(c *gin.Context) bool {
+	if useMock || hostClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "host agent unavailable",
+		})
+		return false
+	}
+	return true
+}
+
 func listFiles(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
 	path := c.DefaultQuery("path", "/home")
 
 	files, err := hostClient.ListFiles(path)
 	if err != nil {
 		log.Printf("Error listing files: %v", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list files"})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"path":  path,
 		"files": files,
 	})
 }
 
 func readFile(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
 	path := c.Query("path")
 
 	content, size, err := hostClient.ReadFile(path)
 	if err != nil {
 		log.Printf("Error reading file: %v", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"path":    path,
 		"content": content,
 		"size":    size,
@@ -40,6 +62,10 @@ func readFile(c *gin.Context) {
 }
 
 func createFile(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
 	var req struct {
 		Path    string `json:"path"`
 		Content string `json:"content"`
@@ -47,7 +73,7 @@ func createFile(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
@@ -60,11 +86,11 @@ func createFile(c *gin.Context) {
 
 	if err != nil {
 		log.Printf("Error creating file: %v", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create"})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"path":    req.Path,
 		"message": "Created successfully",
@@ -72,16 +98,20 @@ func createFile(c *gin.Context) {
 }
 
 func deleteFile(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
 	path := c.Query("path")
 
 	err := hostClient.DeleteFile(path)
 	if err != nil {
 		log.Printf("Error deleting file: %v", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete"})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"path":    path,
 		"message": "Deleted successfully",
@@ -89,24 +119,28 @@ func deleteFile(c *gin.Context) {
 }
 
 func moveFile(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
 	var req struct {
 		From string `json:"from"`
 		To   string `json:"to"`
 	}
 
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
 	err := hostClient.MoveFile(req.From, req.To)
 	if err != nil {
 		log.Printf("Error moving file: %v", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to move"})
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Moved successfully",
 	})
@@ -114,8 +148,10 @@ func moveFile(c *gin.Context) {
 
 func getSystemInfo(c *gin.Context) {
 	// TODO: Implement real system info
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
 }
 
 func getProcesses(c *gin.Context) {
 	// TODO: Implement real process list
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
 }

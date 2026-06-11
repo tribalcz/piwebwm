@@ -1,4 +1,5 @@
 import { getIcon } from '@utils/Icons';
+import { logout } from '@core/AuthGate';
 import type { WindowManager } from '@core/WindowManager';
 import type { AppManager } from '@core/AppManager';
 import type { AppManifest } from '@core/types';
@@ -314,9 +315,12 @@ export class StartMenu {
         switch (action) {
             case 'logout':
                 if (confirm('Are you sure you want to logout?')) {
-                    // Clear state and reload
-                    localStorage.clear();
-                    location.reload();
+                    // End the server session, clear local state, then reload
+                    // back to the login screen.
+                    void logout().finally(() => {
+                        localStorage.clear();
+                        location.reload();
+                    });
                 }
                 break;
 

@@ -9,6 +9,7 @@ import { StateManager } from '@core/StateManager';
 import { EventBus } from '@core/EventBus';
 import { Store } from '@core/Store';
 import { AppManager } from '@core/AppManager';
+import { requireAuth } from '@core/AuthGate';
 
 // Import components
 import { TaskBar } from '@components/TaskBar';
@@ -28,6 +29,10 @@ declare global {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Gate the desktop behind authentication. Resolves once a session exists.
+    const user = await requireAuth();
+    console.log(`Authenticated as ${user.username}`);
+
     console.log('Init EventBus...');
     const eventBus = new EventBus();
 
