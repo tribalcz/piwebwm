@@ -115,7 +115,13 @@ export class Editor {
     }
 
     private refreshGutter(): void {
-        const count = Math.max(1, this.el.innerText.split('\n').length);
+        // contenteditable keeps a trailing block after Enter, so innerText ends
+        // with an extra "\n" until you type into the new line. Strip a single
+        // trailing newline so the count reflects the visible rows (pressing
+        // Enter adds exactly one number, not two).
+        const text = this.el.innerText;
+        const normalized = text.endsWith('\n') ? text.slice(0, -1) : text;
+        const count = Math.max(1, normalized.split('\n').length);
         let out = '';
         for (let i = 1; i <= count; i++) {
             out += (i > 1 ? '\n' : '') + i;
