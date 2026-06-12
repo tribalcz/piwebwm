@@ -1,0 +1,28 @@
+{
+  "id": "settings",
+  "version": "1.0.0",
+  "name": "Settings",
+  "description": "Configure WebDesk OS: appearance and theme, windows, taskbar clock and system options.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "styles": ["./styles/settings.css"],
+  "ui": {
+    "displayName": "Settings",
+    "icon": "settings",
+    "category": "system",
+    "keywords": ["settings", "preferences", "theme", "dark", "appearance", "configuration", "options"]
+  },
+  "window": {
+    "defaultWidth": 720,
+    "defaultHeight": 500,
+    "minWidth": 560,
+    "minHeight": 380,
+    "resizable": true,
+    "persistent": false
+  },
+  "permissions": [],
+  "dependencies": {},
+  "status": "stable",
+  "enabled": true,
+  "removable": false
+}

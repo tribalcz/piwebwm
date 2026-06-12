@@ -111,6 +111,7 @@ export interface WebDeskEventMap {
     'app:error': { appId: string; error: string; phase: 'launch' | 'close'; timestamp: number };
     'app:installed': { appId: string };
     'app:uninstalled': { appId: string };
+    'theme:changed': { theme: 'light' | 'dark' };
     'error': { event: string; error: unknown; data: unknown };
 }
 

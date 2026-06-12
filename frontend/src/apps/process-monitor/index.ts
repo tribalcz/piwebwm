@@ -98,7 +98,7 @@ export default class ProcessMonitor implements WebDeskApp {
                 <div id="app-list" style="flex-shrink: 0;"></div>
                 <div id="window-list" style="flex-shrink: 0;"></div>
                 <div id="event-log" style="flex: 1; min-height: 200px; overflow: hidden;"></div>
-                <div id="actions" style="flex-shrink: 0; display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                <div id="actions" style="flex-shrink: 0; display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
                     <button id="btn-export" style="padding: 6px 12px; cursor: pointer;">${getIcon('exportStats', 16)} Export Stats</button>
                     <button id="btn-clear" style="padding: 6px 12px; cursor: pointer;">${getIcon('clear', 16)} Clear Events</button>
                     <button id="btn-pause" style="padding: 6px 12px; cursor: pointer;">${getIcon('pause', 16)} Pause</button>

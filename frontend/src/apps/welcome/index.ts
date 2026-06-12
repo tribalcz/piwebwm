@@ -73,7 +73,7 @@ export default class Welcome implements WebDeskApp {
                 <h2 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
                     🖥️ WebDesk OS
                 </h2>
-                <p style="margin-bottom: 16px; color: #666; line-height: 1.5;">
+                <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.5;">
                     A modern web-based desktop environment for headless Linux systems.
                 </p>
 
@@ -88,14 +88,14 @@ export default class Welcome implements WebDeskApp {
                 </ul>
 
                 <h3 style="margin-bottom: 12px; font-size: 16px;">🚀 Coming Soon:</h3>
-                <ul style="margin-left: 20px; line-height: 1.8; color: #888;">
+                <ul style="margin-left: 20px; line-height: 1.8; color: var(--text-faint);">
                     <li>Terminal Emulator</li>
                     <li>Text Editor</li>
                     <li>System Settings</li>
                     <li>Network Manager</li>
                 </ul>
 
-                <div style="margin-top: 20px; padding: 12px; background: #f0f0f0; border-radius: 6px; font-size: 13px; color: #666;">
+                <div style="margin-top: 20px; padding: 12px; background: var(--border-soft); border-radius: 6px; font-size: 13px; color: var(--text-muted);">
                     💡 <strong>Tip:</strong> Right-click on the desktop for quick actions!
                 </div>
             </div>

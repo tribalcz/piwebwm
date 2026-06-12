@@ -32,9 +32,9 @@ export class EventLog {
 
     private render(): void {
         this.container.innerHTML = `
-            <div class="event-log-panel" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; height: 100%; display: flex; flex-direction: column;">
-                <div style="padding: 12px 16px; background: #f9f9f9; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;">
-                    <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">
+            <div class="event-log-panel" style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: 100%; display: flex; flex-direction: column;">
+                <div style="padding: 12px 16px; background: var(--surface-alt); border-bottom: 1px solid var(--border); flex-shrink: 0;">
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--text);">
                         ${getIcon('eventStats', 20)} Recent Events (live)
                     </h3>
                 </div>
@@ -87,7 +87,7 @@ export class EventLog {
 
         if (this.events.length === 0) {
             this.eventList.innerHTML = `
-                <div style="padding: 24px; text-align: center; color: #999; font-size: 13px;">
+                <div style="padding: 24px; text-align: center; color: var(--text-faint); font-size: 13px;">
                     No events yet...
                 </div>
             `;
@@ -101,12 +101,12 @@ export class EventLog {
             const color = this.getEventColor(e.event);
 
             return `
-                <div class="event-item" style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f5f5f5; font-size: 12px;">
+                <div class="event-item" style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--surface-hover); font-size: 12px;">
                     <span style="font-size: 14px;">${icon}</span>
                     <span style="flex: 1; font-family: monospace; color: ${color}; font-weight: 500;">
                         ${Formatter.escapeHtml(e.event)}
                     </span>
-                    <span style="color: #999; font-size: 11px; white-space: nowrap;">
+                    <span style="color: var(--text-faint); font-size: 11px; white-space: nowrap;">
                         ${Formatter.timeAgo(e.timestamp)}
                     </span>
                 </div>

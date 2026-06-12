@@ -81,6 +81,12 @@ export class StateManager {
     restoreWindowState(): void {
         if (!this.store) return;
 
+        // User-controlled via Settings → Windows.
+        if (!this.store.get<boolean>('settings.windows.restoreOnStartup', true)) {
+            console.log('Window restore disabled in settings');
+            return;
+        }
+
         const savedWindows = this.store.get<PersistedWindow[]>('persistence.windows', []);
 
         if (savedWindows.length === 0) {
