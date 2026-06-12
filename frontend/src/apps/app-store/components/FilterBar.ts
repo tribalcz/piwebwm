@@ -1,6 +1,6 @@
 import { getIcon } from '@utils/Icons';
 
-export type FilterType = 'all' | 'app' | 'notepad-module';
+export type FilterType = 'all' | 'app' | 'atol-module';
 
 export interface FilterState {
     query: string;
@@ -14,7 +14,7 @@ export interface FilterBarCallbacks {
 const SEGMENTS: { type: FilterType; label: string }[] = [
     { type: 'all', label: 'All' },
     { type: 'app', label: 'Applications' },
-    { type: 'notepad-module', label: 'Modules' },
+    { type: 'atol-module', label: 'Modules' },
 ];
 
 /** Search field plus a segmented type filter. */

@@ -1,7 +1,7 @@
 import type { Disposable, StatusItem } from '../core/types';
 
 /**
- * The Notepad status bar. The host owns a left-hand message (save state);
+ * The Atol status bar. The host owns a left-hand message (save state);
  * modules contribute items rendered on the right and re-rendered on refresh().
  */
 export class StatusBar {
@@ -17,13 +17,13 @@ export class StatusBar {
 
     private render(): void {
         this.container.innerHTML = `
-            <div class="notepad-statusbar">
-                <span class="np-status-message">Ready</span>
-                <span class="np-status-modules"></span>
+            <div class="atol-statusbar">
+                <span class="atol-status-message">Ready</span>
+                <span class="atol-status-modules"></span>
             </div>
         `;
-        this.hostMessageEl = this.container.querySelector<HTMLElement>('.np-status-message')!;
-        this.moduleSlot = this.container.querySelector<HTMLElement>('.np-status-modules')!;
+        this.hostMessageEl = this.container.querySelector<HTMLElement>('.atol-status-message')!;
+        this.moduleSlot = this.container.querySelector<HTMLElement>('.atol-status-modules')!;
     }
 
     setMessage(text: string): void {
@@ -51,7 +51,7 @@ export class StatusBar {
                     console.error(`Status item '${item.id}' render error:`, err);
                     content = '';
                 }
-                return `<span class="np-status-item" data-item-id="${item.id}">${content}</span>`;
+                return `<span class="atol-status-item" data-item-id="${item.id}">${content}</span>`;
             })
             .join('');
     }

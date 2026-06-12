@@ -7,13 +7,13 @@ import type {
     ModuleManifest,
     ModuleSlot,
     ModuleStorage,
-    NotepadModule,
-    NotepadModuleConstructor,
+    AtolModule,
+    AtolModuleConstructor,
     StatusItem,
     ToolbarItem,
 } from './types';
 
-const HOST_ID = 'notepad';
+const HOST_ID = 'atol';
 const VALID_SLOTS: ModuleSlot[] = ['toolbar', 'statusbar', 'contextmenu'];
 
 /** The host UI surface the manager wires module contributions into. */
@@ -29,7 +29,7 @@ export interface ModuleHostBridge {
 interface ModuleRecord {
     manifest: ModuleManifest;
     importer: () => Promise<unknown>;
-    instance: NotepadModule | null;
+    instance: AtolModule | null;
     disposables: Disposable[];
 }
 
@@ -60,7 +60,7 @@ function disposeSafely(d: Disposable): void {
     try {
         d();
     } catch (err) {
-        console.error('Notepad module dispose error:', err);
+        console.error('Atol module dispose error:', err);
     }
 }
 
@@ -75,7 +75,7 @@ function parseShortcut(shortcut: string): ParsedShortcut {
 }
 
 /**
- * Discovers, validates and runs Notepad modules. Each module gets its own
+ * Discovers, validates and runs Atol modules. Each module gets its own
  * ModuleContext; every contribution it makes is tracked so the manager can tear
  * it all down on deactivate — a module cannot leak a listener or a DOM node.
  */
@@ -90,8 +90,8 @@ export class ModuleManager {
 
     /** Scan the modules directory, validate manifests, build the registry. */
     async discover(): Promise<void> {
-        const manifestModules = import.meta.glob('/src/apps/notepad/modules/*/module.json');
-        const entryModules = import.meta.glob('/src/apps/notepad/modules/*/*.{js,ts}');
+        const manifestModules = import.meta.glob('/src/apps/atol/modules/*/module.json');
+        const entryModules = import.meta.glob('/src/apps/atol/modules/*/*.{js,ts}');
 
         for (const [path, importManifest] of Object.entries(manifestModules)) {
             try {
@@ -117,7 +117,7 @@ export class ModuleManager {
                     instance: null,
                     disposables: [],
                 });
-                console.log(`Notepad module registered: ${manifest.id}`);
+                console.log(`Atol module registered: ${manifest.id}`);
             } catch (err) {
                 // A broken module must not take the host down.
                 console.warn(`Skipping invalid module at ${path}:`, err);
@@ -130,7 +130,7 @@ export class ModuleManager {
 
         if (!manifest.id) errors.push('missing "id"');
         else if (!/^[a-z0-9-]+$/.test(manifest.id)) errors.push('invalid "id" (lowercase/dashes only)');
-        if (manifest.type !== 'notepad-module') errors.push('"type" must be "notepad-module"');
+        if (manifest.type !== 'atol-module') errors.push('"type" must be "atol-module"');
         if (manifest.host !== HOST_ID) errors.push(`"host" must be "${HOST_ID}"`);
         if (!manifest.name) errors.push('missing "name"');
         if (!manifest.version) errors.push('missing "version"');
@@ -165,7 +165,7 @@ export class ModuleManager {
     }
 
     private enabledKey(id: string): string {
-        return `apps.notepad.modules.${id}.enabled`;
+        return `apps.atol.modules.${id}.enabled`;
     }
 
     /** Enable or disable a module at runtime, persisting the choice. */
@@ -187,12 +187,12 @@ export class ModuleManager {
         if (!record || record.instance) return;
 
         try {
-            const mod = await record.importer() as { default: NotepadModuleConstructor };
+            const mod = await record.importer() as { default: AtolModuleConstructor };
             const instance = new mod.default();
             const ctx = this.buildContext(record);
             await instance.activate(ctx);
             record.instance = instance;
-            console.log(`Notepad module activated: ${id}`);
+            console.log(`Atol module activated: ${id}`);
         } catch (err) {
             console.error(`Failed to activate module ${id}:`, err);
             // Roll back anything that was registered before the failure.
@@ -212,7 +212,7 @@ export class ModuleManager {
 
         this.disposeRecord(record);
         record.instance = null;
-        console.log(`Notepad module deactivated: ${id}`);
+        console.log(`Atol module deactivated: ${id}`);
     }
 
     private disposeRecord(record: ModuleRecord): void {
@@ -297,7 +297,7 @@ export class ModuleManager {
     }
 
     private createStorage(moduleId: string): ModuleStorage {
-        const prefix = `apps.notepad.modules.${moduleId}.data.`;
+        const prefix = `apps.atol.modules.${moduleId}.data.`;
         const store = this.host.store;
         const memory = new Map<string, unknown>();
 

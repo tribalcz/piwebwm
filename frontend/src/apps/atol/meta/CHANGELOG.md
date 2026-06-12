@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0
+
+- Renamed from **Notepad** to **Atol** — positioned as a universal modular
+  application (a notepad in its base form, extensible into anything up to an
+  IDE). App id `notepad` → `atol`, module discriminator `notepad-module` →
+  `atol-module`, Store keys `apps.notepad.*` → `apps.atol.*`.
+- New bundled module **insert-datetime**: toolbar button, context-menu entries
+  (date & time / date / time) and a Ctrl+Shift+D command; remembers the last
+  used format in module storage.
+
 ## 1.0.0
 
 - Initial Notepad application: contenteditable rich-text editor with basic

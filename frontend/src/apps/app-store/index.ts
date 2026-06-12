@@ -11,7 +11,7 @@ import { InstallManager } from './core/InstallManager';
 import { collectCatalog, entryKey, type CatalogEntry } from './core/Catalog';
 
 /**
- * App Store — browse the catalog of applications and Notepad modules and
+ * App Store — browse the catalog of applications and Atol modules and
  * install/uninstall them. "Install" toggles a persisted flag (see
  * InstallManager); it never downloads or removes code.
  */
@@ -159,7 +159,7 @@ export default class AppStore implements WebDeskApp {
     private renderStatus(): void {
         if (!this.statusEl) return;
         const apps = this.entries.filter(e => e.type === 'app');
-        const modules = this.entries.filter(e => e.type === 'notepad-module');
+        const modules = this.entries.filter(e => e.type === 'atol-module');
         const installed = this.entries.filter(e => e.installed).length;
         this.statusEl.textContent =
             `${apps.length} application${apps.length !== 1 ? 's' : ''} · ` +

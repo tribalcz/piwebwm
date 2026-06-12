@@ -1,6 +1,6 @@
-# Notepad
+# Atol
 
-A basic rich-text notepad that doubles as a **host** for micro-app modules.
+A universal modular application: a rich-text notepad in its base form that doubles as a **host** for micro-app modules — extensible into anything up to an IDE.
 
 The editor (contenteditable + basic formatting: bold/italic/underline,
 headings, lists) is the built-in baseline. Everything beyond that is added by
@@ -10,17 +10,17 @@ runtime, kept deliberately separate from top-level WebDesk applications.
 ## Architecture
 
 ```
-notepad/
+atol/
 ├── index.ts              Host app (WebDeskApp). Wires editor + ModuleManager.
 ├── components/           Editor, Toolbar, StatusBar, ModulesDialog.
 ├── core/
-│   ├── types.ts          Module contracts (ModuleManifest, NotepadModule, …).
+│   ├── types.ts          Module contracts (ModuleManifest, AtolModule, …).
 │   ├── ModuleManager.ts  Discovery, validation, activate/deactivate, cleanup.
 │   └── EditorAPI.ts      Narrow editor facade handed to modules.
 └── modules/<id>/         Micro-apps (see below).
 ```
 
-Content is auto-saved to the Store (`apps.notepad.content`) and restored on
+Content is auto-saved to the Store (`apps.atol.content`) and restored on
 reopen.
 
 ## Modules vs. applications
@@ -31,7 +31,7 @@ just convention:
 | | Application | Module |
 |---|---|---|
 | Manifest | `meta/manifest.json` | `module.json` |
-| Discovery | global `AppManager` | Notepad's `ModuleManager` |
+| Discovery | global `AppManager` | Atol's `ModuleManager` |
 | Window | own window | none — contributes to host slots |
 | Lifecycle | `init`/`open`/`close` | `activate`/`deactivate` |
 | Context | `AppContext` | `ModuleContext` |
@@ -46,8 +46,8 @@ discovery globs never pick a module up.
    ```json
    {
      "id": "my-module",
-     "type": "notepad-module",
-     "host": "notepad",
+     "type": "atol-module",
+     "host": "atol",
      "version": "1.0.0",
      "name": "My Module",
      "description": "What it does.",
@@ -61,12 +61,12 @@ discovery globs never pick a module up.
    are ignored with a warning.
 
 2. Create `modules/<id>/index.ts` with a default-exported class implementing
-   `NotepadModule`:
+   `AtolModule`:
 
    ```ts
-   import type { ModuleContext, NotepadModule } from '../../core/types';
+   import type { ModuleContext, AtolModule } from '../../core/types';
 
-   export default class MyModule implements NotepadModule {
+   export default class MyModule implements AtolModule {
        activate(ctx: ModuleContext): void {
            ctx.ui.addToolbarItem({
                id: 'shout',
@@ -94,7 +94,7 @@ be toggled at runtime from the toolbar's **⚙ Modules** dialog.
 - `log` — console.
 
 Every registration returns a `Disposable` and is tracked by the host: when a
-module is disabled or the Notepad closes, all of its contributions, listeners
+module is disabled or the Atol closes, all of its contributions, listeners
 and commands are removed automatically. A module cannot leak state into the
 host.
 
@@ -102,3 +102,6 @@ host.
 
 - **word-count** — live word/character count in the status bar (example of the
   `statusbar` slot).
+- **insert-datetime** — inserts the current date/time at the cursor (example of
+  the `toolbar` and `contextmenu` slots, a keyboard command — Ctrl+Shift+D —
+  and per-module storage).

@@ -25,7 +25,7 @@ export class DetailPanel {
     show(entry: CatalogEntry): void {
         this.current = entry;
 
-        const typeLabel = entry.type === 'app' ? 'Application' : 'Notepad module';
+        const typeLabel = entry.type === 'app' ? 'Application' : 'Atol module';
         const locked = entry.installed && !entry.removable;
 
         const meta: string[] = [];

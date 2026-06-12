@@ -12,15 +12,15 @@ import { ModuleManager, type ModuleHostBridge } from './core/ModuleManager';
 import { createEditorAPI } from './core/EditorAPI';
 import type { ContextMenuContribution, Disposable, EditorAPI } from './core/types';
 
-const CONTENT_STORAGE_KEY = 'apps.notepad.content';
+const CONTENT_STORAGE_KEY = 'apps.atol.content';
 
 /**
- * Notepad — a basic rich-text editor that also hosts micro-app modules.
+ * Atol — a basic rich-text editor that also hosts micro-app modules.
  *
  * The editor and its formatting are the built-in baseline; modules extend it
  * through the ModuleManager, contributing to toolbar/status/context-menu slots.
  */
-export default class Notepad implements WebDeskApp {
+export default class Atol implements WebDeskApp {
     private windowManager: WindowManager;
     private eventBus: EventBus | null;
     private store: Store | null;
@@ -65,7 +65,7 @@ export default class Notepad implements WebDeskApp {
 
         this.moduleManager = new ModuleManager(bridge);
 
-        console.log('Notepad initialized');
+        console.log('Atol initialized');
     }
 
     async init(): Promise<void> {
@@ -76,7 +76,7 @@ export default class Notepad implements WebDeskApp {
         const windowCount = this.windowManager.getAllWindows().size;
 
         this.windowId = this.windowManager.createWindow({
-            title: this.manifest?.ui?.displayName || 'Notepad',
+            title: this.manifest?.ui?.displayName || 'Atol',
             x: 160 + (windowCount * 25),
             y: 110 + (windowCount * 25),
             width: this.manifest?.window?.defaultWidth || 640,
@@ -86,15 +86,15 @@ export default class Notepad implements WebDeskApp {
             onCreated: (id, el) => this.onWindowCreated(id, el),
         });
 
-        console.log('Notepad opened, windowId:', this.windowId);
+        console.log('Atol opened, windowId:', this.windowId);
     }
 
     private renderSkeleton(): string {
         return `
-            <div class="notepad">
-                <div class="notepad-toolbar-host" id="np-toolbar"></div>
-                <div class="notepad-editor-host" id="np-editor"></div>
-                <div class="notepad-statusbar-host" id="np-status"></div>
+            <div class="atol">
+                <div class="atol-toolbar-host" id="atol-toolbar"></div>
+                <div class="atol-editor-host" id="atol-editor"></div>
+                <div class="atol-statusbar-host" id="atol-status"></div>
             </div>
         `;
     }
@@ -102,13 +102,13 @@ export default class Notepad implements WebDeskApp {
     private async onWindowCreated(id: string, windowEl: HTMLElement): Promise<void> {
         this.windowId = id;
 
-        const root = windowEl.querySelector<HTMLElement>('.notepad');
-        const toolbarHost = windowEl.querySelector('#np-toolbar');
-        const editorHost = windowEl.querySelector('#np-editor');
-        const statusHost = windowEl.querySelector('#np-status');
+        const root = windowEl.querySelector<HTMLElement>('.atol');
+        const toolbarHost = windowEl.querySelector('#atol-toolbar');
+        const editorHost = windowEl.querySelector('#atol-editor');
+        const statusHost = windowEl.querySelector('#atol-status');
 
         if (!root || !toolbarHost || !editorHost || !statusHost) {
-            console.error('Notepad: window scaffold not found');
+            console.error('Atol: window scaffold not found');
             return;
         }
 
@@ -142,7 +142,7 @@ export default class Notepad implements WebDeskApp {
         this.statusbar.setMessage('Ready');
         this.editor.focus();
 
-        console.log('Notepad components initialized');
+        console.log('Atol components initialized');
     }
 
     private scheduleSave(): void {
@@ -218,6 +218,6 @@ export default class Notepad implements WebDeskApp {
             this.eventBus.emit('app:closed', { appId: this.manifest.id, timestamp: Date.now() });
         }
 
-        console.log('Notepad closed');
+        console.log('Atol closed');
     }
 }

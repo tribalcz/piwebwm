@@ -2,7 +2,7 @@
   "id": "app-store",
   "version": "1.0.0",
   "name": "App Store",
-  "description": "Browse, install and uninstall applications and Notepad modules.",
+  "description": "Browse, install and uninstall applications and Atol modules.",
   "author": "marsuch",
   "entryPoint": "index.ts",
   "styles": ["./styles/app-store.css"],

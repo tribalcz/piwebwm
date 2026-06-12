@@ -2,7 +2,7 @@ import type { ModuleManager } from '../core/ModuleManager';
 
 /**
  * A small overlay panel listing discovered modules with an enable/disable
- * toggle. Rendered inside the Notepad window, not a separate WebDesk window.
+ * toggle. Rendered inside the Atol window, not a separate WebDesk window.
  */
 export class ModulesDialog {
     private parent: HTMLElement;
@@ -26,20 +26,20 @@ export class ModulesDialog {
         if (this.overlay) return;
 
         const overlay = document.createElement('div');
-        overlay.className = 'np-modules-overlay';
+        overlay.className = 'atol-modules-overlay';
         overlay.innerHTML = `
-            <div class="np-modules-panel">
-                <div class="np-modules-header">
+            <div class="atol-modules-panel">
+                <div class="atol-modules-header">
                     <h3>Modules</h3>
-                    <button class="np-modules-close" title="Close">×</button>
+                    <button class="atol-modules-close" title="Close">×</button>
                 </div>
-                <div class="np-modules-list"></div>
+                <div class="atol-modules-list"></div>
             </div>
         `;
         this.parent.appendChild(overlay);
         this.overlay = overlay;
 
-        overlay.querySelector('.np-modules-close')?.addEventListener('click', () => this.close());
+        overlay.querySelector('.atol-modules-close')?.addEventListener('click', () => this.close());
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) this.close();
         });
@@ -49,20 +49,20 @@ export class ModulesDialog {
 
     private renderList(): void {
         if (!this.overlay) return;
-        const list = this.overlay.querySelector<HTMLElement>('.np-modules-list')!;
+        const list = this.overlay.querySelector<HTMLElement>('.atol-modules-list')!;
         const modules = this.manager.list();
 
         if (modules.length === 0) {
-            list.innerHTML = `<div class="np-modules-empty">No modules installed</div>`;
+            list.innerHTML = `<div class="atol-modules-empty">No modules installed</div>`;
             return;
         }
 
         list.innerHTML = modules.map(m => `
-            <label class="np-module-row">
+            <label class="atol-module-row">
                 <input type="checkbox" data-module-id="${m.id}" ${m.enabled ? 'checked' : ''} />
-                <span class="np-module-info">
-                    <span class="np-module-name">${escapeHtml(m.name)} <small>v${escapeHtml(m.version)}</small></span>
-                    <span class="np-module-desc">${escapeHtml(m.description ?? '')}</span>
+                <span class="atol-module-info">
+                    <span class="atol-module-name">${escapeHtml(m.name)} <small>v${escapeHtml(m.version)}</small></span>
+                    <span class="atol-module-desc">${escapeHtml(m.description ?? '')}</span>
                 </span>
             </label>
         `).join('');

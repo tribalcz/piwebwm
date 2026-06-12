@@ -4,8 +4,8 @@ import type { CatalogEntry } from './Catalog';
 
 /**
  * Reads and writes install state. Apps are delegated to the AppManager (which
- * also emits the install/uninstall events the Start menu listens for); Notepad
- * modules reuse the exact Store key the Notepad's ModuleManager reads.
+ * also emits the install/uninstall events the Start menu listens for); Atol
+ * modules reuse the exact Store key Atol's ModuleManager reads.
  *
  * "Install"/"uninstall" only flips a persisted flag — no code is added or
  * removed; everything ships in the bundle.
@@ -29,7 +29,7 @@ export class InstallManager {
     }
 
     private moduleKey(id: string): string {
-        return `apps.notepad.modules.${id}.enabled`;
+        return `apps.atol.modules.${id}.enabled`;
     }
 
     /** Apply a new install state to any catalog entry. */

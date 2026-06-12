@@ -34,6 +34,10 @@ const Icons: Record<string, string> = {
         '                        <path d="M8 9l4 4 4-4"/>\n' +
         '                        <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>\n' +
         '                    </svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <circle cx="12" cy="12" r="9"/>\n' +
+        '                        <path d="M12 7v5l3 3"/>\n' +
+        '                    </svg>',
     appStore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                        <path d="M5 7l1.5-3h11L19 7v1a2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2V7z" fill="#dbeafe" stroke="#3b82f6"/>\n' +
         '                        <path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9" stroke="#3b82f6"/>\n' +
@@ -323,7 +327,7 @@ export function getIconList(): string[] {
  */
 export function getIconCategories(): Record<string, string[]> {
     return {
-        'UI Icons': ['back', 'up', 'home', 'refresh', 'clearFormat', 'install'],
+        'UI Icons': ['back', 'up', 'home', 'refresh', 'clearFormat', 'install', 'clock'],
         'Context Menu': ['openDir', 'openFile', 'rename', 'copy', 'cut', 'paste', 'delete', 'newDir', 'newFile'],
         'File Types': ['file', 'txt', 'md', 'pdf', 'doc', 'xls', 'jpg', 'music', 'video', 'archive', 'sh', 'py', 'js', 'html', 'css', 'unknown'],
         'System': ['welcome', 'search', 'logout', 'restart', 'shutdown', 'appStore'],

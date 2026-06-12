@@ -1,4 +1,4 @@
-import type { ModuleContext, NotepadModule } from '../../core/types';
+import type { ModuleContext, AtolModule } from '../../core/types';
 
 /**
  * Word Count — a minimal example module. Adds a status-bar item showing live
@@ -8,7 +8,7 @@ import type { ModuleContext, NotepadModule } from '../../core/types';
  * ModuleContext. All registrations are tracked by the ModuleManager, so there
  * is nothing to clean up here beyond an optional deactivate hook.
  */
-export default class WordCountModule implements NotepadModule {
+export default class WordCountModule implements AtolModule {
     private ctx: ModuleContext | null = null;
 
     activate(ctx: ModuleContext): void {

@@ -1,7 +1,7 @@
 import type { AppManager } from '@core/AppManager';
 import type { InstallManager } from './InstallManager';
 
-export type EntryType = 'app' | 'notepad-module';
+export type EntryType = 'app' | 'atol-module';
 
 /** A unified catalog entry, normalized from an app or a module manifest. */
 export interface CatalogEntry {
@@ -19,7 +19,7 @@ export interface CatalogEntry {
     installed: boolean;
 }
 
-/** Minimal shape of a notepad module.json (local copy to avoid coupling). */
+/** Minimal shape of an Atol module.json (local copy to avoid coupling). */
 interface RawModuleManifest {
     id: string;
     type: string;
@@ -37,7 +37,7 @@ export function entryKey(type: EntryType, id: string): string {
 }
 
 /**
- * Gathers the catalog: applications from the AppManager registry plus Notepad
+ * Gathers the catalog: applications from the AppManager registry plus Atol
  * modules discovered from their manifests. Install state is resolved through
  * the InstallManager so it reflects the same flags the rest of the system uses.
  */
@@ -66,19 +66,19 @@ export async function collectCatalog(
         }
     }
 
-    // Notepad modules. Module entries borrow the host app's icon.
-    const moduleManifests = import.meta.glob('/src/apps/notepad/modules/*/module.json');
-    const hostIcon = appManager?.registry.get('notepad')?.ui?.icon || 'txt';
+    // Atol modules. Module entries borrow the host app's icon.
+    const moduleManifests = import.meta.glob('/src/apps/atol/modules/*/module.json');
+    const hostIcon = appManager?.registry.get('atol')?.ui?.icon || 'txt';
 
     for (const importer of Object.values(moduleManifests)) {
         try {
             const mod = await importer() as { default?: RawModuleManifest };
             const m = mod.default ?? (mod as RawModuleManifest);
-            if (m.type !== 'notepad-module') continue;
+            if (m.type !== 'atol-module') continue;
 
             const def = m.enabledByDefault ?? false;
             entries.push({
-                type: 'notepad-module',
+                type: 'atol-module',
                 id: m.id,
                 name: m.name,
                 version: m.version,

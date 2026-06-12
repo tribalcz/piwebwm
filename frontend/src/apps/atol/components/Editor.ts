@@ -1,7 +1,7 @@
 import type { Disposable } from '../core/types';
 
 /**
- * The editable surface of the Notepad. A thin wrapper over a contenteditable
+ * The editable surface of the Atol. A thin wrapper over a contenteditable
  * element providing basic rich-text formatting via document.execCommand.
  *
  * execCommand is deprecated but remains the simplest cross-browser way to do
@@ -15,8 +15,8 @@ export class Editor {
     private onDocSelectionChange: () => void;
 
     constructor(container: Element) {
-        container.innerHTML = `<div class="notepad-editor" contenteditable="true" spellcheck="true"></div>`;
-        this.el = container.querySelector<HTMLElement>('.notepad-editor')!;
+        container.innerHTML = `<div class="atol-editor" contenteditable="true" spellcheck="true"></div>`;
+        this.el = container.querySelector<HTMLElement>('.atol-editor')!;
 
         this.el.addEventListener('input', () => this.emitChange());
 
@@ -40,7 +40,7 @@ export class Editor {
         try {
             cb();
         } catch (err) {
-            console.error('Notepad editor listener error:', err);
+            console.error('Atol editor listener error:', err);
         }
     }
 

@@ -1,4 +1,4 @@
-.notepad {
+.atol {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -7,7 +7,7 @@
 }
 
 /* Toolbar */
-.notepad-toolbar {
+.atol-toolbar {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -17,24 +17,24 @@
     flex-wrap: wrap;
 }
 
-.np-toolbar-format,
-.np-toolbar-modules {
+.atol-toolbar-format,
+.atol-toolbar-modules {
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
-.np-toolbar-modules:not(:empty) {
+.atol-toolbar-modules:not(:empty) {
     padding-left: 4px;
     margin-left: 4px;
     border-left: 1px solid #ddd;
 }
 
-.np-toolbar-spacer {
+.atol-toolbar-spacer {
     flex: 1;
 }
 
-.np-tool-btn {
+.atol-tool-btn {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -50,27 +50,27 @@
     line-height: 1;
 }
 
-.np-btn-icon {
+.atol-btn-icon {
     display: inline-flex;
     align-items: center;
 }
 
-.np-tool-btn:hover {
+.atol-tool-btn:hover {
     background: #e8e8e8;
     border-color: #ddd;
 }
 
-.np-modules-btn {
+.atol-modules-btn {
     color: #555;
 }
 
 /* Editor */
-.notepad-editor-host {
+.atol-editor-host {
     flex: 1;
     overflow: auto;
 }
 
-.notepad-editor {
+.atol-editor {
     min-height: 100%;
     padding: 16px 20px;
     outline: none;
@@ -79,14 +79,14 @@
     color: #222;
 }
 
-.notepad-editor h1 { font-size: 22px; margin: 0.4em 0; }
-.notepad-editor h2 { font-size: 18px; margin: 0.4em 0; }
-.notepad-editor p { margin: 0.3em 0; }
-.notepad-editor ul,
-.notepad-editor ol { margin: 0.3em 0 0.3em 1.4em; }
+.atol-editor h1 { font-size: 22px; margin: 0.4em 0; }
+.atol-editor h2 { font-size: 18px; margin: 0.4em 0; }
+.atol-editor p { margin: 0.3em 0; }
+.atol-editor ul,
+.atol-editor ol { margin: 0.3em 0 0.3em 1.4em; }
 
 /* Status bar */
-.notepad-statusbar {
+.atol-statusbar {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -97,21 +97,21 @@
     color: #666;
 }
 
-.np-status-message {
+.atol-status-message {
     flex: 1;
 }
 
-.np-status-modules {
+.atol-status-modules {
     display: flex;
     gap: 12px;
 }
 
-.np-status-item {
+.atol-status-item {
     color: #555;
 }
 
 /* Modules dialog */
-.np-modules-overlay {
+.atol-modules-overlay {
     position: absolute;
     inset: 0;
     z-index: 10;
@@ -122,7 +122,7 @@
     background: rgba(0, 0, 0, 0.25);
 }
 
-.np-modules-panel {
+.atol-modules-panel {
     width: 360px;
     max-width: calc(100% - 32px);
     max-height: calc(100% - 80px);
@@ -134,7 +134,7 @@
     overflow: hidden;
 }
 
-.np-modules-header {
+.atol-modules-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -142,13 +142,13 @@
     border-bottom: 1px solid #eee;
 }
 
-.np-modules-header h3 {
+.atol-modules-header h3 {
     margin: 0;
     font-size: 15px;
     color: #333;
 }
 
-.np-modules-close {
+.atol-modules-close {
     border: none;
     background: transparent;
     font-size: 20px;
@@ -157,19 +157,19 @@
     color: #888;
 }
 
-.np-modules-list {
+.atol-modules-list {
     overflow-y: auto;
     padding: 8px;
 }
 
-.np-modules-empty {
+.atol-modules-empty {
     padding: 24px;
     text-align: center;
     color: #999;
     font-size: 13px;
 }
 
-.np-module-row {
+.atol-module-row {
     display: flex;
     align-items: flex-start;
     gap: 10px;
@@ -178,32 +178,32 @@
     cursor: pointer;
 }
 
-.np-module-row:hover {
+.atol-module-row:hover {
     background: #f5f5f5;
 }
 
-.np-module-row input {
+.atol-module-row input {
     margin-top: 2px;
 }
 
-.np-module-info {
+.atol-module-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.np-module-name {
+.atol-module-name {
     font-size: 13px;
     font-weight: 600;
     color: #333;
 }
 
-.np-module-name small {
+.atol-module-name small {
     font-weight: 400;
     color: #999;
 }
 
-.np-module-desc {
+.atol-module-desc {
     font-size: 12px;
     color: #777;
 }

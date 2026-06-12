@@ -5,7 +5,7 @@ export interface CatalogListCallbacks {
     onSelect: (entry: CatalogEntry) => void;
 }
 
-/** Left pane: catalog entries grouped into Applications and Notepad Modules. */
+/** Left pane: catalog entries grouped into Applications and Atol Modules. */
 export class CatalogList {
     private container: Element;
     private callbacks: CatalogListCallbacks;
@@ -30,11 +30,11 @@ export class CatalogList {
         }
 
         const apps = this.entries.filter(e => e.type === 'app');
-        const modules = this.entries.filter(e => e.type === 'notepad-module');
+        const modules = this.entries.filter(e => e.type === 'atol-module');
 
         let html = '';
         if (apps.length > 0) html += this.renderSection('Applications', apps);
-        if (modules.length > 0) html += this.renderSection('Notepad Modules', modules);
+        if (modules.length > 0) html += this.renderSection('Atol Modules', modules);
         this.container.innerHTML = html;
 
         this.container.querySelectorAll<HTMLElement>('.store-card').forEach(card => {

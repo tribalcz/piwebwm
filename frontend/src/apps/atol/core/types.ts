@@ -1,7 +1,7 @@
 /**
- * Notepad module system — public contracts.
+ * Atol module system — public contracts.
  *
- * A "module" (micro-app) extends the Notepad host. It is deliberately distinct
+ * A "module" (micro-app) extends the Atol host. It is deliberately distinct
  * from a top-level WebDesk application:
  *   - it is described by module.json (not meta/manifest.json), so the global
  *     AppManager discovery never picks it up;
@@ -17,13 +17,13 @@ export type Disposable = () => void;
 export type ModuleSlot = 'toolbar' | 'statusbar' | 'contextmenu';
 
 /**
- * module.json schema. `type` is the discriminator that marks this as a Notepad
+ * module.json schema. `type` is the discriminator that marks this as an Atol
  * micro-app rather than a normal application.
  */
 export interface ModuleManifest {
     id: string;
-    type: 'notepad-module';
-    host: string; // target host app id, e.g. "notepad"
+    type: 'atol-module';
+    host: string; // target host app id, e.g. "atol"
     version: string;
     name: string;
     description?: string;
@@ -54,7 +54,7 @@ export interface ContextMenuContribution {
     icon?: string;
 }
 
-/** Per-module key/value store, namespaced under apps.notepad.modules.<id>. */
+/** Per-module key/value store, namespaced under apps.atol.modules.<id>. */
 export interface ModuleStorage {
     get<T = unknown>(key: string, defaultValue?: T): T;
     set(key: string, value: unknown): void;
@@ -105,10 +105,10 @@ export interface ModuleContext {
 }
 
 /** Lifecycle contract a module's default export must implement. */
-export interface NotepadModule {
+export interface AtolModule {
     activate(ctx: ModuleContext): void | Promise<void>;
     deactivate?(): void | Promise<void>;
 }
 
 /** Shape of a module entry point's default export. */
-export type NotepadModuleConstructor = new () => NotepadModule;
+export type AtolModuleConstructor = new () => AtolModule;

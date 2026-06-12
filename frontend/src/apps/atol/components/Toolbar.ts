@@ -22,11 +22,11 @@ const FORMAT_BUTTONS: FormatButton[] = [
     { label: '¶', title: 'Paragraph', command: 'formatBlock', value: 'p' },
     { label: '• List', title: 'Bulleted list', command: 'insertUnorderedList' },
     { label: '1. List', title: 'Numbered list', command: 'insertOrderedList' },
-    { label: `<span class="np-btn-icon">${getIcon('clearFormat', 14)}</span> Clear`, title: 'Clear formatting', command: 'removeFormat' },
+    { label: `<span class="atol-btn-icon">${getIcon('clearFormat', 14)}</span> Clear`, title: 'Clear formatting', command: 'removeFormat' },
 ];
 
 /**
- * The Notepad toolbar: built-in formatting controls plus a slot where modules
+ * The Atol toolbar: built-in formatting controls plus a slot where modules
  * inject their own buttons, and a host "Modules" button.
  */
 export class Toolbar {
@@ -43,25 +43,25 @@ export class Toolbar {
 
     private render(): void {
         const formatHtml = FORMAT_BUTTONS.map(b =>
-            `<button class="np-tool-btn" data-command="${b.command}"` +
+            `<button class="atol-tool-btn" data-command="${b.command}"` +
             (b.value ? ` data-value="${b.value}"` : '') +
             ` title="${b.title}">${b.label}</button>`
         ).join('');
 
         this.container.innerHTML = `
-            <div class="notepad-toolbar">
-                <div class="np-toolbar-format">${formatHtml}</div>
-                <div class="np-toolbar-modules"></div>
-                <div class="np-toolbar-spacer"></div>
-                <button class="np-tool-btn np-modules-btn" title="Manage modules"><span class="np-btn-icon">${getIcon('settings', 14)}</span> Modules</button>
+            <div class="atol-toolbar">
+                <div class="atol-toolbar-format">${formatHtml}</div>
+                <div class="atol-toolbar-modules"></div>
+                <div class="atol-toolbar-spacer"></div>
+                <button class="atol-tool-btn atol-modules-btn" title="Manage modules"><span class="atol-btn-icon">${getIcon('settings', 14)}</span> Modules</button>
             </div>
         `;
 
-        this.moduleSlot = this.container.querySelector<HTMLElement>('.np-toolbar-modules')!;
+        this.moduleSlot = this.container.querySelector<HTMLElement>('.atol-toolbar-modules')!;
     }
 
     private setupEventListeners(): void {
-        this.container.querySelectorAll<HTMLElement>('.np-toolbar-format .np-tool-btn').forEach(btn => {
+        this.container.querySelectorAll<HTMLElement>('.atol-toolbar-format .atol-tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const command = btn.dataset.command;
                 if (command) {
@@ -70,14 +70,14 @@ export class Toolbar {
             });
         });
 
-        const modulesBtn = this.container.querySelector<HTMLElement>('.np-modules-btn');
+        const modulesBtn = this.container.querySelector<HTMLElement>('.atol-modules-btn');
         modulesBtn?.addEventListener('click', () => this.callbacks.onOpenModules());
     }
 
     /** Module slot: add a button. Returns a Disposable that removes it. */
     addItem(item: ToolbarItem): Disposable {
         const btn = document.createElement('button');
-        btn.className = 'np-tool-btn np-module-item';
+        btn.className = 'atol-tool-btn atol-module-item';
         btn.dataset.itemId = item.id;
         btn.innerHTML = item.label;
         if (item.title) btn.title = item.title;
