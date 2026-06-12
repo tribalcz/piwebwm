@@ -67,16 +67,48 @@
 /* Editor */
 .atol-editor-host {
     flex: 1;
+    display: flex;
     overflow: auto;
 }
 
 .atol-editor {
+    flex: 1;
     min-height: 100%;
     padding: 16px 20px;
     outline: none;
     font-size: 14px;
     line-height: 1.6;
     color: var(--text);
+}
+
+/* Line-number gutter (provided by the line-numbers module via setLineNumbers).
+   Hidden until enabled; enabling puts the editor into a no-wrap layout so each
+   logical line is exactly one row and the numbers stay aligned. */
+.atol-gutter {
+    display: none;
+    flex: 0 0 auto;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    padding: 16px 8px 16px 12px;
+    background: var(--surface-alt);
+    border-right: 1px solid var(--border);
+    color: var(--text-faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: right;
+    white-space: pre;
+    user-select: none;
+}
+
+.atol-editor-host.with-gutter .atol-gutter {
+    display: block;
+}
+
+.atol-editor-host.with-gutter .atol-editor {
+    white-space: pre;
+    min-width: max-content;
 }
 
 .atol-editor h1 { font-size: 22px; margin: 0.4em 0; }

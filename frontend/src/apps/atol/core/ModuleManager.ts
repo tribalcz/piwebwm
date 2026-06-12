@@ -260,6 +260,7 @@ export class ModuleManager {
             replaceSelection: (t) => this.host.editorAPI.replaceSelection(t),
             applyFormat: (c, v) => this.host.editorAPI.applyFormat(c, v),
             focus: () => this.host.editorAPI.focus(),
+            setLineNumbers: (on) => this.host.editorAPI.setLineNumbers(on),
             onChange: (cb) => track(this.host.editorAPI.onChange(cb)),
             onSelectionChange: (cb) => track(this.host.editorAPI.onSelectionChange(cb)),
         };

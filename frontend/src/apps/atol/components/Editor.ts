@@ -1,22 +1,34 @@
 import type { Disposable } from '../core/types';
 
 /**
- * The editable surface of the Atol. A thin wrapper over a contenteditable
- * element providing basic rich-text formatting via document.execCommand.
+ * The editable surface of Atol. A thin wrapper over a contenteditable element
+ * providing basic rich-text formatting via document.execCommand.
  *
  * execCommand is deprecated but remains the simplest cross-browser way to do
  * basic formatting with no dependencies, which suits this project. If richer
  * editing is ever needed this is the single place to swap implementations.
  */
 export class Editor {
+    private host: HTMLElement;
     private el: HTMLElement;
+    private gutterEl: HTMLElement;
+    private lineNumbersOn = false;
     private changeListeners = new Set<(text: string) => void>();
     private selectionListeners = new Set<() => void>();
     private onDocSelectionChange: () => void;
 
     constructor(container: Element) {
-        container.innerHTML = `<div class="atol-editor" contenteditable="true" spellcheck="true"></div>`;
-        this.el = container.querySelector<HTMLElement>('.atol-editor')!;
+        this.host = container as HTMLElement;
+        // Gutter sits to the left of the editable; both share the host's scroll
+        // container so they scroll together. The gutter is hidden until line
+        // numbers are enabled (see setLineNumbers), leaving the base editor
+        // visually unchanged.
+        this.host.innerHTML = `
+            <div class="atol-gutter" aria-hidden="true"></div>
+            <div class="atol-editor" contenteditable="true" spellcheck="true"></div>
+        `;
+        this.el = this.host.querySelector<HTMLElement>('.atol-editor')!;
+        this.gutterEl = this.host.querySelector<HTMLElement>('.atol-gutter')!;
 
         this.el.addEventListener('input', () => this.emitChange());
 
@@ -46,6 +58,7 @@ export class Editor {
 
     private emitChange(): void {
         const text = this.getText();
+        if (this.lineNumbersOn) this.refreshGutter();
         this.changeListeners.forEach(cb => this.safe(() => cb(text)));
     }
 
@@ -84,6 +97,30 @@ export class Editor {
 
     focus(): void {
         this.el.focus();
+    }
+
+    /**
+     * Toggle the line-number gutter. Enabling also switches the editable to a
+     * no-wrap "code" layout so that one logical line maps to exactly one row,
+     * keeping the numbers aligned. Disabling restores normal wrapping.
+     */
+    setLineNumbers(on: boolean): void {
+        this.lineNumbersOn = on;
+        this.host.classList.toggle('with-gutter', on);
+        if (on) {
+            this.refreshGutter();
+        } else {
+            this.gutterEl.textContent = '';
+        }
+    }
+
+    private refreshGutter(): void {
+        const count = Math.max(1, this.el.innerText.split('\n').length);
+        let out = '';
+        for (let i = 1; i <= count; i++) {
+            out += (i > 1 ? '\n' : '') + i;
+        }
+        this.gutterEl.textContent = out;
     }
 
     onChange(callback: (text: string) => void): Disposable {

@@ -108,3 +108,7 @@ host.
 - **menu-bar** — classic File / Edit dropdown menu bar above the toolbar
   (example of the `menubar` slot). The host shows the menu bar only while a
   module contributes menus to it.
+- **line-numbers** — IDE-style line-number gutter (example of a slot-less
+  module: pure editor behaviour via `EditorAPI.setLineNumbers`). Off by
+  default; enabling it shows the gutter and switches the editor to a no-wrap
+  layout so numbers stay aligned.

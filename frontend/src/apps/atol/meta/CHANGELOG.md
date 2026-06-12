@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- New `EditorAPI.setLineNumbers` editor capability (host owns a sticky,
+  scroll-synced line-number gutter; enabling it switches the editor to a
+  no-wrap layout so logical lines map 1:1 to rows).
+- New bundled module **line-numbers** (off by default): a slot-less module
+  that turns the gutter on/off purely through the editor API.
+
 ## 1.2.0
 
 - New `menubar` slot in the module system (host gained a menu-bar region above

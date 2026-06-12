@@ -14,6 +14,7 @@ export function createEditorAPI(editor: Editor): EditorAPI {
         replaceSelection: (text) => editor.replaceSelection(text),
         applyFormat: (command, value) => editor.applyFormat(command, value),
         focus: () => editor.focus(),
+        setLineNumbers: (enabled) => editor.setLineNumbers(enabled),
         onChange: (cb) => editor.onChange(cb),
         onSelectionChange: (cb) => editor.onSelectionChange(cb),
     };

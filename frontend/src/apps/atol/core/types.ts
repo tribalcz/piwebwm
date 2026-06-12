@@ -90,6 +90,8 @@ export interface EditorAPI {
     /** Apply a formatting command (bold, italic, formatBlock, …). */
     applyFormat(command: string, value?: string): void;
     focus(): void;
+    /** Toggle the IDE-style line-number gutter (also switches to no-wrap). */
+    setLineNumbers(enabled: boolean): void;
     /** Fires on content change. Returns a Disposable. */
     onChange(callback: (text: string) => void): Disposable;
     /** Fires when the selection inside the editor changes. Returns a Disposable. */
