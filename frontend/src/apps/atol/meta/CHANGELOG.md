@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- New `menubar` slot in the module system (host gained a menu-bar region above
+  the toolbar; hidden until a module contributes menus, so the base editor is
+  unchanged when no menu module is enabled).
+- New bundled module **menu-bar**: classic File / Edit dropdown menus.
+
 ## 1.1.0
 
 - Renamed from **Notepad** to **Atol** — positioned as a universal modular

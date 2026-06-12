@@ -14,7 +14,7 @@
 export type Disposable = () => void;
 
 /** Slots a module may contribute to. Declared up-front in module.json. */
-export type ModuleSlot = 'toolbar' | 'statusbar' | 'contextmenu';
+export type ModuleSlot = 'toolbar' | 'statusbar' | 'contextmenu' | 'menubar';
 
 /**
  * module.json schema. `type` is the discriminator that marks this as an Atol
@@ -54,6 +54,22 @@ export interface ContextMenuContribution {
     icon?: string;
 }
 
+/** One entry inside a menu-bar dropdown. */
+export interface MenuBarItem {
+    label?: string;
+    shortcut?: string; // display only (e.g. "Ctrl+Z"); register the command separately
+    disabled?: boolean;
+    separator?: boolean;
+    onClick?: () => void;
+}
+
+/** A top-level menu (e.g. "File") a module adds to the menu bar. */
+export interface MenuBarMenu {
+    id: string;
+    label: string;
+    items: MenuBarItem[];
+}
+
 /** Per-module key/value store, namespaced under apps.atol.modules.<id>. */
 export interface ModuleStorage {
     get<T = unknown>(key: string, defaultValue?: T): T;
@@ -85,6 +101,8 @@ export interface ModuleUI {
     addToolbarItem(item: ToolbarItem): Disposable;
     addStatusItem(item: StatusItem): Disposable;
     addContextMenuItem(item: ContextMenuContribution): Disposable;
+    /** Add a top-level menu to the menu bar (requires the "menubar" slot). */
+    addMenu(menu: MenuBarMenu): Disposable;
     /** Ask the host to re-render status contributions. */
     refreshStatus(): void;
 }

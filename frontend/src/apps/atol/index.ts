@@ -5,6 +5,7 @@ import type { EventBus } from '@core/EventBus';
 import type { Store } from '@core/Store';
 
 import { Editor } from './components/Editor';
+import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
 import { StatusBar } from './components/StatusBar';
 import { ModulesDialog } from './components/ModulesDialog';
@@ -30,6 +31,7 @@ export default class Atol implements WebDeskApp {
 
     private editor: Editor | null = null;
     private editorAPI: EditorAPI | null = null;
+    private menubar: MenuBar | null = null;
     private toolbar: Toolbar | null = null;
     private statusbar: StatusBar | null = null;
     private modulesDialog: ModulesDialog | null = null;
@@ -61,6 +63,7 @@ export default class Atol implements WebDeskApp {
             addStatusItem: (item) => self.statusbar!.addItem(item),
             refreshStatus: () => self.statusbar?.refresh(),
             addContextMenuItem: (item) => self.addContextContribution(item),
+            addMenu: (menu) => self.menubar!.addMenu(menu),
         };
 
         this.moduleManager = new ModuleManager(bridge);
@@ -92,6 +95,7 @@ export default class Atol implements WebDeskApp {
     private renderSkeleton(): string {
         return `
             <div class="atol">
+                <div class="atol-menubar-host" id="atol-menubar"></div>
                 <div class="atol-toolbar-host" id="atol-toolbar"></div>
                 <div class="atol-editor-host" id="atol-editor"></div>
                 <div class="atol-statusbar-host" id="atol-status"></div>
@@ -103,11 +107,12 @@ export default class Atol implements WebDeskApp {
         this.windowId = id;
 
         const root = windowEl.querySelector<HTMLElement>('.atol');
+        const menubarHost = windowEl.querySelector('#atol-menubar');
         const toolbarHost = windowEl.querySelector('#atol-toolbar');
         const editorHost = windowEl.querySelector('#atol-editor');
         const statusHost = windowEl.querySelector('#atol-status');
 
-        if (!root || !toolbarHost || !editorHost || !statusHost) {
+        if (!root || !menubarHost || !toolbarHost || !editorHost || !statusHost) {
             console.error('Atol: window scaffold not found');
             return;
         }
@@ -118,6 +123,7 @@ export default class Atol implements WebDeskApp {
 
         this.editor = new Editor(editorHost);
         this.editorAPI = createEditorAPI(this.editor);
+        this.menubar = new MenuBar(menubarHost);
         this.toolbar = new Toolbar(toolbarHost, {
             onFormat: (command, value) => this.editor?.applyFormat(command, value),
             onOpenModules: () => this.modulesDialog?.toggle(),
@@ -208,6 +214,7 @@ export default class Atol implements WebDeskApp {
         this.modulesDialog?.destroy();
         this.statusbar?.destroy();
         this.toolbar?.destroy();
+        this.menubar?.destroy();
         this.editor?.destroy();
 
         if (this.windowId) {

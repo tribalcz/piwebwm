@@ -105,3 +105,6 @@ host.
 - **insert-datetime** — inserts the current date/time at the cursor (example of
   the `toolbar` and `contextmenu` slots, a keyboard command — Ctrl+Shift+D —
   and per-module storage).
+- **menu-bar** — classic File / Edit dropdown menu bar above the toolbar
+  (example of the `menubar` slot). The host shows the menu bar only while a
+  module contributes menus to it.

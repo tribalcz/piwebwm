@@ -3,6 +3,7 @@ import type {
     ContextMenuContribution,
     Disposable,
     EditorAPI,
+    MenuBarMenu,
     ModuleContext,
     ModuleManifest,
     ModuleSlot,
@@ -14,7 +15,7 @@ import type {
 } from './types';
 
 const HOST_ID = 'atol';
-const VALID_SLOTS: ModuleSlot[] = ['toolbar', 'statusbar', 'contextmenu'];
+const VALID_SLOTS: ModuleSlot[] = ['toolbar', 'statusbar', 'contextmenu', 'menubar'];
 
 /** The host UI surface the manager wires module contributions into. */
 export interface ModuleHostBridge {
@@ -23,6 +24,7 @@ export interface ModuleHostBridge {
     addStatusItem(item: StatusItem): Disposable;
     refreshStatus(): void;
     addContextMenuItem(item: ContextMenuContribution): Disposable;
+    addMenu(menu: MenuBarMenu): Disposable;
     store: Store | null;
 }
 
@@ -277,6 +279,10 @@ export class ModuleManager {
                 addContextMenuItem: (item) =>
                     requireSlot('contextmenu', 'add a context-menu item')
                         ? track(this.host.addContextMenuItem(item))
+                        : noop,
+                addMenu: (menu) =>
+                    requireSlot('menubar', 'add a menu')
+                        ? track(this.host.addMenu(menu))
                         : noop,
                 refreshStatus: () => this.host.refreshStatus(),
             },
