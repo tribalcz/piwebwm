@@ -104,6 +104,8 @@ func main() {
 				system.GET("/network/interfaces", getNetworkInterfaces)
 				system.GET("/network/routes", getNetworkRoutes)
 				system.POST("/network/hostname", setHostname)
+				system.POST("/network/interface", setInterfaceConfig)
+				system.POST("/network/confirm", confirmNetworkConfig)
 			}
 		}
 	}

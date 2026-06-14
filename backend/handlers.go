@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"rpi-desktop/host-client"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -221,4 +223,63 @@ func setHostname(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "hostname": req.Name})
+}
+
+func setInterfaceConfig(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface         string   `json:"iface"`
+		Method        string   `json:"method"`
+		Address       *string  `json:"address"`
+		Prefixlen     *int     `json:"prefixlen"`
+		Gateway       *string  `json:"gateway"`
+		DNS           []string `json:"dns"`
+		RevertSeconds uint64   `json:"revert_seconds"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	token, secs, err := hostClient.SetInterfaceConfig(hostclient.InterfaceConfigRequest{
+		Iface:         req.Iface,
+		Method:        req.Method,
+		Address:       req.Address,
+		Prefixlen:     req.Prefixlen,
+		Gateway:       req.Gateway,
+		DNS:           req.DNS,
+		RevertSeconds: req.RevertSeconds,
+	})
+	if err != nil {
+		log.Printf("Error applying interface config: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token, "revert_seconds": secs})
+}
+
+func confirmNetworkConfig(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.ConfirmNetworkConfig(req.Token); err != nil {
+		log.Printf("Error confirming network config: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to confirm"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

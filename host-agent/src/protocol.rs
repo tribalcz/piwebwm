@@ -28,6 +28,20 @@ pub enum Action {
     RoutingTable,
     SetHostname { name: String },
 
+    // Network configuration (NetworkManager) with optional auto-revert.
+    SetInterfaceConfig {
+        iface: String,
+        method: String, // "auto" (DHCP) | "manual" (static)
+        address: Option<String>,
+        prefixlen: Option<u8>,
+        gateway: Option<String>,
+        dns: Option<Vec<String>>,
+        revert_seconds: u64, // 0 = apply immediately, no revert
+    },
+    ConfirmNetworkConfig {
+        token: String,
+    },
+
     Ping,
 }
 
@@ -55,6 +69,7 @@ pub enum ResponseData {
     NetworkStatusData(NetworkStatus),
     Interfaces { interfaces: Vec<NetworkInterface> },
     Routes { routes: Vec<RouteEntry> },
+    NetworkApplied { token: Option<String>, revert_seconds: u64 },
     Pong,
 }
 

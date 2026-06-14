@@ -5,13 +5,22 @@ use crate::security::Validator;
 use anyhow::Context;
 use log::{debug, error, info, warn};
 use serde_json;
+use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
+use tokio::time::sleep;
 use crate::handlers::files::FileHandler;
 use crate::handlers::network;
 use crate::protocol::{Action, Request, Response, ResponseData, ResponseResult};
+
+/// Pending auto-reverts, keyed by token. A change waits here until the client
+/// confirms it (token removed → kept) or the timer fires (token taken → revert).
+/// Shared across client connections so a confirm can arrive on a new connection.
+type Reverts = Arc<Mutex<HashMap<String, network::PrevConfig>>>;
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let socket_path = &config.server.socket_path;
@@ -33,15 +42,17 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     info!("Host agent listening on {}", socket_path);
 
     let validator = Validator::new(config.security.clone());
+    let reverts: Reverts = Arc::new(Mutex::new(HashMap::new()));
 
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
                 let config = config.clone();
                 let validator = validator.clone();
+                let reverts = reverts.clone();
 
                 tokio::spawn(async move {
-                    if let Err(e) = handle_client(stream, config, validator).await {
+                    if let Err(e) = handle_client(stream, config, validator, reverts).await {
                         error!("Client error: {}", e);
                     }
                 });
@@ -90,6 +101,7 @@ async fn handle_client(
     stream: UnixStream,
     config: Config,
     validator: Validator,
+    reverts: Reverts,
 ) -> Result<()> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -127,7 +139,7 @@ async fn handle_client(
                 let line = String::from_utf8_lossy(&buf);
                 debug!("Received request ({} bytes)", n);
 
-                let response_json = process_request(&line, &config, &validator).await;
+                let response_json = process_request(&line, &config, &validator, &reverts).await;
 
                 writer.write_all(response_json.as_bytes()).await?;
                 writer.write_all(b"\n").await?;
@@ -147,6 +159,7 @@ async fn process_request(
     request_str: &str,
     _config: &Config,
     validator: &Validator,
+    reverts: &Reverts,
 ) -> String {
     // Parse request
     let request: Request = match serde_json::from_str(request_str) {
@@ -271,6 +284,72 @@ async fn process_request(
                 code: 400,
             },
         },
+
+        Action::SetInterfaceConfig {
+            iface,
+            method,
+            address,
+            prefixlen,
+            gateway,
+            dns,
+            revert_seconds,
+        } => {
+            let cfg = network::InterfaceConfig {
+                iface,
+                method,
+                address,
+                prefixlen,
+                gateway,
+                dns,
+            };
+            match network::apply_interface_config(&cfg) {
+                Ok(prev) => {
+                    if revert_seconds > 0 {
+                        let token = network::gen_token();
+                        reverts.lock().unwrap().insert(token.clone(), prev);
+
+                        // Auto-revert unless confirmed within the window.
+                        let reverts2 = reverts.clone();
+                        let token2 = token.clone();
+                        tokio::spawn(async move {
+                            sleep(Duration::from_secs(revert_seconds)).await;
+                            let entry = reverts2.lock().unwrap().remove(&token2);
+                            if let Some(prev) = entry {
+                                warn!("Auto-reverting network change {} after {}s", token2, revert_seconds);
+                                if let Err(e) = network::restore_interface_config(&prev) {
+                                    error!("Auto-revert failed: {}", e);
+                                }
+                            }
+                        });
+
+                        ResponseResult::Success(ResponseData::NetworkApplied {
+                            token: Some(token),
+                            revert_seconds,
+                        })
+                    } else {
+                        ResponseResult::Success(ResponseData::NetworkApplied {
+                            token: None,
+                            revert_seconds: 0,
+                        })
+                    }
+                }
+                Err(e) => ResponseResult::Error {
+                    error: e.to_string(),
+                    code: 400,
+                },
+            }
+        }
+
+        Action::ConfirmNetworkConfig { token } => {
+            let kept = reverts.lock().unwrap().remove(&token).is_some();
+            ResponseResult::Success(ResponseData::Success {
+                message: if kept {
+                    "Network change kept".to_string()
+                } else {
+                    "No pending change for token".to_string()
+                },
+            })
+        }
 
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),

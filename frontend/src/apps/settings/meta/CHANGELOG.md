@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0
+
+- Network phase 2: per-interface IPv4 configuration (DHCP/static + gateway +
+  DNS) via NetworkManager, from the Interfaces tab's "Configure" dialog.
+- Safe-apply with auto-revert: the agent reverts the change after 60s unless
+  confirmed, preventing lockout when changing the management interface.
+  New agent actions SetInterfaceConfig / ConfirmNetworkConfig and endpoints
+  `POST /api/system/network/{interface,confirm}`.
+- Routing remains read-only (route editing deferred).
+
 ## 1.1.0
 
 - New **Network** section (Status / Interfaces / Routing) reading live host

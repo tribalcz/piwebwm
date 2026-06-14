@@ -451,3 +451,74 @@ func (c *HostAgentClient) SetHostname(name string) error {
 	}
 	return nil
 }
+
+// --- Network configuration (phase 2) ---------------------------------------
+
+type InterfaceConfigRequest struct {
+	Iface         string
+	Method        string
+	Address       *string
+	Prefixlen     *int
+	Gateway       *string
+	DNS           []string
+	RevertSeconds uint64
+}
+
+// SetInterfaceConfig applies an interface config. Returns a revert token (when
+// revert_seconds > 0) the caller must confirm before the agent reverts.
+func (c *HostAgentClient) SetInterfaceConfig(req InterfaceConfigRequest) (*string, uint64, error) {
+	params := map[string]interface{}{
+		"iface":          req.Iface,
+		"method":         req.Method,
+		"revert_seconds": req.RevertSeconds,
+	}
+	if req.Address != nil {
+		params["address"] = *req.Address
+	}
+	if req.Prefixlen != nil {
+		params["prefixlen"] = *req.Prefixlen
+	}
+	if req.Gateway != nil {
+		params["gateway"] = *req.Gateway
+	}
+	if req.DNS != nil {
+		params["dns"] = req.DNS
+	}
+
+	resp, err := c.sendRequest(Action{Type: "SetInterfaceConfig", Params: params})
+	if err != nil {
+		return nil, 0, err
+	}
+	if resp.IsError() {
+		return nil, 0, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	var token *string
+	if data != nil {
+		if t, ok := data["token"].(string); ok {
+			token = &t
+		}
+	}
+	var secs uint64
+	if data != nil {
+		if s, ok := data["revert_seconds"].(float64); ok {
+			secs = uint64(s)
+		}
+	}
+	return token, secs, nil
+}
+
+func (c *HostAgentClient) ConfirmNetworkConfig(token string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "ConfirmNetworkConfig",
+		Params: map[string]interface{}{"token": token},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}

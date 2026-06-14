@@ -11,15 +11,19 @@ import type {
 type Tab = 'status' | 'interfaces' | 'routing';
 
 const POLL_MS = 3000;
+const REVERT_SECONDS = 60;
 
 /**
- * Network section. Reads everything from the host agent via /api/system/network/*;
- * the only write is the hostname. The Interfaces tab polls for live throughput
- * while it is open — the returned cleanup stops the timer when the section is
- * left or Settings is closed.
+ * Network section. Reads via /api/system/network/*; writes are the hostname
+ * (Status) and interface IPv4 config (Interfaces). Interface changes apply with
+ * a safe-apply window: the agent reverts after REVERT_SECONDS unless the user
+ * confirms — so changing the IP you are connected through can't lock you out.
  */
 export function renderNetwork(container: Element, _ctx: SettingsContext): () => void {
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let modalOpen = false;
+    let interfaces: NetworkInterface[] = [];
+    let status: NetworkStatus | null = null;
     const lastSample = new Map<string, { rx: number; tx: number; t: number }>();
 
     container.innerHTML = `
@@ -41,17 +45,165 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         }
     };
 
+    const refreshInterfaces = async () => {
+        const res = await getJSON<NetworkInterfacesResponse>('/api/system/network/interfaces');
+        if (!res.ok || !res.data) {
+            body.innerHTML = unavailable(res.status);
+            interfaces = [];
+            return;
+        }
+        interfaces = res.data.interfaces;
+        const now = Date.now();
+        body.innerHTML = `<div class="net-iface-list">${
+            interfaces.map(i => renderInterfaceCard(i, lastSample, now)).join('')
+        }</div>`;
+        body.querySelectorAll<HTMLElement>('[data-edit]').forEach(btn => {
+            btn.addEventListener('click', () => openEditModal(btn.dataset.edit!));
+        });
+    };
+
     const show = (tab: Tab) => {
         stopPoll();
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
         if (tab === 'status') {
             void renderStatus(body);
         } else if (tab === 'interfaces') {
-            void renderInterfaces(body, lastSample);
-            pollTimer = setInterval(() => void renderInterfaces(body, lastSample), POLL_MS);
+            void refreshInterfaces();
+            pollTimer = setInterval(() => {
+                if (!modalOpen) void refreshInterfaces();
+            }, POLL_MS);
         } else {
             void renderRouting(body);
         }
+    };
+
+    const openEditModal = async (name: string) => {
+        const iface = interfaces.find(i => i.name === name);
+        if (!iface) return;
+        modalOpen = true;
+        if (!status) {
+            const s = await getJSON<NetworkStatus>('/api/system/network/status');
+            status = s.data ?? null;
+        }
+
+        const ipv4 = iface.addresses.find(a => a.family === 'ipv4');
+        const overlay = modal(`
+            <h3>Configure ${escapeHtml(iface.name)}</h3>
+            <label>Method</label>
+            <select class="net-f-method">
+                <option value="auto">Automatic (DHCP)</option>
+                <option value="manual" selected>Manual (static)</option>
+            </select>
+            <div class="net-manual">
+                <label>IP address</label>
+                <input type="text" class="net-f-address" value="${escapeHtml(ipv4?.address ?? '')}" placeholder="192.168.1.50" />
+                <label>Prefix length</label>
+                <input type="text" class="net-f-prefix" value="${ipv4?.prefixlen ?? 24}" placeholder="24" />
+                <label>Gateway</label>
+                <input type="text" class="net-f-gateway" value="${escapeHtml(status?.gateway ?? '')}" placeholder="192.168.1.1" />
+            </div>
+            <label>DNS servers (space or comma separated)</label>
+            <input type="text" class="net-f-dns" value="${escapeHtml((status?.dns ?? []).join(' '))}" placeholder="1.1.1.1 8.8.8.8" />
+            <p class="set-note">Applied with a ${REVERT_SECONDS}s safety timer — if this is the interface you're connected through, the connection may drop and the change will revert automatically.</p>
+            <div class="net-modal-actions">
+                <button class="set-btn net-cancel">Cancel</button>
+                <button class="set-btn net-apply" style="background:var(--accent);color:#fff;border-color:var(--accent)">Apply</button>
+            </div>
+        `);
+
+        const methodSel = overlay.querySelector<HTMLSelectElement>('.net-f-method')!;
+        const manualBox = overlay.querySelector<HTMLElement>('.net-manual')!;
+        const syncManual = () => { manualBox.style.display = methodSel.value === 'manual' ? '' : 'none'; };
+        methodSel.addEventListener('change', syncManual);
+        syncManual();
+
+        const close = () => { overlay.remove(); modalOpen = false; };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.querySelector('.net-cancel')?.addEventListener('click', close);
+        overlay.querySelector('.net-apply')?.addEventListener('click', async () => {
+            const method = methodSel.value;
+            const dnsRaw = overlay.querySelector<HTMLInputElement>('.net-f-dns')!.value.trim();
+            const dns = dnsRaw ? dnsRaw.split(/[\s,]+/).filter(Boolean) : [];
+            const payload: Record<string, unknown> = {
+                iface: name,
+                method,
+                dns,
+                revert_seconds: REVERT_SECONDS,
+            };
+            if (method === 'manual') {
+                payload.address = overlay.querySelector<HTMLInputElement>('.net-f-address')!.value.trim();
+                payload.prefixlen = parseInt(overlay.querySelector<HTMLInputElement>('.net-f-prefix')!.value, 10) || 24;
+                const gw = overlay.querySelector<HTMLInputElement>('.net-f-gateway')!.value.trim();
+                payload.gateway = gw;
+            }
+            close();
+            await applyConfig(payload);
+            status = null; // gateway/dns may have changed
+            void refreshInterfaces();
+        });
+    };
+
+    const applyConfig = async (payload: Record<string, unknown>) => {
+        try {
+            const res = await fetch('/api/system/network/interface', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({})) as { error?: string };
+                alert(`Could not apply: ${err.error ?? res.status}`);
+                return;
+            }
+            const data = await res.json() as { token: string | null; revert_seconds: number };
+            if (data.token) {
+                showRevertCountdown(data.token, data.revert_seconds);
+            }
+        } catch {
+            alert('Could not apply network configuration.');
+        }
+    };
+
+    const showRevertCountdown = (token: string, seconds: number) => {
+        modalOpen = true;
+        let remaining = seconds;
+        const overlay = modal(`
+            <h3>Keep these settings?</h3>
+            <p>Network settings were applied. They will revert automatically if not confirmed.</p>
+            <p class="net-countdown">Reverting in <strong>${remaining}s</strong>…</p>
+            <p class="set-note">If your connection dropped, you can't confirm here — wait for the automatic revert, then reconnect.</p>
+            <div class="net-modal-actions">
+                <button class="set-btn net-keep" style="background:var(--accent);color:#fff;border-color:var(--accent)">Keep changes</button>
+            </div>
+        `);
+        const countEl = overlay.querySelector<HTMLElement>('.net-countdown strong')!;
+        const finish = () => { clearInterval(timer); overlay.remove(); modalOpen = false; };
+
+        const timer = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                finish();
+                void refreshInterfaces();
+                return;
+            }
+            countEl.textContent = `${remaining}s`;
+        }, 1000);
+
+        overlay.querySelector('.net-keep')?.addEventListener('click', async () => {
+            try {
+                await fetch('/api/system/network/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ token }),
+                });
+            } catch {
+                /* if this fails the agent will auto-revert */
+            }
+            finish();
+            void refreshInterfaces();
+        });
     };
 
     tabs.forEach(t => t.addEventListener('click', () => show((t.dataset.tab as Tab) ?? 'status')));
@@ -60,7 +212,7 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
     return stopPoll;
 }
 
-// --- helpers ---------------------------------------------------------------
+// --- shared helpers --------------------------------------------------------
 
 async function getJSON<T>(url: string): Promise<{ ok: boolean; status: number; data?: T }> {
     try {
@@ -70,6 +222,14 @@ async function getJSON<T>(url: string): Promise<{ ok: boolean; status: number; d
     } catch {
         return { ok: false, status: 0 };
     }
+}
+
+function modal(innerHtml: string): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.className = 'net-modal-overlay';
+    overlay.innerHTML = `<div class="net-modal">${innerHtml}</div>`;
+    document.body.appendChild(overlay);
+    return overlay;
 }
 
 function unavailable(status: number): string {
@@ -152,21 +312,6 @@ async function renderStatus(body: HTMLElement): Promise<void> {
 
 // --- Interfaces tab --------------------------------------------------------
 
-async function renderInterfaces(
-    body: HTMLElement,
-    lastSample: Map<string, { rx: number; tx: number; t: number }>
-): Promise<void> {
-    const res = await getJSON<NetworkInterfacesResponse>('/api/system/network/interfaces');
-    if (!res.ok || !res.data) {
-        body.innerHTML = unavailable(res.status);
-        return;
-    }
-
-    const now = Date.now();
-    const cards = res.data.interfaces.map(i => renderInterfaceCard(i, lastSample, now)).join('');
-    body.innerHTML = `<div class="net-iface-list">${cards}</div>`;
-}
-
 function renderInterfaceCard(
     iface: NetworkInterface,
     lastSample: Map<string, { rx: number; tx: number; t: number }>,
@@ -192,6 +337,7 @@ function renderInterfaceCard(
             : '';
 
     const stateClass = iface.state === 'up' ? 'net-online' : 'net-offline';
+    const editable = iface.kind === 'ethernet' || iface.kind === 'wifi';
 
     return `
         <div class="net-iface">
@@ -199,6 +345,8 @@ function renderInterfaceCard(
                 <span class="net-iface-name">${escapeHtml(iface.name)}</span>
                 <span class="net-iface-kind">${escapeHtml(iface.kind)}</span>
                 <span class="net-pill ${stateClass}">${escapeHtml(iface.state)}</span>
+                <span class="net-iface-spacer"></span>
+                ${editable ? `<button class="set-btn net-iface-edit" data-edit="${escapeHtml(iface.name)}">Configure</button>` : ''}
             </div>
             ${addrLine('IPv4', ipv4)}
             ${addrLine('IPv6', ipv6)}
