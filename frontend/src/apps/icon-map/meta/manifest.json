@@ -4,7 +4,7 @@
   "name": "Icon Map",
   "description": "Browse and search all available system icons with easy copy-to-clipboard functionality",
   "author": ",arsuch",
-  "entryPoint": "index.js",
+  "entryPoint": "index.ts",
   "styles": ["./styles/styles.css"],
   "ui": {
     "displayName": "Icon Map",

@@ -1,0 +1,31 @@
+{
+  "id": "atol",
+  "version": "1.4.0",
+  "name": "Atol",
+  "description": "A universal modular application — a rich-text notepad in its base form, extensible through modules into anything up to an IDE.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "styles": ["./styles/atol.css"],
+  "ui": {
+    "displayName": "Atol",
+    "icon": "txt",
+    "category": "applications",
+    "keywords": ["atol", "notepad", "notes", "editor", "text", "write", "modules", "ide"]
+  },
+  "window": {
+    "defaultWidth": 640,
+    "defaultHeight": 480,
+    "minWidth": 480,
+    "minHeight": 320,
+    "resizable": true,
+    "persistent": true
+  },
+  "permissions": [
+    "clipboard"
+  ],
+  "dependencies": {
+    "ContextMenu": "^1.0.0"
+  },
+  "status": "stable",
+  "enabled": true
+}

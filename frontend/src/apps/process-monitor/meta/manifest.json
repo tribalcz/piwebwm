@@ -5,7 +5,7 @@
   "description": "Monitor WebDesk WM processes, events and system resources in real-time",
   "author": "marsuch",
 
-  "entryPoint": "index.js",
+  "entryPoint": "index.ts",
 
   "ui": {
     "displayName": "Process Monitor",

@@ -5,8 +5,9 @@ use crate::security::Validator;
 use anyhow::Context;
 use log::{debug, error, info, warn};
 use serde_json;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use crate::handlers::files::FileHandler;
 use crate::protocol::{Action, Request, Response, ResponseData, ResponseResult};
@@ -22,9 +23,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let listener = UnixListener::bind(socket_path)
         .context("Failed to bind Unix socket")?;
 
-    info!("Host agent listening on {}", socket_path);
+    // Restrict access to the control socket. This is the agent's only
+    // privilege boundary: without it any local process could drive file
+    // operations with the agent's rights. Apply the configured group first,
+    // then the mode, so group-readable permissions take effect atomically.
+    apply_socket_permissions(socket_path, &config)?;
 
-    // TODO: Set socket permissions
+    info!("Host agent listening on {}", socket_path);
 
     let validator = Validator::new(config.security.clone());
 
@@ -47,6 +52,39 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     }
 }
 
+/// Sets the control socket's group and mode from configuration.
+///
+/// A missing group is logged and tolerated (the mode still restricts access to
+/// owner+group), but failing to apply the mode is fatal — we must not serve on
+/// a world-accessible socket.
+fn apply_socket_permissions(socket_path: &str, config: &Config) -> anyhow::Result<()> {
+    let path = Path::new(socket_path);
+
+    if !config.server.socket_group.is_empty() {
+        match nix::unistd::Group::from_name(&config.server.socket_group) {
+            Ok(Some(group)) => {
+                nix::unistd::chown(path, None, Some(group.gid))
+                    .context("Failed to set socket group")?;
+            }
+            Ok(None) => warn!(
+                "Socket group '{}' not found; leaving default group",
+                config.server.socket_group
+            ),
+            Err(e) => warn!(
+                "Failed to resolve socket group '{}': {}",
+                config.server.socket_group, e
+            ),
+        }
+    }
+
+    let mode = config.server.socket_permissions;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+        .context("Failed to set socket permissions")?;
+    info!("Socket permissions set to {:o}", mode);
+
+    Ok(())
+}
+
 async fn handle_client(
     stream: UnixStream,
     config: Config,
@@ -54,15 +92,39 @@ async fn handle_client(
 ) -> Result<()> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
-    let mut line = String::new();
+
+    // Bound a single request line so a client cannot exhaust memory by sending
+    // bytes without a newline. The cap is derived from the configured file-size
+    // limit (content travels inline as JSON, which inflates the byte count)
+    // plus headroom for the rest of the envelope.
+    let max_line_len: u64 = config
+        .security
+        .max_file_size
+        .saturating_mul(2)
+        .saturating_add(1 << 20);
 
     loop {
-        line.clear();
+        let mut buf: Vec<u8> = Vec::new();
+        let mut limited = (&mut reader).take(max_line_len);
 
-        match reader.read_line(&mut line).await {
-            Ok(0) => break,
-            Ok(_) => {
-                debug!("Received: {}", line.trim());
+        match limited.read_until(b'\n', &mut buf).await {
+            Ok(0) => break, // EOF
+            Ok(n) => {
+                // No terminating newline means either a final unterminated line
+                // or a line that hit the cap. If we read up to the cap, reject.
+                if buf.last() != Some(&b'\n') {
+                    if n as u64 >= max_line_len {
+                        error!("Request line exceeded {} bytes; closing connection", max_line_len);
+                        let resp = r#"{"id":"unknown","result":{"error":"Request too large","code":413}}"#;
+                        let _ = writer.write_all(resp.as_bytes()).await;
+                        let _ = writer.write_all(b"\n").await;
+                        let _ = writer.flush().await;
+                    }
+                    break;
+                }
+
+                let line = String::from_utf8_lossy(&buf);
+                debug!("Received request ({} bytes)", n);
 
                 let response_json = process_request(&line, &config, &validator).await;
 

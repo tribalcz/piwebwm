@@ -4,7 +4,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #f5f5f5;
+    background: var(--surface-hover);
     overflow: hidden;
 }
 
@@ -16,8 +16,8 @@
 
 /* Search Bar */
 .icon-map-search {
-    background: white;
-    border-bottom: 1px solid #ddd;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
 }
 
@@ -38,7 +38,7 @@
 .search-icon {
     position: absolute;
     left: 12px;
-    color: #999;
+    color: var(--text-faint);
     display: flex;
     align-items: center;
     pointer-events: none;
@@ -47,7 +47,7 @@
 .search-input {
     width: 100%;
     padding: 10px 40px 10px 40px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
     transition: all 0.2s;
@@ -69,13 +69,13 @@
     border-radius: 4px;
     display: flex;
     align-items: center;
-    color: #999;
+    color: var(--text-faint);
     transition: all 0.2s;
 }
 
 .clear-search:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: var(--border-soft);
+    color: var(--text);
 }
 
 .category-filter {
@@ -85,10 +85,10 @@
 .category-select {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
-    background: white;
+    background: var(--surface);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -103,7 +103,7 @@
 .icon-map-content {
     flex: 1;
     overflow: hidden;
-    background: white;
+    background: var(--surface);
 }
 
 .icon-grid-wrapper {
@@ -115,9 +115,9 @@
 .icon-grid-stats {
     padding: 12px 20px;
     background: #f8f8f8;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border);
     font-size: 13px;
-    color: #666;
+    color: var(--text-muted);
     flex-shrink: 0;
 }
 
@@ -139,8 +139,8 @@
 
 /* Icon Card */
 .icon-card {
-    background: white;
-    border: 2px solid #e0e0e0;
+    background: var(--surface);
+    border: 2px solid var(--border);
     border-radius: 12px;
     padding: 20px;
     display: flex;
@@ -190,14 +190,14 @@
 .icon-name {
     font-size: 13px;
     font-weight: 600;
-    color: #333;
+    color: var(--text);
     word-break: break-word;
     margin-bottom: 4px;
 }
 
 .icon-category {
     font-size: 11px;
-    color: #999;
+    color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -210,7 +210,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: white;
+    background: var(--surface);
     border-radius: 10px;
     color: #10b981;
 }
@@ -220,7 +220,7 @@
     grid-column: 1 / -1;
     padding: 80px 20px;
     text-align: center;
-    color: #999;
+    color: var(--text-faint);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -230,14 +230,14 @@
 .empty-state p {
     font-size: 18px;
     font-weight: 500;
-    color: #666;
+    color: var(--text-muted);
     margin: 0;
 }
 
 /* Footer */
 .icon-map-footer {
     background: #f8f8f8;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--border);
     padding: 12px 20px;
     flex-shrink: 0;
 }
@@ -247,7 +247,7 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: #666;
+    color: var(--text-muted);
 }
 
 .footer-hint span {
@@ -261,11 +261,11 @@
 }
 
 .icon-grid::-webkit-scrollbar-track {
-    background: #f0f0f0;
+    background: var(--border-soft);
 }
 
 .icon-grid::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: var(--border);
     border-radius: 4px;
 }
 

@@ -9,14 +9,26 @@ security:
     - "/media"
     - "/mnt"
     - "/tmp/webdesk"
-    - "/"
 
+  # Defense-in-depth blocklist. NOTE: this is a denylist and therefore
+  # inherently incomplete; the real boundary should be per-operation
+  # whitelisting. Until then, block the most common credential material.
   forbidden_patterns:
     - ".ssh"
     - ".gnupg"
     - ".passwords"
+    - ".aws"
+    - ".netrc"
+    - ".git-credentials"
+    - ".pgpass"
+    - ".kube"
+    - ".docker"
     - "id_rsa"
+    - "id_dsa"
+    - "id_ecdsa"
+    - "id_ed25519"
     - "*.key"
+    - "*.pem"
 
   max_file_size: 104857600
   max_path_depth: 10

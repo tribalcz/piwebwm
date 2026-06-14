@@ -18,13 +18,39 @@ var (
 )
 
 func main() {
+	// Subcommands (utilities that don't start the server).
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "hashpw":
+			os.Exit(runHashpw(os.Args[2:]))
+		}
+	}
+
+	// Authentication must be configured before we accept any traffic.
+	auth, err := buildAuthenticator()
+	if err != nil {
+		log.Fatalf("❌ Authentication setup failed: %v", err)
+	}
+	log.Println("🔐 Authentication source:", auth.Name())
+
+	sessions := NewSessionStore()
+	limiter := newLoginLimiter()
+
 	r := gin.Default()
 
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
-	r.Use(cors.New(corsConfig))
+	// CORS: locked down by default. Cross-origin browser access is only
+	// enabled when WEBDESK_ALLOWED_ORIGINS (comma-separated) is set, and then
+	// with credentials so the session cookie is allowed. In the default setup
+	// the frontend is same-origin (served by this backend, or proxied by Vite
+	// server-side), so no permissive CORS is needed.
+	if origins := os.Getenv("WEBDESK_ALLOWED_ORIGINS"); origins != "" {
+		corsConfig := cors.DefaultConfig()
+		corsConfig.AllowOrigins = strings.Split(origins, ",")
+		corsConfig.AllowCredentials = true
+		corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+		corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept"}
+		r.Use(cors.New(corsConfig))
+	}
 
 	socketPath := os.Getenv("HOST_AGENT_SOCKET")
 	if socketPath == "" {
@@ -40,7 +66,7 @@ func main() {
 		} else {
 			log.Println("⚠️  Host Agent socket exists but ping failed:", err)
 			log.Println("📦 Using MOCK data")
-			useMock = false
+			useMock = true
 		}
 	} else {
 		log.Println("⚠️  Host Agent socket not found at", socketPath)
@@ -50,21 +76,31 @@ func main() {
 
 	api := r.Group("/api")
 	{
+		// Public auth endpoints.
+		api.POST("/login", loginHandler(auth, sessions, limiter))
+		api.POST("/logout", logoutHandler(sessions))
+		api.GET("/me", meHandler(sessions))
+
 		api.GET("/time", getTime)
 
-		files := api.Group("/files")
+		// Everything below requires a valid session.
+		authed := api.Group("")
+		authed.Use(authMiddleware(sessions))
 		{
-			files.GET("/list", listFiles)
-			files.GET("/read", readFile)
-			files.POST("/create", createFile)
-			files.POST("/move", moveFile)
-			files.DELETE("/delete", deleteFile)
-		}
+			files := authed.Group("/files")
+			{
+				files.GET("/list", listFiles)
+				files.GET("/read", readFile)
+				files.POST("/create", createFile)
+				files.POST("/move", moveFile)
+				files.DELETE("/delete", deleteFile)
+			}
 
-		system := api.Group("/system")
-		{
-			system.GET("/info", getSystemInfo)
-			system.GET("/processes", getProcesses)
+			system := authed.Group("/system")
+			{
+				system.GET("/info", getSystemInfo)
+				system.GET("/processes", getProcesses)
+			}
 		}
 	}
 

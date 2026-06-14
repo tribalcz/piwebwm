@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true,
+
+    "types": ["vite/client", "node"],
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@css/*": ["src/styles/*"],
+      "@core/*": ["src/core/*"],
+      "@components/*": ["src/components/*"],
+      "@apps/*": ["src/apps/*"],
+      "@utils/*": ["src/utils/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

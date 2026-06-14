@@ -15,4 +15,35 @@ A modern web-based desktop environment designed for headless Linux systems, part
 ```bash
 git clone https://github.com/[username]/webdesk-os.git
 cd webdesk-os
-docker-compose up -d
+./install.sh          # check prerequisites (Docker, Compose, ports, …)
+./install.sh --start  # check, then bring the stack up
+```
+
+`install.sh` only inspects the system unless you pass `--start`; it reports each
+prerequisite as `[ OK ] / [WARN] / [FAIL]` and refuses to start if anything
+hard-fails. You can also start manually with `docker-compose up -d`.
+
+## Authentication
+
+The API is protected by a login (session cookie). Credentials come from one of
+two sources, checked in order:
+
+1. **Users file** (preferred). One `username:bcrypt-hash` entry per line.
+   Default path `/etc/webdesk/users`, overridable via `WEBDESK_USERS_FILE`.
+   Generate entries with the helper (it never stores plaintext):
+
+   ```bash
+   # build the backend once, then:
+   tools/hashpw.sh alice                 # prompts for password, appends entry
+   tools/hashpw.sh alice --print         # just print "alice:$2a$..."
+   ```
+
+2. **Environment fallback** (used when no users file exists), e.g. in
+   `docker-compose.yml`: `WEBDESK_USER` / `WEBDESK_PASSWORD`.
+
+If neither is configured the backend refuses to start (fail-closed) — it never
+runs unauthenticated.
+
+> This file/env scheme is temporary. The intended end state is logging in with
+> real system accounts (PAM). When deploying over the network, terminate TLS in
+> front of the backend and set `WEBDESK_SECURE_COOKIE=1`.

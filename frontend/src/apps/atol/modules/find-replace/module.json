@@ -1,0 +1,12 @@
+{
+  "id": "find-replace",
+  "type": "atol-module",
+  "host": "atol",
+  "version": "1.0.0",
+  "name": "Find & Replace",
+  "description": "Search the document and replace text. Ctrl+F to find, Ctrl+H to replace.",
+  "author": "marsuch",
+  "entryPoint": "index.ts",
+  "slots": ["toolbar"],
+  "enabledByDefault": true
+}

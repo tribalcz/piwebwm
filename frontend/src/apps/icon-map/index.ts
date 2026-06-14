@@ -1,0 +1,204 @@
+import { ContextMenu, type ContextMenuItem } from '@components/ContextMenu';
+import { getIcon } from '@utils/Icons';
+import type { AppContext, AppManifest, WebDeskApp } from '@core/types';
+import type { WindowManager } from '@core/WindowManager';
+import type { EventBus } from '@core/EventBus';
+import type { Store } from '@core/Store';
+
+import { SearchBar, type SearchFilters } from './components/SearchBar';
+import { IconGrid } from './components/IconGrid';
+
+/**
+ * Icon Map - Browse and search system icons
+ * Modular architecture with SearchBar and IconGrid components
+ */
+export default class IconMap implements WebDeskApp {
+    private context: AppContext;
+    private windowManager: WindowManager;
+    private eventBus: EventBus | null;
+    private store: Store | null;
+    private manifest: AppManifest;
+
+    private windowId: string | null;
+
+    private components: {
+        searchBar: SearchBar | null;
+        iconGrid: IconGrid | null;
+    };
+
+    private contextMenu: ContextMenu;
+
+    constructor(context: AppContext) {
+        this.context = context;
+        this.windowManager = context.windowManager;
+        this.eventBus = context.eventBus || null;
+        this.store = context.store || null;
+        this.manifest = context.manifest;
+
+        this.windowId = null;
+
+        this.components = {
+            searchBar: null,
+            iconGrid: null
+        };
+
+        this.contextMenu = new ContextMenu();
+
+        console.log('Icon Map initialized');
+    }
+
+    async init(): Promise<void> {
+        console.log('Icon Map init');
+    }
+
+    async open(): Promise<void> {
+        const windowCount = this.windowManager.getAllWindows().size;
+
+        this.windowId = this.windowManager.createWindow({
+            title: this.manifest?.ui?.displayName || 'Icon Map',
+            x: 150 + (windowCount * 25),
+            y: 100 + (windowCount * 25),
+            width: this.manifest?.window?.defaultWidth || 800,
+            height: this.manifest?.window?.defaultHeight || 600,
+            content: this.renderSkeleton(),
+            persistent: this.manifest?.window?.persistent || false,
+            onCreated: (windowId, windowEl) => this.onWindowCreated(windowId, windowEl)
+        });
+
+        console.log('Icon Map opened, windowId:', this.windowId);
+    }
+
+    private onWindowCreated(id: string, windowEl: HTMLElement): void {
+        this.windowId = id;
+
+        if (this.eventBus) {
+            this.eventBus.emit('app:opened', {
+                appId: this.manifest.id,
+                windowId: this.windowId
+            });
+        }
+
+        this.initializeComponents(windowEl);
+
+        this.setupKeyboardShortcuts();
+    }
+
+    private renderSkeleton(): string {
+        return `
+            <div class="icon-map-app">
+                <div class="icon-map-search" id="search-container"></div>
+                <div class="icon-map-content" id="grid-container"></div>
+
+                <div class="icon-map-footer">
+                    <div class="footer-hint">
+                        Click [<span>${getIcon('copy', 16)}</span>] to copy icon name • Right-click for more options
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    private initializeComponents(windowEl: HTMLElement): void {
+        const searchContainer = windowEl.querySelector('#search-container');
+        const gridContainer = windowEl.querySelector('#grid-container');
+
+        if (!searchContainer || !gridContainer) {
+            console.error('Icon Map containers not found in window');
+            return;
+        }
+
+        this.components.searchBar = new SearchBar(searchContainer, {
+            onChange: (filters) => this.handleSearchChange(filters)
+        });
+
+        this.components.iconGrid = new IconGrid(gridContainer, {
+            onContextMenu: (x, y, iconName) => this.showContextMenu(x, y, iconName)
+        });
+
+        console.log('Icon Map components initialized');
+    }
+
+    private setupKeyboardShortcuts(): void {
+        document.addEventListener('keydown', () => {
+            const activeWindow = document.querySelector<HTMLElement>('.window.active');
+            if (!activeWindow || activeWindow.dataset.id !== this.windowId) {
+                return;
+            }
+        });
+    }
+
+    private handleSearchChange(filters: SearchFilters): void {
+        const { query, category } = filters;
+
+        if (this.components.iconGrid) {
+            this.components.iconGrid.filter(query, category);
+        }
+
+        console.log('Search filters changed:', filters);
+    }
+
+    private showContextMenu(x: number, y: number, iconName: string): void {
+        const items: ContextMenuItem[] = [
+            {
+                icon: getIcon('copy', 18),
+                label: 'Copy Icon Name',
+                action: 'copy-name',
+                handler: () => this.copyIconName(iconName)
+            },
+            {
+                icon: getIcon('copy', 18),
+                label: 'Copy SVG Code',
+                action: 'copy-svg',
+                handler: () => this.copySvgCode(iconName)
+            },
+            { separator: true },
+            {
+                icon: getIcon('search', 18),
+                label: `Icon: ${iconName}`,
+                action: 'info',
+                disabled: true
+            }
+        ];
+
+        this.contextMenu.show(x, y, items);
+    }
+
+    private copyIconName(iconName: string): void {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(iconName)
+                .then(() => {
+                    console.log(`Copied icon name: ${iconName}`);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+        }
+    }
+
+    private copySvgCode(iconName: string): void {
+        if (this.components.iconGrid) {
+            this.components.iconGrid.copySvgCode(iconName);
+        }
+    }
+
+    async close(): Promise<void> {
+        Object.values(this.components).forEach(component => {
+            if (component && component.destroy) {
+                component.destroy();
+            }
+        });
+
+        if (this.windowId) {
+            this.windowManager.closeWindow(this.windowId);
+        }
+
+        if (this.eventBus) {
+            this.eventBus.emit('app:closed', {
+                appId: this.manifest.id,
+                timestamp: Date.now()
+            });
+        }
+
+        console.log('Icon Map closed');
+    }
+}

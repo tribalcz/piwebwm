@@ -123,7 +123,7 @@ func (c *HostAgentClient) sendRequest(action Action) (*Response, error) {
 		return nil, err
 	}
 
-	log.Printf("[HostClient] Sending: %s", string(reqJSON))
+	log.Printf("[HostClient] Sending action: %s", action.Type)
 
 	_, err = conn.Write(append(reqJSON, '\n'))
 	if err != nil {
@@ -137,7 +137,7 @@ func (c *HostAgentClient) sendRequest(action Action) (*Response, error) {
 		return nil, err
 	}
 
-	log.Printf("[HostClient] Received: %s", respLine)
+	log.Printf("[HostClient] Received %d bytes for action %s", len(respLine), action.Type)
 
 	// Parse response
 	var resp Response

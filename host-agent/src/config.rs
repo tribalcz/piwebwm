@@ -61,7 +61,18 @@ impl Config {
                 forbidden_patterns: vec![
                     ".ssh".to_string(),
                     ".gnupg".to_string(),
+                    ".aws".to_string(),
+                    ".netrc".to_string(),
+                    ".git-credentials".to_string(),
+                    ".pgpass".to_string(),
+                    ".kube".to_string(),
+                    ".docker".to_string(),
+                    "id_rsa".to_string(),
+                    "id_dsa".to_string(),
+                    "id_ecdsa".to_string(),
+                    "id_ed25519".to_string(),
                     "*.key".to_string(),
+                    "*.pem".to_string(),
                 ],
                 max_file_size: 100 * 1024 * 1024, //100MB
                 max_path_depth: 10,

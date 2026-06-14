@@ -11,6 +11,18 @@ services:
     environment:
       - HOST_AGENT_SOCKET=/var/run/webdesk.sock
       - GIN_MODE=release
+      # Authentication (temporary, until PAM). If a users file exists at
+      # WEBDESK_USERS_FILE (default /etc/webdesk/users) it takes precedence;
+      # otherwise these env credentials are used. Override in a .env file or
+      # your shell — do not ship these defaults to production.
+      - WEBDESK_USER=${WEBDESK_USER:-admin}
+      - WEBDESK_PASSWORD=${WEBDESK_PASSWORD:-changeme}
+      # To use a users file instead, mount it and point WEBDESK_USERS_FILE at it:
+      # - WEBDESK_USERS_FILE=/etc/webdesk/users
+      # Set to 1 when serving over HTTPS so the session cookie gets the Secure flag.
+      - WEBDESK_SECURE_COOKIE=${WEBDESK_SECURE_COOKIE:-0}
+    # volumes example for a users file:
+    #   - ./webdesk-users:/etc/webdesk/users:ro
     restart: unless-stopped
     networks:
       - webdesk
