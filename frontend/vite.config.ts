@@ -38,6 +38,12 @@ export default defineConfig({
             '/api': {
                 target: 'http://backend:8080',
                 changeOrigin: true,
+            },
+            // Health is served at the backend root (not under /api); proxy it
+            // too so dev mirrors production, where the backend serves both.
+            '/health': {
+                target: 'http://backend:8080',
+                changeOrigin: true,
             }
         }
     }
