@@ -129,6 +129,136 @@ export class Editor {
         this.gutterEl.textContent = out;
     }
 
+    // --- Search / replace -------------------------------------------------
+
+    private searchMatches: { start: number; end: number }[] = [];
+    private searchIndex = -1;
+
+    /** Find all matches in the text content, select the first, return count. */
+    search(query: string, opts: { caseSensitive?: boolean } = {}): number {
+        this.searchMatches = [];
+        this.searchIndex = -1;
+        if (!query) return 0;
+
+        const text = this.el.textContent ?? '';
+        const hay = opts.caseSensitive ? text : text.toLowerCase();
+        const needle = opts.caseSensitive ? query : query.toLowerCase();
+
+        let i = hay.indexOf(needle);
+        while (i !== -1) {
+            this.searchMatches.push({ start: i, end: i + query.length });
+            i = hay.indexOf(needle, i + query.length);
+        }
+
+        if (this.searchMatches.length > 0) {
+            this.searchIndex = 0;
+            this.selectMatch(0);
+        }
+        return this.searchMatches.length;
+    }
+
+    findNext(): void {
+        if (this.searchMatches.length === 0) return;
+        this.searchIndex = (this.searchIndex + 1) % this.searchMatches.length;
+        this.selectMatch(this.searchIndex);
+    }
+
+    findPrev(): void {
+        if (this.searchMatches.length === 0) return;
+        this.searchIndex =
+            (this.searchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+        this.selectMatch(this.searchIndex);
+    }
+
+    replaceCurrent(replacement: string): boolean {
+        if (this.searchIndex < 0) return false;
+        this.selectMatch(this.searchIndex);
+        this.el.focus();
+        document.execCommand('insertText', false, replacement);
+        return true;
+    }
+
+    /** Replace within each text node (preserves element structure/formatting). */
+    replaceAll(query: string, replacement: string, opts: { caseSensitive?: boolean } = {}): number {
+        if (!query) return 0;
+        const re = new RegExp(escapeRegExp(query), opts.caseSensitive ? 'g' : 'gi');
+        let count = 0;
+
+        const walker = document.createTreeWalker(this.el, NodeFilter.SHOW_TEXT);
+        const nodes: Text[] = [];
+        let n = walker.nextNode();
+        while (n) {
+            nodes.push(n as Text);
+            n = walker.nextNode();
+        }
+
+        for (const node of nodes) {
+            const value = node.nodeValue ?? '';
+            const replaced = value.replace(re, () => {
+                count++;
+                return replacement;
+            });
+            if (replaced !== value) node.nodeValue = replaced;
+        }
+
+        this.searchMatches = [];
+        this.searchIndex = -1;
+        if (count > 0) this.emitChange();
+        return count;
+    }
+
+    clearSearch(): void {
+        this.searchMatches = [];
+        this.searchIndex = -1;
+    }
+
+    private selectMatch(index: number): void {
+        const match = this.searchMatches[index];
+        if (!match) return;
+        const range = this.rangeForOffsets(match.start, match.end);
+        if (!range) return;
+
+        const sel = window.getSelection();
+        if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        const anchor = range.startContainer.parentElement;
+        anchor?.scrollIntoView({ block: 'nearest' });
+    }
+
+    /** Map [start,end) character offsets in textContent to a DOM Range. */
+    private rangeForOffsets(start: number, end: number): Range | null {
+        const walker = document.createTreeWalker(this.el, NodeFilter.SHOW_TEXT);
+        let acc = 0;
+        let startNode: Text | undefined;
+        let startOffset = 0;
+        let endNode: Text | undefined;
+        let endOffset = 0;
+
+        let n = walker.nextNode() as Text | null;
+        while (n) {
+            const len = (n.nodeValue ?? '').length;
+            if (startNode === undefined && start <= acc + len) {
+                startNode = n;
+                startOffset = start - acc;
+            }
+            if (endNode === undefined && end <= acc + len) {
+                endNode = n;
+                endOffset = end - acc;
+                break;
+            }
+            acc += len;
+            n = walker.nextNode() as Text | null;
+        }
+
+        if (!startNode || !endNode) return null;
+        const range = document.createRange();
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        return range;
+    }
+
     onChange(callback: (text: string) => void): Disposable {
         this.changeListeners.add(callback);
         return () => this.changeListeners.delete(callback);
@@ -144,4 +274,8 @@ export class Editor {
         this.changeListeners.clear();
         this.selectionListeners.clear();
     }
+}
+
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

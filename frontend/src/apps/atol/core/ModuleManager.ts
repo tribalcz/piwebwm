@@ -25,6 +25,7 @@ export interface ModuleHostBridge {
     refreshStatus(): void;
     addContextMenuItem(item: ContextMenuContribution): Disposable;
     addMenu(menu: MenuBarMenu): Disposable;
+    setFocusMode(enabled: boolean): void;
     store: Store | null;
 }
 
@@ -256,11 +257,13 @@ export class ModuleManager {
             getText: () => this.host.editorAPI.getText(),
             setText: (t) => this.host.editorAPI.setText(t),
             getHTML: () => this.host.editorAPI.getHTML(),
+            setHTML: (h) => this.host.editorAPI.setHTML(h),
             getSelectionText: () => this.host.editorAPI.getSelectionText(),
             replaceSelection: (t) => this.host.editorAPI.replaceSelection(t),
             applyFormat: (c, v) => this.host.editorAPI.applyFormat(c, v),
             focus: () => this.host.editorAPI.focus(),
             setLineNumbers: (on) => this.host.editorAPI.setLineNumbers(on),
+            search: this.host.editorAPI.search,
             onChange: (cb) => track(this.host.editorAPI.onChange(cb)),
             onSelectionChange: (cb) => track(this.host.editorAPI.onSelectionChange(cb)),
         };
@@ -286,6 +289,7 @@ export class ModuleManager {
                         ? track(this.host.addMenu(menu))
                         : noop,
                 refreshStatus: () => this.host.refreshStatus(),
+                setFocusMode: (on) => this.host.setFocusMode(on),
             },
             commands: {
                 register: (id, handler, shortcut) => {

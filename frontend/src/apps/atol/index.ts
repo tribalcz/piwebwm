@@ -28,6 +28,7 @@ export default class Atol implements WebDeskApp {
     private manifest: AppManifest;
 
     private windowId: string | null = null;
+    private rootEl: HTMLElement | null = null;
 
     private editor: Editor | null = null;
     private editorAPI: EditorAPI | null = null;
@@ -64,6 +65,7 @@ export default class Atol implements WebDeskApp {
             refreshStatus: () => self.statusbar?.refresh(),
             addContextMenuItem: (item) => self.addContextContribution(item),
             addMenu: (menu) => self.menubar!.addMenu(menu),
+            setFocusMode: (on) => self.rootEl?.classList.toggle('focus-mode', on),
         };
 
         this.moduleManager = new ModuleManager(bridge);
@@ -107,6 +109,7 @@ export default class Atol implements WebDeskApp {
         this.windowId = id;
 
         const root = windowEl.querySelector<HTMLElement>('.atol');
+        this.rootEl = root;
         const menubarHost = windowEl.querySelector('#atol-menubar');
         const toolbarHost = windowEl.querySelector('#atol-toolbar');
         const editorHost = windowEl.querySelector('#atol-editor');

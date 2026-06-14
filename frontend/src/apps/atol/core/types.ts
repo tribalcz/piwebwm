@@ -77,6 +77,22 @@ export interface ModuleStorage {
     delete(key: string): void;
 }
 
+/** Search/replace surface over the editor content. */
+export interface EditorSearch {
+    /** Find all matches, select the first, return the match count. */
+    find(query: string, opts?: { caseSensitive?: boolean }): number;
+    /** Select the next match (wraps around). */
+    next(): void;
+    /** Select the previous match (wraps around). */
+    prev(): void;
+    /** Replace the currently selected match; returns whether one was replaced. */
+    replace(replacement: string): boolean;
+    /** Replace every match; returns how many were replaced. */
+    replaceAll(query: string, replacement: string, opts?: { caseSensitive?: boolean }): number;
+    /** Clear the current search state. */
+    clear(): void;
+}
+
 /**
  * The editor surface exposed to modules. Modules never touch the host DOM
  * directly; everything goes through this facade.
@@ -85,6 +101,8 @@ export interface EditorAPI {
     getText(): string;
     setText(text: string): void;
     getHTML(): string;
+    /** Replace the whole document with HTML (used e.g. to restore snapshots). */
+    setHTML(html: string): void;
     getSelectionText(): string;
     replaceSelection(text: string): void;
     /** Apply a formatting command (bold, italic, formatBlock, …). */
@@ -92,6 +110,8 @@ export interface EditorAPI {
     focus(): void;
     /** Toggle the IDE-style line-number gutter (also switches to no-wrap). */
     setLineNumbers(enabled: boolean): void;
+    /** Find/replace over the content. */
+    search: EditorSearch;
     /** Fires on content change. Returns a Disposable. */
     onChange(callback: (text: string) => void): Disposable;
     /** Fires when the selection inside the editor changes. Returns a Disposable. */
@@ -107,6 +127,8 @@ export interface ModuleUI {
     addMenu(menu: MenuBarMenu): Disposable;
     /** Ask the host to re-render status contributions. */
     refreshStatus(): void;
+    /** Toggle distraction-free mode (hides the host chrome, centers the editor). */
+    setFocusMode(enabled: boolean): void;
 }
 
 /** Command registration (with optional keyboard shortcut). */

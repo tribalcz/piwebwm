@@ -112,3 +112,12 @@ host.
   module: pure editor behaviour via `EditorAPI.setLineNumbers`). Off by
   default; enabling it shows the gutter and switches the editor to a no-wrap
   layout so numbers stay aligned.
+- **find-replace** — floating Find & Replace panel (Ctrl+F / Ctrl+H), backed by
+  `EditorAPI.search`. On by default.
+- **export** — download the note as .txt / .md / .html. On by default.
+- **text-transforms** — context-menu actions on the selection (case changes,
+  sort lines, trim, remove duplicates). On by default.
+- **snapshots** — local history: periodic + on-demand snapshots you can
+  restore (uses module storage and `EditorAPI.setHTML`). Off by default.
+- **focus-mode** — distraction-free writing; hides the chrome and centers the
+  text via `ui.setFocusMode`. Off by default.

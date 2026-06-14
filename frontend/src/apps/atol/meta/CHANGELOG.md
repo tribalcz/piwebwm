@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0
+
+- Host editor capabilities: `EditorAPI.search` (find/next/prev/replace/
+  replaceAll over the content), `EditorAPI.setHTML` (restore whole document),
+  and `ui.setFocusMode` (hide chrome / center editor).
+- Five new bundled modules:
+  - **find-replace** (on): floating Find & Replace panel, Ctrl+F / Ctrl+H.
+  - **export** (on): download the note as .txt / .md / .html.
+  - **text-transforms** (on): selection case changes, sort lines, trim,
+    remove duplicate lines, via the context menu.
+  - **snapshots** (off): local history with periodic + manual snapshots and
+    restore.
+  - **focus-mode** (off): distraction-free writing with a floating exit button.
+
 ## 1.3.0
 
 - New `EditorAPI.setLineNumbers` editor capability (host owns a sticky,
