@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0
+
+- New **Network** section (Status / Interfaces / Routing) reading live host
+  network data via the agent; hostname is editable, the rest is read-only in
+  this iteration. Interfaces tab shows live throughput (polled).
+- Sections may now return a cleanup function from `render` (used to stop the
+  Network polling when the section is left or Settings closes).
+- Fix: `/health` is now proxied by the Vite dev server, so the System tab shows
+  the host-agent status in dev too.
+
 ## 1.0.0
 
 - Initial Settings app with a GNOME-like sidebar layout.

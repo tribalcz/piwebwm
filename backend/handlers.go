@@ -155,3 +155,70 @@ func getProcesses(c *gin.Context) {
 	// TODO: Implement real process list
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
 }
+
+func getNetworkStatus(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	status, err := hostClient.NetworkStatus()
+	if err != nil {
+		log.Printf("Error reading network status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read network status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, status)
+}
+
+func getNetworkInterfaces(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	interfaces, err := hostClient.NetworkInterfaces()
+	if err != nil {
+		log.Printf("Error reading network interfaces: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read interfaces"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"interfaces": interfaces})
+}
+
+func getNetworkRoutes(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	routes, err := hostClient.RoutingTable()
+	if err != nil {
+		log.Printf("Error reading routing table: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read routes"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"routes": routes})
+}
+
+func setHostname(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetHostname(req.Name); err != nil {
+		log.Printf("Error setting hostname: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "hostname": req.Name})
+}

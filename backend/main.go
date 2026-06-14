@@ -100,6 +100,10 @@ func main() {
 			{
 				system.GET("/info", getSystemInfo)
 				system.GET("/processes", getProcesses)
+				system.GET("/network/status", getNetworkStatus)
+				system.GET("/network/interfaces", getNetworkInterfaces)
+				system.GET("/network/routes", getNetworkRoutes)
+				system.POST("/network/hostname", setHostname)
 			}
 		}
 	}

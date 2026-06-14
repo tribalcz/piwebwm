@@ -10,6 +10,7 @@ use std::path::Path;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use crate::handlers::files::FileHandler;
+use crate::handlers::network;
 use crate::protocol::{Action, Request, Response, ResponseData, ResponseResult};
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
@@ -234,6 +235,40 @@ async fn process_request(
             Err(e) => ResponseResult::Error {
                 error: e.to_string(),
                 code: 500,
+            },
+        },
+
+        Action::NetworkStatus => match network::network_status() {
+            Ok(status) => ResponseResult::Success(ResponseData::NetworkStatusData(status)),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 500,
+            },
+        },
+
+        Action::NetworkInterfaces => match network::network_interfaces() {
+            Ok(interfaces) => ResponseResult::Success(ResponseData::Interfaces { interfaces }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 500,
+            },
+        },
+
+        Action::RoutingTable => match network::routing_table() {
+            Ok(routes) => ResponseResult::Success(ResponseData::Routes { routes }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 500,
+            },
+        },
+
+        Action::SetHostname { name } => match network::set_hostname(&name) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "Hostname updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
             },
         },
 

@@ -6,6 +6,7 @@ import type { Store } from '@core/Store';
 
 import type { SettingsContext, SettingsSection } from './core/sections';
 import { renderAppearance } from './sections/Appearance';
+import { renderNetwork } from './sections/Network';
 import { renderWindows } from './sections/Windows';
 import { renderTaskbarClock } from './sections/TaskbarClock';
 import { renderSystem } from './sections/System';
@@ -13,6 +14,7 @@ import { renderAbout } from './sections/About';
 
 const SECTIONS: SettingsSection[] = [
     { id: 'appearance', label: 'Appearance', icon: 'settings', render: renderAppearance },
+    { id: 'network', label: 'Network', icon: 'network', render: renderNetwork },
     { id: 'windows', label: 'Windows', icon: 'windowsStats', render: renderWindows },
     { id: 'taskbar-clock', label: 'Taskbar & Clock', icon: 'clock', render: renderTaskbarClock },
     { id: 'system', label: 'System', icon: 'systemMonitor', render: renderSystem },
@@ -34,6 +36,7 @@ export default class Settings implements WebDeskApp {
     private activeSection = SECTIONS[0].id;
     private contentEl: Element | null = null;
     private sidebarEl: Element | null = null;
+    private currentCleanup: (() => void) | null = null;
 
     constructor(context: AppContext) {
         this.windowManager = context.windowManager;
@@ -119,6 +122,10 @@ export default class Settings implements WebDeskApp {
 
         this.activeSection = sectionId;
 
+        // Tear down the previously rendered section (e.g. stop polling).
+        this.currentCleanup?.();
+        this.currentCleanup = null;
+
         this.sidebarEl?.querySelectorAll<HTMLElement>('.set-nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.section === sectionId);
         });
@@ -128,10 +135,14 @@ export default class Settings implements WebDeskApp {
         if (!title || !body) return;
 
         title.textContent = section.label;
-        section.render(body, this.buildContext());
+        const cleanup = section.render(body, this.buildContext());
+        this.currentCleanup = typeof cleanup === 'function' ? cleanup : null;
     }
 
     async close(): Promise<void> {
+        this.currentCleanup?.();
+        this.currentCleanup = null;
+
         if (this.windowId) {
             this.windowManager.closeWindow(this.windowId);
         }

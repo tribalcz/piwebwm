@@ -332,3 +332,122 @@ func (c *HostAgentClient) MoveFile(from string, to string) error {
 
 	return nil
 }
+
+// --- Network ---------------------------------------------------------------
+
+type NetworkStatus struct {
+	Hostname string   `json:"hostname"`
+	Gateway  *string  `json:"gateway"`
+	DNS      []string `json:"dns"`
+	Online   bool     `json:"online"`
+}
+
+type NetworkAddress struct {
+	Family    string `json:"family"`
+	Address   string `json:"address"`
+	Prefixlen int    `json:"prefixlen"`
+}
+
+type NetworkInterface struct {
+	Name      string           `json:"name"`
+	Kind      string           `json:"kind"`
+	State     string           `json:"state"`
+	MAC       *string          `json:"mac"`
+	Addresses []NetworkAddress `json:"addresses"`
+	RxBytes   uint64           `json:"rx_bytes"`
+	TxBytes   uint64           `json:"tx_bytes"`
+	SpeedMbps *int64           `json:"speed_mbps"`
+}
+
+type RouteEntry struct {
+	Dst      string  `json:"dst"`
+	Gateway  *string `json:"gateway"`
+	Dev      string  `json:"dev"`
+	Protocol *string `json:"protocol"`
+}
+
+func (c *HostAgentClient) NetworkStatus() (*NetworkStatus, error) {
+	resp, err := c.sendRequest(Action{Type: "NetworkStatus"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var status NetworkStatus
+	if err := json.Unmarshal(raw, &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
+func (c *HostAgentClient) NetworkInterfaces() ([]NetworkInterface, error) {
+	resp, err := c.sendRequest(Action{Type: "NetworkInterfaces"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["interfaces"])
+	if err != nil {
+		return nil, err
+	}
+	var interfaces []NetworkInterface
+	if err := json.Unmarshal(raw, &interfaces); err != nil {
+		return nil, err
+	}
+	return interfaces, nil
+}
+
+func (c *HostAgentClient) RoutingTable() ([]RouteEntry, error) {
+	resp, err := c.sendRequest(Action{Type: "RoutingTable"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["routes"])
+	if err != nil {
+		return nil, err
+	}
+	var routes []RouteEntry
+	if err := json.Unmarshal(raw, &routes); err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
+
+func (c *HostAgentClient) SetHostname(name string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetHostname",
+		Params: map[string]interface{}{"name": name},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}

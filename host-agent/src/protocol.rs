@@ -22,6 +22,12 @@ pub enum Action {
     ListProcesses,
     KillProcess { pid: u32 },
 
+    // Network (reads + hostname write)
+    NetworkStatus,
+    NetworkInterfaces,
+    RoutingTable,
+    SetHostname { name: String },
+
     Ping,
 }
 
@@ -46,6 +52,9 @@ pub enum ResponseData {
     Success { message: String },
     SystemInfo(SystemInfo),
     Processes { processes: Vec<ProcessInfo> },
+    NetworkStatusData(NetworkStatus),
+    Interfaces { interfaces: Vec<NetworkInterface> },
+    Routes { routes: Vec<RouteEntry> },
     Pong,
 }
 
@@ -76,4 +85,39 @@ pub struct ProcessInfo {
     pub cpu: f32,
     pub memory: u64,
     pub status: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkStatus {
+    pub hostname: String,
+    pub gateway: Option<String>,
+    pub dns: Vec<String>,
+    pub online: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkAddress {
+    pub family: String, // "ipv4" | "ipv6"
+    pub address: String,
+    pub prefixlen: u8,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkInterface {
+    pub name: String,
+    pub kind: String, // "ethernet" | "wifi" | "loopback" | "other"
+    pub state: String, // "up" | "down" | "unknown"
+    pub mac: Option<String>,
+    pub addresses: Vec<NetworkAddress>,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+    pub speed_mbps: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RouteEntry {
+    pub dst: String,
+    pub gateway: Option<String>,
+    pub dev: String,
+    pub protocol: Option<String>,
 }

@@ -57,3 +57,45 @@ export interface HealthResponse {
 export interface ApiErrorResponse {
     error: string;
 }
+
+/** GET /api/system/network/status */
+export interface NetworkStatus {
+    hostname: string;
+    gateway: string | null;
+    dns: string[];
+    online: boolean;
+}
+
+export interface NetworkAddress {
+    family: string; // "ipv4" | "ipv6"
+    address: string;
+    prefixlen: number;
+}
+
+export interface NetworkInterface {
+    name: string;
+    kind: string; // "ethernet" | "wifi" | "loopback" | "other"
+    state: string; // "up" | "down" | "unknown"
+    mac: string | null;
+    addresses: NetworkAddress[];
+    rx_bytes: number;
+    tx_bytes: number;
+    speed_mbps: number | null;
+}
+
+/** GET /api/system/network/interfaces */
+export interface NetworkInterfacesResponse {
+    interfaces: NetworkInterface[];
+}
+
+export interface RouteEntry {
+    dst: string;
+    gateway: string | null;
+    dev: string;
+    protocol: string | null;
+}
+
+/** GET /api/system/network/routes */
+export interface RoutesResponse {
+    routes: RouteEntry[];
+}

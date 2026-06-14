@@ -16,7 +16,8 @@ export interface SettingsSection {
     id: string;
     label: string;
     icon: string; // Icons.ts name
-    render: (container: Element, ctx: SettingsContext) => void;
+    /** Render the section. May return a cleanup function (e.g. to stop polling). */
+    render: (container: Element, ctx: SettingsContext) => void | (() => void);
 }
 
 // --- small shared UI builders -----------------------------------------------
