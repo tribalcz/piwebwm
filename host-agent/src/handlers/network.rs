@@ -520,6 +520,35 @@ pub fn set_mtu(iface: &str, mtu: u32) -> Result<()> {
     Ok(())
 }
 
+/// Returns the active DHCPv4/DHCPv6 lease options for an interface's connection,
+/// as reported by NetworkManager (human-readable multi-line text).
+pub fn dhcp_lease(iface: &str) -> Result<String> {
+    if !valid_iface(iface) {
+        return Err(AgentError::InvalidRequest("invalid interface name".to_string()));
+    }
+    let con = con_for_iface(iface)?;
+    // `-f DHCP4.OPTION` prints one labelled "key = value" line per option.
+    let v4 = run("nmcli", &["-f", "DHCP4.OPTION", "con", "show", &con]).unwrap_or_default();
+    let v6 = run("nmcli", &["-f", "DHCP6.OPTION", "con", "show", &con]).unwrap_or_default();
+
+    let mut out = String::new();
+    let v4 = v4.trim();
+    let v6 = v6.trim();
+    if !v4.is_empty() {
+        out.push_str(v4);
+    }
+    if !v6.is_empty() {
+        if !out.is_empty() {
+            out.push_str("\n\n");
+        }
+        out.push_str(v6);
+    }
+    if out.is_empty() {
+        out = "No DHCP lease — the interface is likely using a static address.".to_string();
+    }
+    Ok(out)
+}
+
 // --- Wi-Fi management ------------------------------------------------------
 
 /// SSID validation: 1–32 bytes, no control characters. SSIDs can contain most

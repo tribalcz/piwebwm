@@ -448,6 +448,15 @@
 
 .net-warn { color: var(--danger, #d9534f); }
 
+.net-spark { display: inline-flex; align-items: center; }
+
+.net-spark-svg {
+    display: block;
+    background: var(--surface-sunken, rgba(0, 0, 0, 0.04));
+    border-radius: 4px;
+    padding: 1px 2px;
+}
+
 /* Wi-Fi tab */
 .net-wifi-iface { font-size: 13px; color: var(--text-muted); }
 

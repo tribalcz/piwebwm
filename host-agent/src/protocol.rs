@@ -69,6 +69,9 @@ pub enum Action {
         iface: String,
         mtu: u32,
     },
+    DhcpLease {
+        iface: String,
+    },
 
     // Wi-Fi management (NetworkManager).
     WifiScan {

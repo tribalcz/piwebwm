@@ -388,6 +388,22 @@ func setMtu(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func dhcpLease(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	iface := c.Query("iface")
+	output, err := hostClient.DhcpLease(iface)
+	if err != nil {
+		log.Printf("Error reading DHCP lease: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"output": output})
+}
+
 func wifiScan(c *gin.Context) {
 	if !requireHostAgent(c) {
 		return

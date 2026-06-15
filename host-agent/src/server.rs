@@ -401,6 +401,14 @@ async fn process_request(
             },
         },
 
+        Action::DhcpLease { iface } => match network::dhcp_lease(&iface) {
+            Ok(output) => ResponseResult::Success(ResponseData::CommandOutput { output }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
         Action::WifiScan { iface } => match network::wifi_scan(&iface) {
             Ok(networks) => ResponseResult::Success(ResponseData::WifiNetworks { networks }),
             Err(e) => ResponseResult::Error {

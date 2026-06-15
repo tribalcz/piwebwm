@@ -28,6 +28,8 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
     let interfaces: NetworkInterface[] = [];
     let status: NetworkStatus | null = null;
     const lastSample = new Map<string, { rx: number; tx: number; t: number }>();
+    // Recent combined throughput (bytes/s) per interface, for the sparkline.
+    const history = new Map<string, number[]>();
 
     container.innerHTML = `
         <div class="net-tabs">
@@ -60,10 +62,13 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         interfaces = res.data.interfaces;
         const now = Date.now();
         body.innerHTML = `<div class="net-iface-list">${
-            interfaces.map(i => renderInterfaceCard(i, lastSample, now)).join('')
+            interfaces.map(i => renderInterfaceCard(i, lastSample, history, now)).join('')
         }</div>`;
         body.querySelectorAll<HTMLElement>('[data-edit]').forEach(btn => {
             btn.addEventListener('click', () => openEditModal(btn.dataset.edit!));
+        });
+        body.querySelectorAll<HTMLElement>('[data-lease]').forEach(btn => {
+            btn.addEventListener('click', () => void openLeaseModal(btn.dataset.lease!));
         });
         body.querySelectorAll<HTMLElement>('[data-toggle]').forEach(btn => {
             btn.addEventListener('click', () => void toggleInterface(btn.dataset.toggle!, btn.dataset.up === 'true'));
@@ -112,6 +117,23 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
             alert('Could not change interface state.');
         }
         void refreshInterfaces();
+    };
+
+    const openLeaseModal = async (name: string) => {
+        modalOpen = true;
+        const overlay = modal(`
+            <h3>DHCP lease — ${escapeHtml(name)}</h3>
+            <pre class="net-diag-out">Loading…</pre>
+            <div class="net-modal-actions">
+                <button class="set-btn net-cancel">Close</button>
+            </div>
+        `);
+        const close = () => { overlay.remove(); modalOpen = false; };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.querySelector('.net-cancel')?.addEventListener('click', close);
+        const out = overlay.querySelector<HTMLElement>('.net-diag-out')!;
+        const res = await getJSON<{ output: string }>(`/api/system/network/interface/lease?iface=${encodeURIComponent(name)}`);
+        out.textContent = res.ok && res.data ? (res.data.output || '(no lease data)') : `Error: ${res.error ?? res.status}`;
     };
 
     const openMtuModal = (name: string) => {
@@ -733,22 +755,36 @@ async function renderStatus(body: HTMLElement): Promise<void> {
 
 // --- Interfaces tab --------------------------------------------------------
 
+const HISTORY_LEN = 24;
+
 function renderInterfaceCard(
     iface: NetworkInterface,
     lastSample: Map<string, { rx: number; tx: number; t: number }>,
+    history: Map<string, number[]>,
     now: number
 ): string {
     const prev = lastSample.get(iface.name);
     let rate = '';
+    let throughput = 0;
     if (prev) {
         const dt = (now - prev.t) / 1000;
         if (dt > 0) {
-            const down = (iface.rx_bytes - prev.rx) / dt;
-            const up = (iface.tx_bytes - prev.tx) / dt;
-            rate = `<span class="net-rate">↓ ${formatBytes(Math.max(0, down))}/s · ↑ ${formatBytes(Math.max(0, up))}/s</span>`;
+            const down = Math.max(0, (iface.rx_bytes - prev.rx) / dt);
+            const up = Math.max(0, (iface.tx_bytes - prev.tx) / dt);
+            throughput = down + up;
+            rate = `<span class="net-rate">↓ ${formatBytes(down)}/s · ↑ ${formatBytes(up)}/s</span>`;
         }
     }
     lastSample.set(iface.name, { rx: iface.rx_bytes, tx: iface.tx_bytes, t: now });
+
+    // Append to throughput history (skip the very first sample, which has no rate).
+    if (prev) {
+        const hist = history.get(iface.name) ?? [];
+        hist.push(throughput);
+        while (hist.length > HISTORY_LEN) hist.shift();
+        history.set(iface.name, hist);
+    }
+    const spark = sparkline(history.get(iface.name) ?? []);
 
     const ipv4 = iface.addresses.filter(a => a.family === 'ipv4');
     const ipv6 = iface.addresses.filter(a => a.family === 'ipv6');
@@ -763,6 +799,10 @@ function renderInterfaceCard(
     const errors = iface.rx_errors + iface.tx_errors;
     const dropped = iface.rx_dropped + iface.tx_dropped;
     const name = escapeHtml(iface.name);
+    // DHCP lease only applies when the interface got an address dynamically; we
+    // can't tell the method from the address list alone, so offer Lease on any
+    // controllable interface that currently has an IPv4 address.
+    const hasIpv4 = ipv4.length > 0;
 
     return `
         <div class="net-iface">
@@ -774,6 +814,7 @@ function renderInterfaceCard(
                 ${controllable ? `
                     <button class="set-btn" data-toggle="${name}" data-up="${isUp}">${isUp ? 'Disable' : 'Enable'}</button>
                     <button class="set-btn" data-mtu="${name}">MTU</button>
+                    ${hasIpv4 ? `<button class="set-btn" data-lease="${name}">Lease</button>` : ''}
                     <button class="set-btn net-iface-edit" data-edit="${name}">Configure</button>
                 ` : ''}
             </div>
@@ -786,10 +827,28 @@ function renderInterfaceCard(
                 <span>Traffic</span>
                 <span>↓ ${formatBytes(iface.rx_bytes)} · ↑ ${formatBytes(iface.tx_bytes)} ${rate}</span>
             </div>
+            ${spark ? `<div class="net-iface-row"><span>Throughput</span><span class="net-spark">${spark}</span></div>` : ''}
             ${(errors > 0 || dropped > 0)
                 ? `<div class="net-iface-row"><span>Errors / dropped</span><span class="net-warn">${errors} / ${dropped}</span></div>`
                 : ''}
         </div>
     `;
+}
+
+/// Renders an inline SVG sparkline from throughput samples (auto-scaled).
+function sparkline(values: number[]): string {
+    if (values.length < 2) return '';
+    const w = 96;
+    const h = 22;
+    const max = Math.max(...values, 1);
+    const step = w / (HISTORY_LEN - 1);
+    const pts = values.map((v, i) => {
+        const x = i * step;
+        const y = h - (v / max) * (h - 2) - 1;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return `<svg class="net-spark-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" />
+    </svg>`;
 }
 

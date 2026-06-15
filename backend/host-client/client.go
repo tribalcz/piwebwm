@@ -615,6 +615,13 @@ func (c *HostAgentClient) SetMtu(iface string, mtu uint32) error {
 	return nil
 }
 
+func (c *HostAgentClient) DhcpLease(iface string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "DhcpLease",
+		Params: map[string]interface{}{"iface": iface},
+	})
+}
+
 // --- Wi-Fi -----------------------------------------------------------------
 
 func (c *HostAgentClient) WifiScan(iface string) ([]WifiNetwork, error) {
