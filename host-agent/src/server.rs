@@ -373,6 +373,80 @@ async fn process_request(
             },
         },
 
+        Action::SetInterfaceState { iface, up } => match network::set_interface_state(&iface, up) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: format!("Interface {}", if up { "enabled" } else { "disabled" }),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::SetMtu { iface, mtu } => match network::set_mtu(&iface, mtu) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "MTU updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::WifiScan { iface } => match network::wifi_scan(&iface) {
+            Ok(networks) => ResponseResult::Success(ResponseData::WifiNetworks { networks }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::WifiConnect { iface, ssid, password } => {
+            match network::wifi_connect(&iface, &ssid, &password) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: "Wi-Fi connected".to_string(),
+                }),
+                Err(e) => ResponseResult::Error {
+                    error: e.to_string(),
+                    code: 400,
+                },
+            }
+        }
+
+        Action::WifiForget { ssid } => match network::wifi_forget(&ssid) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "Wi-Fi network forgotten".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::Ping4 { host, count } => match network::ping4(&host, count) {
+            Ok(output) => ResponseResult::Success(ResponseData::CommandOutput { output }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::Traceroute { host } => match network::traceroute(&host) {
+            Ok(output) => ResponseResult::Success(ResponseData::CommandOutput { output }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::DnsLookup { host } => match network::dns_lookup(&host) {
+            Ok(output) => ResponseResult::Success(ResponseData::CommandOutput { output }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),
             code: 501,

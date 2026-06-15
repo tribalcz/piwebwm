@@ -333,3 +333,154 @@ func deleteRoute(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
+
+func setInterfaceState(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface string `json:"iface"`
+		Up    bool   `json:"up"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetInterfaceState(req.Iface, req.Up); err != nil {
+		log.Printf("Error setting interface state: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func setMtu(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface string `json:"iface"`
+		MTU   uint32 `json:"mtu"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetMtu(req.Iface, req.MTU); err != nil {
+		log.Printf("Error setting MTU: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func wifiScan(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	iface := c.Query("iface")
+	nets, err := hostClient.WifiScan(iface)
+	if err != nil {
+		log.Printf("Error scanning Wi-Fi: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"networks": nets})
+}
+
+func wifiConnect(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface    string  `json:"iface"`
+		SSID     string  `json:"ssid"`
+		Password *string `json:"password"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.WifiConnect(req.Iface, req.SSID, req.Password); err != nil {
+		log.Printf("Error connecting Wi-Fi: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func wifiForget(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		SSID string `json:"ssid"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.WifiForget(req.SSID); err != nil {
+		log.Printf("Error forgetting Wi-Fi: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func networkDiagnostic(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Tool  string `json:"tool"` // "ping" | "traceroute" | "dns"
+		Host  string `json:"host"`
+		Count uint8  `json:"count"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	var (
+		output string
+		err    error
+	)
+	switch req.Tool {
+	case "ping":
+		count := req.Count
+		if count == 0 {
+			count = 4
+		}
+		output, err = hostClient.Ping4(req.Host, count)
+	case "traceroute":
+		output, err = hostClient.Traceroute(req.Host)
+	case "dns":
+		output, err = hostClient.DnsLookup(req.Host)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown diagnostic tool"})
+		return
+	}
+	if err != nil {
+		log.Printf("Error running diagnostic %s: %v", req.Tool, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"output": output})
+}

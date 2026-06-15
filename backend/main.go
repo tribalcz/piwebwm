@@ -108,6 +108,12 @@ func main() {
 				system.POST("/network/confirm", confirmNetworkConfig)
 				system.POST("/network/route", addRoute)
 				system.DELETE("/network/route", deleteRoute)
+				system.POST("/network/interface/state", setInterfaceState)
+				system.POST("/network/interface/mtu", setMtu)
+				system.GET("/network/wifi/scan", wifiScan)
+				system.POST("/network/wifi/connect", wifiConnect)
+				system.POST("/network/wifi/forget", wifiForget)
+				system.POST("/network/diagnostic", networkDiagnostic)
 			}
 		}
 	}

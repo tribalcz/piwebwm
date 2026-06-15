@@ -1,5 +1,5 @@
 use crate::error::{AgentError, Result};
-use crate::protocol::{NetworkAddress, NetworkInterface, NetworkStatus, RouteEntry};
+use crate::protocol::{NetworkAddress, NetworkInterface, NetworkStatus, RouteEntry, WifiNetwork};
 use log::info;
 use serde::Deserialize;
 use std::fs;
@@ -102,14 +102,20 @@ pub fn network_interfaces() -> Result<Vec<NetworkInterface>> {
             })
             .collect();
 
+        let stat = |kind: &str| read_u64(&format!("/sys/class/net/{}/statistics/{}", e.ifname, kind));
         result.push(NetworkInterface {
             kind: classify(&e.ifname),
             state: e.operstate.unwrap_or_else(|| "unknown".to_string()).to_lowercase(),
             mac: e.address,
             addresses,
-            rx_bytes: read_u64(&format!("/sys/class/net/{}/statistics/rx_bytes", e.ifname)),
-            tx_bytes: read_u64(&format!("/sys/class/net/{}/statistics/tx_bytes", e.ifname)),
+            rx_bytes: stat("rx_bytes"),
+            tx_bytes: stat("tx_bytes"),
             speed_mbps: read_speed(&e.ifname),
+            mtu: read_u64(&format!("/sys/class/net/{}/mtu", e.ifname)) as u32,
+            rx_errors: stat("rx_errors"),
+            tx_errors: stat("tx_errors"),
+            rx_dropped: stat("rx_dropped"),
+            tx_dropped: stat("tx_dropped"),
             name: e.ifname,
         });
     }
@@ -398,6 +404,168 @@ pub fn delete_route(iface: &str, dst: &str, gateway: &Option<String>) -> Result<
     run("nmcli", &["con", "up", &con])?;
     info!("Deleted route {} on {}", value, con);
     Ok(())
+}
+
+// --- Interface link controls (runtime) -------------------------------------
+
+/// A safe interface name: 1–15 chars, alphanumeric plus '.', '-', '_', '@'
+/// (covers vlan/bridge/altname forms). Rejects anything that could be read as
+/// a flag or shell metacharacter.
+fn valid_iface(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 15
+        && !name.starts_with('-')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '@'))
+}
+
+pub fn set_interface_state(iface: &str, up: bool) -> Result<()> {
+    if !valid_iface(iface) {
+        return Err(AgentError::InvalidRequest("invalid interface name".to_string()));
+    }
+    run("ip", &["link", "set", iface, if up { "up" } else { "down" }])?;
+    info!("Set interface {} {}", iface, if up { "up" } else { "down" });
+    Ok(())
+}
+
+pub fn set_mtu(iface: &str, mtu: u32) -> Result<()> {
+    if !valid_iface(iface) {
+        return Err(AgentError::InvalidRequest("invalid interface name".to_string()));
+    }
+    if !(576..=9216).contains(&mtu) {
+        return Err(AgentError::InvalidRequest("MTU out of range (576–9216)".to_string()));
+    }
+    run("ip", &["link", "set", iface, "mtu", &mtu.to_string()])?;
+    info!("Set MTU of {} to {}", iface, mtu);
+    Ok(())
+}
+
+// --- Wi-Fi management ------------------------------------------------------
+
+/// SSID validation: 1–32 bytes, no control characters. SSIDs can contain most
+/// printable characters, so we only reject control bytes and over-length names.
+fn valid_ssid(ssid: &str) -> bool {
+    !ssid.is_empty()
+        && ssid.len() <= 32
+        && !ssid.chars().any(|c| c.is_control())
+}
+
+pub fn wifi_scan(iface: &str) -> Result<Vec<WifiNetwork>> {
+    if !valid_iface(iface) {
+        return Err(AgentError::InvalidRequest("invalid interface name".to_string()));
+    }
+    // Terse, colon-separated output. Escaped colons inside fields are rendered
+    // as "\:" by nmcli, so we unescape them after splitting on unescaped ':'.
+    let out = run(
+        "nmcli",
+        &["-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", iface],
+    )?;
+
+    let mut nets = Vec::new();
+    for line in out.lines() {
+        let fields = split_nmcli_terse(line);
+        if fields.len() < 4 {
+            continue;
+        }
+        let ssid = fields[1].clone();
+        if ssid.is_empty() {
+            continue; // hidden network
+        }
+        let security = fields[3].trim().to_string();
+        nets.push(WifiNetwork {
+            in_use: fields[0].trim() == "*",
+            ssid,
+            signal: fields[2].trim().parse::<u8>().unwrap_or(0),
+            security: if security.is_empty() { "open".to_string() } else { security },
+        });
+    }
+    Ok(nets)
+}
+
+/// Splits one line of nmcli `-t` terse output on unescaped ':' and unescapes.
+fn split_nmcli_terse(line: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut cur = String::new();
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(&next) = chars.peek() {
+                cur.push(next);
+                chars.next();
+            }
+        } else if c == ':' {
+            fields.push(std::mem::take(&mut cur));
+        } else {
+            cur.push(c);
+        }
+    }
+    fields.push(cur);
+    fields
+}
+
+pub fn wifi_connect(iface: &str, ssid: &str, password: &Option<String>) -> Result<()> {
+    if !valid_iface(iface) {
+        return Err(AgentError::InvalidRequest("invalid interface name".to_string()));
+    }
+    if !valid_ssid(ssid) {
+        return Err(AgentError::InvalidRequest("invalid SSID".to_string()));
+    }
+    // SSID/password travel as fixed positional args (no shell), so even values
+    // with spaces or metacharacters are safe.
+    let mut args: Vec<&str> = vec!["device", "wifi", "connect", ssid, "ifname", iface];
+    if let Some(pw) = password {
+        if !pw.is_empty() {
+            args.push("password");
+            args.push(pw);
+        }
+    }
+    run("nmcli", &args)?;
+    info!("Connected {} to Wi-Fi SSID", iface);
+    Ok(())
+}
+
+pub fn wifi_forget(ssid: &str) -> Result<()> {
+    if !valid_ssid(ssid) {
+        return Err(AgentError::InvalidRequest("invalid SSID".to_string()));
+    }
+    // The saved connection profile is usually named after the SSID.
+    run("nmcli", &["con", "delete", ssid])?;
+    info!("Forgot Wi-Fi network");
+    Ok(())
+}
+
+// --- Diagnostics -----------------------------------------------------------
+
+/// A host argument for diagnostics: IPv4/IPv6 literal or DNS name. Rejects
+/// anything that could be read as a flag or contains shell-unsafe characters.
+fn valid_host(host: &str) -> bool {
+    !host.is_empty()
+        && host.len() <= 255
+        && !host.starts_with('-')
+        && host.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '_'))
+}
+
+pub fn ping4(host: &str, count: u8) -> Result<String> {
+    if !valid_host(host) {
+        return Err(AgentError::InvalidRequest("invalid host".to_string()));
+    }
+    let n = count.clamp(1, 10).to_string();
+    // -w caps total time so a request can't hang the agent.
+    run("ping", &["-4", "-c", &n, "-w", "15", host])
+}
+
+pub fn traceroute(host: &str) -> Result<String> {
+    if !valid_host(host) {
+        return Err(AgentError::InvalidRequest("invalid host".to_string()));
+    }
+    // Cap hops and per-hop wait to bound runtime.
+    run("traceroute", &["-4", "-m", "20", "-w", "2", host])
+}
+
+pub fn dns_lookup(host: &str) -> Result<String> {
+    if !valid_host(host) {
+        return Err(AgentError::InvalidRequest("invalid host".to_string()));
+    }
+    run("getent", &["hosts", host])
 }
 
 static TOKEN_COUNTER: AtomicU64 = AtomicU64::new(0);

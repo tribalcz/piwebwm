@@ -6,9 +6,12 @@ import type {
     NetworkInterfacesResponse,
     RouteEntry,
     RoutesResponse,
+    WifiNetwork,
+    WifiScanResponse,
+    DiagnosticResponse,
 } from '@/types/api';
 
-type Tab = 'status' | 'interfaces' | 'routing';
+type Tab = 'status' | 'interfaces' | 'wifi' | 'routing' | 'diagnostics';
 
 const POLL_MS = 3000;
 const REVERT_SECONDS = 60;
@@ -30,7 +33,9 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         <div class="net-tabs">
             <button class="net-tab active" data-tab="status">Status</button>
             <button class="net-tab" data-tab="interfaces">Interfaces</button>
+            <button class="net-tab" data-tab="wifi">Wi-Fi</button>
             <button class="net-tab" data-tab="routing">Routing</button>
+            <button class="net-tab" data-tab="diagnostics">Diagnostics</button>
         </div>
         <div class="net-body"></div>
     `;
@@ -60,6 +65,12 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         body.querySelectorAll<HTMLElement>('[data-edit]').forEach(btn => {
             btn.addEventListener('click', () => openEditModal(btn.dataset.edit!));
         });
+        body.querySelectorAll<HTMLElement>('[data-toggle]').forEach(btn => {
+            btn.addEventListener('click', () => void toggleInterface(btn.dataset.toggle!, btn.dataset.up === 'true'));
+        });
+        body.querySelectorAll<HTMLElement>('[data-mtu]').forEach(btn => {
+            btn.addEventListener('click', () => openMtuModal(btn.dataset.mtu!));
+        });
     };
 
     const show = (tab: Tab) => {
@@ -72,9 +83,74 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
             pollTimer = setInterval(() => {
                 if (!modalOpen) void refreshInterfaces();
             }, POLL_MS);
+        } else if (tab === 'wifi') {
+            void renderWifi();
+        } else if (tab === 'diagnostics') {
+            renderDiagnostics();
         } else {
             void renderRouting();
         }
+    };
+
+    const toggleInterface = async (name: string, currentlyUp: boolean) => {
+        const up = !currentlyUp;
+        if (!up && !confirm(`Disable ${name}? If this is the interface you're connected through, you may lose access until it is re-enabled on the device.`)) {
+            return;
+        }
+        try {
+            const res = await fetch('/api/system/network/interface/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ iface: name, up }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({})) as { error?: string };
+                alert(`Could not change interface state: ${err.error ?? res.status}`);
+            }
+        } catch {
+            alert('Could not change interface state.');
+        }
+        void refreshInterfaces();
+    };
+
+    const openMtuModal = (name: string) => {
+        const iface = interfaces.find(i => i.name === name);
+        if (!iface) return;
+        modalOpen = true;
+        const overlay = modal(`
+            <h3>Set MTU for ${escapeHtml(name)}</h3>
+            <label>MTU (bytes, 576–9216)</label>
+            <input type="text" class="net-mtu-val" value="${iface.mtu || 1500}" />
+            <p class="set-note">Lowering MTU below the path maximum is safe; raising it requires the link and peers to support jumbo frames.</p>
+            <div class="net-modal-actions">
+                <button class="set-btn net-cancel">Cancel</button>
+                <button class="set-btn net-mtu-apply" style="background:var(--accent);color:#fff;border-color:var(--accent)">Apply</button>
+            </div>
+        `);
+        const close = () => { overlay.remove(); modalOpen = false; };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.querySelector('.net-cancel')?.addEventListener('click', close);
+        overlay.querySelector('.net-mtu-apply')?.addEventListener('click', async () => {
+            const mtu = parseInt(overlay.querySelector<HTMLInputElement>('.net-mtu-val')!.value, 10);
+            if (!mtu || mtu < 576 || mtu > 9216) { alert('MTU must be between 576 and 9216.'); return; }
+            close();
+            try {
+                const res = await fetch('/api/system/network/interface/mtu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ iface: name, mtu }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({})) as { error?: string };
+                    alert(`Could not set MTU: ${err.error ?? res.status}`);
+                }
+            } catch {
+                alert('Could not set MTU.');
+            }
+            void refreshInterfaces();
+        });
     };
 
     const renderRouting = async () => {
@@ -324,10 +400,186 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         });
     };
 
+    // --- Wi-Fi tab ---------------------------------------------------------
+
+    const renderWifi = async () => {
+        if (interfaces.length === 0) {
+            const r = await getJSON<NetworkInterfacesResponse>('/api/system/network/interfaces');
+            if (r.ok && r.data) interfaces = r.data.interfaces;
+        }
+        const wifiIfaces = interfaces.filter(i => i.kind === 'wifi');
+        if (wifiIfaces.length === 0) {
+            body.innerHTML = `<p class="set-note">No Wi-Fi interfaces detected.</p>`;
+            return;
+        }
+        const iface = wifiIfaces[0].name;
+
+        body.innerHTML = `
+            <div class="net-routes-head">
+                <span class="net-wifi-iface">Adapter: <strong>${escapeHtml(iface)}</strong></span>
+                <button class="set-btn net-wifi-scan" style="background:var(--accent);color:#fff;border-color:var(--accent)">Scan</button>
+            </div>
+            <div class="net-wifi-list"><p class="set-note">Scanning…</p></div>
+        `;
+        const listEl = body.querySelector<HTMLElement>('.net-wifi-list')!;
+        const scanBtn = body.querySelector<HTMLButtonElement>('.net-wifi-scan')!;
+
+        const doScan = async () => {
+            scanBtn.disabled = true;
+            scanBtn.textContent = 'Scanning…';
+            const res = await getJSON<WifiScanResponse>(`/api/system/network/wifi/scan?iface=${encodeURIComponent(iface)}`);
+            scanBtn.disabled = false;
+            scanBtn.textContent = 'Scan';
+            if (!res.ok || !res.data) {
+                listEl.innerHTML = unavailable(res.status, res.error);
+                return;
+            }
+            // Strongest signal first; de-duplicate by SSID.
+            const seen = new Set<string>();
+            const nets = res.data.networks
+                .sort((a, b) => b.signal - a.signal)
+                .filter(n => (seen.has(n.ssid) ? false : (seen.add(n.ssid), true)));
+            if (nets.length === 0) {
+                listEl.innerHTML = `<p class="set-note">No networks found.</p>`;
+                return;
+            }
+            listEl.innerHTML = nets.map(n => renderWifiRow(n)).join('');
+            listEl.querySelectorAll<HTMLElement>('[data-connect]').forEach(btn => {
+                btn.addEventListener('click', () => openWifiConnect(iface, btn.dataset.connect!, btn.dataset.secured === 'true'));
+            });
+            listEl.querySelectorAll<HTMLElement>('[data-forget]').forEach(btn => {
+                btn.addEventListener('click', () => void forgetWifi(btn.dataset.forget!, doScan));
+            });
+        };
+
+        scanBtn.addEventListener('click', () => void doScan());
+        void doScan();
+    };
+
+    const openWifiConnect = (iface: string, ssid: string, secured: boolean) => {
+        modalOpen = true;
+        const overlay = modal(`
+            <h3>Connect to ${escapeHtml(ssid)}</h3>
+            ${secured
+                ? `<label>Password</label>
+                   <input type="password" class="net-wifi-pw" placeholder="Network password" />`
+                : `<p class="set-note">This is an open network (no password).</p>`}
+            <div class="net-modal-actions">
+                <button class="set-btn net-cancel">Cancel</button>
+                <button class="set-btn net-wifi-go" style="background:var(--accent);color:#fff;border-color:var(--accent)">Connect</button>
+            </div>
+        `);
+        const close = () => { overlay.remove(); modalOpen = false; };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.querySelector('.net-cancel')?.addEventListener('click', close);
+        overlay.querySelector('.net-wifi-go')?.addEventListener('click', async () => {
+            const pwEl = overlay.querySelector<HTMLInputElement>('.net-wifi-pw');
+            const password = pwEl ? pwEl.value : '';
+            close();
+            try {
+                const res = await fetch('/api/system/network/wifi/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ iface, ssid, password: password || undefined }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({})) as { error?: string };
+                    alert(`Could not connect: ${err.error ?? res.status}`);
+                }
+            } catch {
+                alert('Could not connect to the network.');
+            }
+            void renderWifi();
+        });
+    };
+
+    const forgetWifi = async (ssid: string, after: () => Promise<void>) => {
+        if (!confirm(`Forget saved network "${ssid}"?`)) return;
+        try {
+            const res = await fetch('/api/system/network/wifi/forget', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ ssid }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({})) as { error?: string };
+                alert(`Could not forget network: ${err.error ?? res.status}`);
+            }
+        } catch {
+            alert('Could not forget the network.');
+        }
+        await after();
+    };
+
+    // --- Diagnostics tab ---------------------------------------------------
+
+    const renderDiagnostics = () => {
+        body.innerHTML = `
+            <div class="net-diag-form">
+                <select class="net-diag-tool">
+                    <option value="ping">Ping</option>
+                    <option value="traceroute">Traceroute</option>
+                    <option value="dns">DNS lookup</option>
+                </select>
+                <input type="text" class="net-diag-host" placeholder="example.com or 1.1.1.1" />
+                <button class="set-btn net-diag-run" style="background:var(--accent);color:#fff;border-color:var(--accent)">Run</button>
+            </div>
+            <pre class="net-diag-out">Choose a tool, enter a host, and run.</pre>
+        `;
+        const toolSel = body.querySelector<HTMLSelectElement>('.net-diag-tool')!;
+        const hostEl = body.querySelector<HTMLInputElement>('.net-diag-host')!;
+        const runBtn = body.querySelector<HTMLButtonElement>('.net-diag-run')!;
+        const out = body.querySelector<HTMLElement>('.net-diag-out')!;
+
+        const run = async () => {
+            const host = hostEl.value.trim();
+            if (!host) { hostEl.focus(); return; }
+            runBtn.disabled = true;
+            const prev = runBtn.textContent;
+            runBtn.textContent = 'Running…';
+            out.textContent = 'Running…';
+            try {
+                const res = await fetch('/api/system/network/diagnostic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ tool: toolSel.value, host }),
+                });
+                const data = await res.json().catch(() => ({})) as DiagnosticResponse & { error?: string };
+                out.textContent = res.ok ? (data.output || '(no output)') : `Error: ${data.error ?? res.status}`;
+            } catch {
+                out.textContent = 'Request failed.';
+            }
+            runBtn.disabled = false;
+            runBtn.textContent = prev;
+        };
+
+        runBtn.addEventListener('click', () => void run());
+        hostEl.addEventListener('keydown', e => { if (e.key === 'Enter') void run(); });
+    };
+
     tabs.forEach(t => t.addEventListener('click', () => show((t.dataset.tab as Tab) ?? 'status')));
     show('status');
 
     return stopPoll;
+}
+
+function renderWifiRow(n: WifiNetwork): string {
+    const bars = Math.round(n.signal / 25); // 0–4
+    const signalIcon = '▂▄▆█'.slice(0, Math.max(1, bars));
+    const locked = n.security && n.security !== 'open' && n.security !== '--';
+    return `
+        <div class="net-wifi-row${n.in_use ? ' net-wifi-active' : ''}">
+            <span class="net-wifi-signal" title="${n.signal}%">${signalIcon}</span>
+            <span class="net-wifi-ssid">${escapeHtml(n.ssid)}${n.in_use ? ' <span class="net-pill net-online">connected</span>' : ''}</span>
+            <span class="net-wifi-sec">${locked ? escapeHtml(n.security) : 'open'}</span>
+            <span class="net-iface-spacer"></span>
+            <button class="set-btn" data-connect="${escapeHtml(n.ssid)}" data-secured="${locked ? 'true' : 'false'}">Connect</button>
+            <button class="set-btn net-route-del" data-forget="${escapeHtml(n.ssid)}">Forget</button>
+        </div>
+    `;
 }
 
 // --- shared helpers --------------------------------------------------------
@@ -473,25 +725,37 @@ function renderInterfaceCard(
             : '';
 
     const stateClass = iface.state === 'up' ? 'net-online' : 'net-offline';
-    const editable = iface.kind === 'ethernet' || iface.kind === 'wifi';
+    const controllable = iface.kind === 'ethernet' || iface.kind === 'wifi';
+    const isUp = iface.state === 'up';
+    const errors = iface.rx_errors + iface.tx_errors;
+    const dropped = iface.rx_dropped + iface.tx_dropped;
+    const name = escapeHtml(iface.name);
 
     return `
         <div class="net-iface">
             <div class="net-iface-head">
-                <span class="net-iface-name">${escapeHtml(iface.name)}</span>
+                <span class="net-iface-name">${name}</span>
                 <span class="net-iface-kind">${escapeHtml(iface.kind)}</span>
                 <span class="net-pill ${stateClass}">${escapeHtml(iface.state)}</span>
                 <span class="net-iface-spacer"></span>
-                ${editable ? `<button class="set-btn net-iface-edit" data-edit="${escapeHtml(iface.name)}">Configure</button>` : ''}
+                ${controllable ? `
+                    <button class="set-btn" data-toggle="${name}" data-up="${isUp}">${isUp ? 'Disable' : 'Enable'}</button>
+                    <button class="set-btn" data-mtu="${name}">MTU</button>
+                    <button class="set-btn net-iface-edit" data-edit="${name}">Configure</button>
+                ` : ''}
             </div>
             ${addrLine('IPv4', ipv4)}
             ${addrLine('IPv6', ipv6)}
             ${iface.mac ? `<div class="net-iface-row"><span>MAC</span><span>${escapeHtml(iface.mac)}</span></div>` : ''}
+            <div class="net-iface-row"><span>MTU</span><span>${iface.mtu || '—'}</span></div>
             ${iface.speed_mbps ? `<div class="net-iface-row"><span>Link</span><span>${iface.speed_mbps} Mbps</span></div>` : ''}
             <div class="net-iface-row">
                 <span>Traffic</span>
                 <span>↓ ${formatBytes(iface.rx_bytes)} · ↑ ${formatBytes(iface.tx_bytes)} ${rate}</span>
             </div>
+            ${(errors > 0 || dropped > 0)
+                ? `<div class="net-iface-row"><span>Errors / dropped</span><span class="net-warn">${errors} / ${dropped}</span></div>`
+                : ''}
         </div>
     `;
 }

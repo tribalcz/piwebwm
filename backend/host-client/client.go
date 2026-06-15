@@ -357,6 +357,18 @@ type NetworkInterface struct {
 	RxBytes   uint64           `json:"rx_bytes"`
 	TxBytes   uint64           `json:"tx_bytes"`
 	SpeedMbps *int64           `json:"speed_mbps"`
+	MTU       uint32           `json:"mtu"`
+	RxErrors  uint64           `json:"rx_errors"`
+	TxErrors  uint64           `json:"tx_errors"`
+	RxDropped uint64           `json:"rx_dropped"`
+	TxDropped uint64           `json:"tx_dropped"`
+}
+
+type WifiNetwork struct {
+	SSID     string `json:"ssid"`
+	Signal   uint8  `json:"signal"`
+	Security string `json:"security"`
+	InUse    bool   `json:"in_use"`
 }
 
 type RouteEntry struct {
@@ -555,4 +567,131 @@ func (c *HostAgentClient) DeleteRoute(iface, dst string, gateway *string) error 
 		return errors.New(resp.GetError())
 	}
 	return nil
+}
+
+// --- Interface link controls -----------------------------------------------
+
+func (c *HostAgentClient) SetInterfaceState(iface string, up bool) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetInterfaceState",
+		Params: map[string]interface{}{"iface": iface, "up": up},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) SetMtu(iface string, mtu uint32) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetMtu",
+		Params: map[string]interface{}{"iface": iface, "mtu": mtu},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Wi-Fi -----------------------------------------------------------------
+
+func (c *HostAgentClient) WifiScan(iface string) ([]WifiNetwork, error) {
+	resp, err := c.sendRequest(Action{
+		Type:   "WifiScan",
+		Params: map[string]interface{}{"iface": iface},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["networks"])
+	if err != nil {
+		return nil, err
+	}
+	var nets []WifiNetwork
+	if err := json.Unmarshal(raw, &nets); err != nil {
+		return nil, err
+	}
+	return nets, nil
+}
+
+func (c *HostAgentClient) WifiConnect(iface, ssid string, password *string) error {
+	params := map[string]interface{}{"iface": iface, "ssid": ssid}
+	if password != nil {
+		params["password"] = *password
+	}
+	resp, err := c.sendRequest(Action{Type: "WifiConnect", Params: params})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) WifiForget(ssid string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "WifiForget",
+		Params: map[string]interface{}{"ssid": ssid},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Diagnostics -----------------------------------------------------------
+
+// runDiag dispatches a diagnostic action that returns CommandOutput.
+func (c *HostAgentClient) runDiag(action Action) (string, error) {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return "", err
+	}
+	if resp.IsError() {
+		return "", errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return "", errors.New("no data in response")
+	}
+	out, _ := data["output"].(string)
+	return out, nil
+}
+
+func (c *HostAgentClient) Ping4(host string, count uint8) (string, error) {
+	return c.runDiag(Action{
+		Type:   "Ping4",
+		Params: map[string]interface{}{"host": host, "count": count},
+	})
+}
+
+func (c *HostAgentClient) Traceroute(host string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "Traceroute",
+		Params: map[string]interface{}{"host": host},
+	})
+}
+
+func (c *HostAgentClient) DnsLookup(host string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "DnsLookup",
+		Params: map[string]interface{}{"host": host},
+	})
 }

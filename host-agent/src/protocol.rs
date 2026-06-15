@@ -55,6 +55,41 @@ pub enum Action {
         gateway: Option<String>,
     },
 
+    // Interface link controls (runtime, via `ip link`).
+    SetInterfaceState {
+        iface: String,
+        up: bool,
+    },
+    SetMtu {
+        iface: String,
+        mtu: u32,
+    },
+
+    // Wi-Fi management (NetworkManager).
+    WifiScan {
+        iface: String,
+    },
+    WifiConnect {
+        iface: String,
+        ssid: String,
+        password: Option<String>,
+    },
+    WifiForget {
+        ssid: String,
+    },
+
+    // Network diagnostics (bounded, fixed-arg external tools).
+    Ping4 {
+        host: String,
+        count: u8,
+    },
+    Traceroute {
+        host: String,
+    },
+    DnsLookup {
+        host: String,
+    },
+
     Ping,
 }
 
@@ -83,6 +118,8 @@ pub enum ResponseData {
     Interfaces { interfaces: Vec<NetworkInterface> },
     Routes { routes: Vec<RouteEntry> },
     NetworkApplied { token: Option<String>, revert_seconds: u64 },
+    WifiNetworks { networks: Vec<WifiNetwork> },
+    CommandOutput { output: String },
     Pong,
 }
 
@@ -140,6 +177,19 @@ pub struct NetworkInterface {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
     pub speed_mbps: Option<i64>,
+    pub mtu: u32,
+    pub rx_errors: u64,
+    pub tx_errors: u64,
+    pub rx_dropped: u64,
+    pub tx_dropped: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WifiNetwork {
+    pub ssid: String,
+    pub signal: u8,      // 0–100
+    pub security: String, // "WPA2", "open", …
+    pub in_use: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

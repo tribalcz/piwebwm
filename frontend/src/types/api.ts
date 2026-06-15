@@ -81,6 +81,11 @@ export interface NetworkInterface {
     rx_bytes: number;
     tx_bytes: number;
     speed_mbps: number | null;
+    mtu: number;
+    rx_errors: number;
+    tx_errors: number;
+    rx_dropped: number;
+    tx_dropped: number;
 }
 
 /** GET /api/system/network/interfaces */
@@ -98,4 +103,21 @@ export interface RouteEntry {
 /** GET /api/system/network/routes */
 export interface RoutesResponse {
     routes: RouteEntry[];
+}
+
+export interface WifiNetwork {
+    ssid: string;
+    signal: number;   // 0–100
+    security: string; // "WPA2", "open", …
+    in_use: boolean;
+}
+
+/** GET /api/system/network/wifi/scan */
+export interface WifiScanResponse {
+    networks: WifiNetwork[];
+}
+
+/** POST /api/system/network/diagnostic */
+export interface DiagnosticResponse {
+    output: string;
 }

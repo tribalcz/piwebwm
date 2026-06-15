@@ -446,6 +446,66 @@
     font-size: 12px;
 }
 
+.net-warn { color: var(--danger, #d9534f); }
+
+/* Wi-Fi tab */
+.net-wifi-iface { font-size: 13px; color: var(--text-muted); }
+
+.net-wifi-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 13px;
+}
+
+.net-wifi-active { background: var(--surface-hover, rgba(127, 127, 127, 0.08)); }
+
+.net-wifi-signal {
+    font-family: ui-monospace, monospace;
+    color: var(--accent);
+    min-width: 34px;
+    letter-spacing: 1px;
+}
+
+.net-wifi-ssid { font-weight: 600; }
+.net-wifi-sec { color: var(--text-faint); font-size: 12px; }
+
+/* Diagnostics tab */
+.net-diag-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.net-diag-form .net-diag-host { flex: 1; }
+
+.net-diag-form select,
+.net-diag-form input {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.net-diag-out {
+    background: var(--surface-sunken, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+    overflow-x: auto;
+    max-height: 360px;
+    overflow-y: auto;
+    margin: 0;
+}
+
 /* Network edit modal + interface configure button */
 .net-iface-spacer { flex: 1; }
 
