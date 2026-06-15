@@ -35,8 +35,13 @@ pub enum Action {
         address: Option<String>,
         prefixlen: Option<u8>,
         gateway: Option<String>,
-        dns: Option<Vec<String>>,
+        dns: Option<Vec<String>>, // IPv4 and/or IPv6 servers, split by family
         dns_search: Option<Vec<String>>,
+        // IPv6: when ipv6_method is None, IPv6 settings are left untouched.
+        ipv6_method: Option<String>, // "auto" | "manual" | "disabled" | "ignore"
+        ipv6_address: Option<String>,
+        ipv6_prefixlen: Option<u8>,
+        ipv6_gateway: Option<String>,
         revert_seconds: u64, // 0 = apply immediately, no revert
     },
     ConfirmNetworkConfig {

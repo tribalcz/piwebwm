@@ -202,7 +202,7 @@ pub fn set_hostname(name: &str) -> Result<()> {
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Desired IPv4 configuration for an interface.
+/// Desired IPv4/IPv6 configuration for an interface.
 pub struct InterfaceConfig {
     pub iface: String,
     pub method: String, // "auto" | "manual"
@@ -211,9 +211,14 @@ pub struct InterfaceConfig {
     pub gateway: Option<String>,
     pub dns: Option<Vec<String>>,
     pub dns_search: Option<Vec<String>>,
+    // IPv6: None = leave untouched.
+    pub ipv6_method: Option<String>, // "auto" | "manual" | "disabled" | "ignore"
+    pub ipv6_address: Option<String>,
+    pub ipv6_prefixlen: Option<u8>,
+    pub ipv6_gateway: Option<String>,
 }
 
-/// Snapshot of a connection's IPv4 settings, used to revert.
+/// Snapshot of a connection's IPv4 + IPv6 settings, used to revert.
 #[derive(Clone, Debug)]
 pub struct PrevConfig {
     pub con: String,
@@ -222,6 +227,10 @@ pub struct PrevConfig {
     pub gateway: String,
     pub dns: String,
     pub dns_search: String,
+    pub ip6_method: String,
+    pub ip6_addresses: String,
+    pub ip6_gateway: String,
+    pub ip6_dns: String,
 }
 
 fn valid_ipv4(s: &str) -> bool {
@@ -230,6 +239,16 @@ fn valid_ipv4(s: &str) -> bool {
         !p.is_empty() && p.len() <= 3 && p.chars().all(|c| c.is_ascii_digit())
             && p.parse::<u16>().map(|n| n <= 255).unwrap_or(false)
     })
+}
+
+/// Lightweight IPv6 literal check: hex groups, ':' and (for embedded v4) '.'.
+/// nmcli does the authoritative parsing; this just blocks anything that could
+/// be read as a flag or shell-unsafe input.
+fn valid_ipv6(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 45
+        && s.contains(':')
+        && s.chars().all(|c| c.is_ascii_hexdigit() || matches!(c, ':' | '.' | '%'))
 }
 
 /// Resolve the active NetworkManager connection name bound to an interface.
@@ -249,16 +268,26 @@ fn capture_prev(con: &str) -> Result<PrevConfig> {
     // -g with multiple fields prints one value per line, in order.
     let out = run(
         "nmcli",
-        &["-g", "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,ipv4.dns-search", "con", "show", con],
+        &[
+            "-g",
+            "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,ipv4.dns-search,\
+             ipv6.method,ipv6.addresses,ipv6.gateway,ipv6.dns",
+            "con", "show", con,
+        ],
     )?;
     let lines: Vec<&str> = out.lines().collect();
+    let at = |i: usize| lines.get(i).unwrap_or(&"").trim().to_string();
     Ok(PrevConfig {
         con: con.to_string(),
-        method: lines.first().unwrap_or(&"auto").trim().to_string(),
-        addresses: lines.get(1).unwrap_or(&"").trim().to_string(),
-        gateway: lines.get(2).unwrap_or(&"").trim().to_string(),
-        dns: lines.get(3).unwrap_or(&"").trim().to_string(),
-        dns_search: lines.get(4).unwrap_or(&"").trim().to_string(),
+        method: lines.first().map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("auto").to_string(),
+        addresses: at(1),
+        gateway: at(2),
+        dns: at(3),
+        dns_search: at(4),
+        ip6_method: lines.get(5).map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("auto").to_string(),
+        ip6_addresses: at(6),
+        ip6_gateway: at(7),
+        ip6_dns: at(8),
     })
 }
 
@@ -270,16 +299,25 @@ pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
     // untouched"; `Some(list)` overwrites it (an empty list clears it). This
     // way a plain IP change never silently wipes pre-existing DNS or search
     // domains the caller didn't intend to touch.
-    let dns_joined = match &cfg.dns {
+    //
+    // A single DNS list may carry both IPv4 and IPv6 servers; they are routed
+    // to ipv4.dns / ipv6.dns by family so the caller doesn't manage two fields.
+    let (dns4_joined, dns6_joined) = match &cfg.dns {
         Some(list) => {
+            let mut v4 = Vec::new();
+            let mut v6 = Vec::new();
             for d in list {
-                if !valid_ipv4(d) {
+                if valid_ipv4(d) {
+                    v4.push(d.clone());
+                } else if valid_ipv6(d) {
+                    v6.push(d.clone());
+                } else {
                     return Err(AgentError::InvalidRequest(format!("invalid DNS server: {}", d)));
                 }
             }
-            Some(list.join(" "))
+            (Some(v4.join(" ")), Some(v6.join(" ")))
         }
-        None => None,
+        None => (None, None),
     };
 
     // Search domains are validated lightly (no whitespace; nmcli rejects the rest).
@@ -299,7 +337,7 @@ pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
     let prev = capture_prev(&con)?;
 
     // Build the `con mod` argument vector dynamically so that fields the caller
-    // didn't specify (DNS / search) are simply omitted rather than cleared.
+    // didn't specify (DNS / search / IPv6) are simply omitted rather than cleared.
     let mut args: Vec<String> = vec!["con".into(), "mod".into(), con.clone()];
 
     match cfg.method.as_str() {
@@ -335,8 +373,47 @@ pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
         }
     }
 
-    if let Some(dns) = &dns_joined {
+    // IPv6 — only touched when ipv6_method is provided.
+    if let Some(m) = cfg.ipv6_method.as_deref() {
+        match m {
+            "auto" | "disabled" | "ignore" => {
+                args.extend([
+                    "ipv6.method".into(), m.to_string(),
+                    "ipv6.addresses".into(), "".into(),
+                    "ipv6.gateway".into(), "".into(),
+                ]);
+            }
+            "manual" => {
+                let address = cfg.ipv6_address.as_deref().unwrap_or("");
+                let prefix = cfg.ipv6_prefixlen.unwrap_or(64);
+                if !valid_ipv6(address) {
+                    return Err(AgentError::InvalidRequest("invalid IPv6 address".to_string()));
+                }
+                if prefix > 128 {
+                    return Err(AgentError::InvalidRequest("invalid IPv6 prefix length".to_string()));
+                }
+                let gateway = cfg.ipv6_gateway.as_deref().unwrap_or("");
+                if !gateway.is_empty() && !valid_ipv6(gateway) {
+                    return Err(AgentError::InvalidRequest("invalid IPv6 gateway".to_string()));
+                }
+                let cidr = format!("{}/{}", address, prefix);
+                args.extend([
+                    "ipv6.method".into(), "manual".into(),
+                    "ipv6.addresses".into(), cidr,
+                    "ipv6.gateway".into(), gateway.to_string(),
+                ]);
+            }
+            other => {
+                return Err(AgentError::InvalidRequest(format!("unknown IPv6 method: {}", other)));
+            }
+        }
+    }
+
+    if let Some(dns) = &dns4_joined {
         args.extend(["ipv4.dns".into(), dns.clone()]);
+    }
+    if let Some(dns) = &dns6_joined {
+        args.extend(["ipv6.dns".into(), dns.clone()]);
     }
     if let Some(search) = &search_joined {
         args.extend(["ipv4.dns-search".into(), search.clone()]);
@@ -359,6 +436,10 @@ pub fn restore_interface_config(prev: &PrevConfig) -> Result<()> {
         "ipv4.gateway", &prev.gateway,
         "ipv4.dns", &prev.dns,
         "ipv4.dns-search", &prev.dns_search,
+        "ipv6.method", &prev.ip6_method,
+        "ipv6.addresses", &prev.ip6_addresses,
+        "ipv6.gateway", &prev.ip6_gateway,
+        "ipv6.dns", &prev.ip6_dns,
     ])?;
     run("nmcli", &["con", "up", &prev.con])?;
     info!("Reverted network config on {}", prev.con);

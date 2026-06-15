@@ -293,6 +293,10 @@ async fn process_request(
             gateway,
             dns,
             dns_search,
+            ipv6_method,
+            ipv6_address,
+            ipv6_prefixlen,
+            ipv6_gateway,
             revert_seconds,
         } => {
             let cfg = network::InterfaceConfig {
@@ -303,6 +307,10 @@ async fn process_request(
                 gateway,
                 dns,
                 dns_search,
+                ipv6_method,
+                ipv6_address,
+                ipv6_prefixlen,
+                ipv6_gateway,
             };
             match network::apply_interface_config(&cfg) {
                 Ok(prev) => {

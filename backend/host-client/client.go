@@ -474,6 +474,10 @@ type InterfaceConfigRequest struct {
 	Gateway       *string
 	DNS           []string
 	DNSSearch     []string
+	IPv6Method    *string
+	IPv6Address   *string
+	IPv6Prefixlen *int
+	IPv6Gateway   *string
 	RevertSeconds uint64
 }
 
@@ -499,6 +503,18 @@ func (c *HostAgentClient) SetInterfaceConfig(req InterfaceConfigRequest) (*strin
 	}
 	if req.DNSSearch != nil {
 		params["dns_search"] = req.DNSSearch
+	}
+	if req.IPv6Method != nil {
+		params["ipv6_method"] = *req.IPv6Method
+	}
+	if req.IPv6Address != nil {
+		params["ipv6_address"] = *req.IPv6Address
+	}
+	if req.IPv6Prefixlen != nil {
+		params["ipv6_prefixlen"] = *req.IPv6Prefixlen
+	}
+	if req.IPv6Gateway != nil {
+		params["ipv6_gateway"] = *req.IPv6Gateway
 	}
 
 	resp, err := c.sendRequest(Action{Type: "SetInterfaceConfig", Params: params})

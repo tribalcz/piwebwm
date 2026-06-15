@@ -238,6 +238,10 @@ func setInterfaceConfig(c *gin.Context) {
 		Gateway       *string  `json:"gateway"`
 		DNS           []string `json:"dns"`
 		DNSSearch     []string `json:"dns_search"`
+		IPv6Method    *string  `json:"ipv6_method"`
+		IPv6Address   *string  `json:"ipv6_address"`
+		IPv6Prefixlen *int     `json:"ipv6_prefixlen"`
+		IPv6Gateway   *string  `json:"ipv6_gateway"`
 		RevertSeconds uint64   `json:"revert_seconds"`
 	}
 	if err := c.BindJSON(&req); err != nil {
@@ -253,6 +257,10 @@ func setInterfaceConfig(c *gin.Context) {
 		Gateway:       req.Gateway,
 		DNS:           req.DNS,
 		DNSSearch:     req.DNSSearch,
+		IPv6Method:    req.IPv6Method,
+		IPv6Address:   req.IPv6Address,
+		IPv6Prefixlen: req.IPv6Prefixlen,
+		IPv6Gateway:   req.IPv6Gateway,
 		RevertSeconds: req.RevertSeconds,
 	})
 	if err != nil {

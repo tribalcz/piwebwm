@@ -272,9 +272,10 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         }
 
         const ipv4 = iface.addresses.find(a => a.family === 'ipv4');
+        const ipv6 = iface.addresses.find(a => a.family === 'ipv6' && !a.address.startsWith('fe80'));
         const overlay = modal(`
             <h3>Configure ${escapeHtml(iface.name)}</h3>
-            <label>Method</label>
+            <label>IPv4 method</label>
             <select class="net-f-method">
                 <option value="auto">Automatic (DHCP)</option>
                 <option value="manual" selected>Manual (static)</option>
@@ -287,8 +288,24 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
                 <label>Gateway</label>
                 <input type="text" class="net-f-gateway" value="${escapeHtml(status?.gateway ?? '')}" placeholder="192.168.1.1" />
             </div>
-            <label>DNS servers (space or comma separated)</label>
-            <input type="text" class="net-f-dns" value="${escapeHtml((status?.dns ?? []).join(' '))}" placeholder="1.1.1.1 8.8.8.8" />
+            <label>IPv6 method</label>
+            <select class="net-f-ip6method">
+                <option value="" selected>Leave unchanged</option>
+                <option value="auto">Automatic (SLAAC/DHCPv6)</option>
+                <option value="manual">Manual (static)</option>
+                <option value="disabled">Disabled</option>
+                <option value="ignore">Ignore</option>
+            </select>
+            <div class="net-manual6" style="display:none">
+                <label>IPv6 address</label>
+                <input type="text" class="net-f-ip6address" value="${escapeHtml(ipv6?.address ?? '')}" placeholder="2001:db8::50" />
+                <label>IPv6 prefix length</label>
+                <input type="text" class="net-f-ip6prefix" value="${ipv6?.prefixlen ?? 64}" placeholder="64" />
+                <label>IPv6 gateway</label>
+                <input type="text" class="net-f-ip6gateway" value="" placeholder="2001:db8::1" />
+            </div>
+            <label>DNS servers (IPv4 and/or IPv6, space or comma separated)</label>
+            <input type="text" class="net-f-dns" value="${escapeHtml((status?.dns ?? []).join(' '))}" placeholder="1.1.1.1 2606:4700:4700::1111" />
             <label>DNS search domains (optional, space or comma separated)</label>
             <input type="text" class="net-f-search" value="" placeholder="example.lan corp.internal" />
             <p class="set-note">Leave search domains blank to keep the existing ones. Applied with a ${REVERT_SECONDS}s safety timer — if this is the interface you're connected through, the connection may drop and the change will revert automatically.</p>
@@ -303,6 +320,12 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         const syncManual = () => { manualBox.style.display = methodSel.value === 'manual' ? '' : 'none'; };
         methodSel.addEventListener('change', syncManual);
         syncManual();
+
+        const ip6Sel = overlay.querySelector<HTMLSelectElement>('.net-f-ip6method')!;
+        const manual6Box = overlay.querySelector<HTMLElement>('.net-manual6')!;
+        const syncManual6 = () => { manual6Box.style.display = ip6Sel.value === 'manual' ? '' : 'none'; };
+        ip6Sel.addEventListener('change', syncManual6);
+        syncManual6();
 
         const close = () => { overlay.remove(); modalOpen = false; };
         overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -329,6 +352,16 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
                 payload.prefixlen = parseInt(overlay.querySelector<HTMLInputElement>('.net-f-prefix')!.value, 10) || 24;
                 const gw = overlay.querySelector<HTMLInputElement>('.net-f-gateway')!.value.trim();
                 payload.gateway = gw;
+            }
+            // IPv6 is left untouched unless a method is chosen.
+            const ip6Method = ip6Sel.value;
+            if (ip6Method) {
+                payload.ipv6_method = ip6Method;
+                if (ip6Method === 'manual') {
+                    payload.ipv6_address = overlay.querySelector<HTMLInputElement>('.net-f-ip6address')!.value.trim();
+                    payload.ipv6_prefixlen = parseInt(overlay.querySelector<HTMLInputElement>('.net-f-ip6prefix')!.value, 10) || 64;
+                    payload.ipv6_gateway = overlay.querySelector<HTMLInputElement>('.net-f-ip6gateway')!.value.trim();
+                }
             }
             close();
             await applyConfig(payload);
