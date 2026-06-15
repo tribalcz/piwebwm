@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0
+
+- Network phase 2 completed: editable **Routing** tab (add/delete static routes)
+  and **DNS search domains** in the Configure dialog. DNS/search now use
+  "leave unchanged unless specified" semantics so an IP edit never wipes them.
+- Interface controls: **Enable/Disable** (with lockout confirmation) and
+  **MTU** change, plus MTU and error/dropped counters on each card.
+- New **Wi-Fi** tab: scan (signal strength), connect (password prompt for
+  secured networks) and forget saved networks.
+- New **Diagnostics** tab: ping, traceroute and DNS lookup with an output pane.
+- **IPv6** interface configuration (auto/manual/disabled/ignore) in the
+  Configure dialog; the DNS field accepts IPv4 and IPv6 servers together.
+- Polish: inline **throughput sparkline** per interface and a **DHCP lease**
+  viewer.
+- New agent actions and `/api/system/network/*` endpoints back all of the
+  above; static routes and IPv6 are included in the safe-apply auto-revert.
+
 ## 1.2.0
 
 - Network phase 2: per-interface IPv4 configuration (DHCP/static + gateway +
