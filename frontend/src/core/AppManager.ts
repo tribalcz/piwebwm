@@ -212,7 +212,7 @@ export class AppManager {
     /**
      * Launch the application
      */
-    async launch(appId: string): Promise<WebDeskApp> {
+    async launch(appId: string, options?: { args?: Record<string, unknown> }): Promise<WebDeskApp> {
         const manifest = this.registry.get(appId);
         if (!manifest) {
             throw new Error(`Application not found: ${appId}`);
@@ -222,10 +222,18 @@ export class AppManager {
             throw new Error(`Application not installed: ${appId}`);
         }
 
-        const alreadyRunning = this.runningApps.get(appId);
-        if (alreadyRunning) {
-            console.log(`Application ${appId} is already running.`);
-            return alreadyRunning;
+        // A launch carrying args is "transient": it opens the app for a specific
+        // task (e.g. Atol editing a given document) in its own window, alongside
+        // — not replacing — the singleton instance. Transient instances manage
+        // their own lifecycle and are not tracked in runningApps.
+        const transient = !!options?.args;
+
+        if (!transient) {
+            const alreadyRunning = this.runningApps.get(appId);
+            if (alreadyRunning) {
+                console.log(`Application ${appId} is already running.`);
+                return alreadyRunning;
+            }
         }
 
         if (this.eventBus) {
@@ -240,7 +248,7 @@ export class AppManager {
 
             await this.loadAppStyles(appId, manifest);
 
-            const context = this.createAppContext(manifest);
+            const context = this.createAppContext(manifest, options?.args);
             const AppClass = appModule.default;
             const appInstance = new AppClass(context);
 
@@ -250,6 +258,12 @@ export class AppManager {
 
             if (appInstance.open) {
                 await appInstance.open();
+            }
+
+            if (transient) {
+                // Self-managed; do not register or emit launched/running state.
+                console.log(`Application ${appId} launched (transient).`);
+                return appInstance;
             }
 
             this.runningApps.set(appId, appInstance);
@@ -335,6 +349,13 @@ export class AppManager {
             return; // No styles to load
         }
 
+        // Idempotent: a second instance of the same app (e.g. Atol opened for a
+        // document while the notes window is up) must not append duplicate
+        // <link>s, and must not let one instance's teardown strip the other's.
+        if (this.appStyles.has(appId)) {
+            return;
+        }
+
         const loadedStyleElements: HTMLLinkElement[] = [];
 
         for (const stylePath of styles) {
@@ -385,14 +406,15 @@ export class AppManager {
     /**
      * Create the app context
      */
-    createAppContext(manifest: AppManifest): AppContext {
+    createAppContext(manifest: AppManifest, args?: Record<string, unknown>): AppContext {
         return {
             windowManager: this.windowManager,
             manifest: manifest,
             eventBus: this.eventBus,
             store: this.store,
             logger: console,
-            appId: manifest.id
+            appId: manifest.id,
+            args,
         };
     }
 

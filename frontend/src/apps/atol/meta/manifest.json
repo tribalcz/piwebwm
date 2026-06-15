@@ -1,6 +1,6 @@
 {
   "id": "atol",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "name": "Atol",
   "description": "A universal modular application — a rich-text notepad in its base form, extensible through modules into anything up to an IDE.",
   "author": "marsuch",

@@ -718,3 +718,35 @@ func (c *HostAgentClient) DnsLookup(host string) (string, error) {
 		Params: map[string]interface{}{"host": host},
 	})
 }
+
+// --- /etc/hosts editor -----------------------------------------------------
+
+func (c *HostAgentClient) ReadHosts() (string, error) {
+	resp, err := c.sendRequest(Action{Type: "ReadHosts"})
+	if err != nil {
+		return "", err
+	}
+	if resp.IsError() {
+		return "", errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return "", errors.New("no data in response")
+	}
+	content, _ := data["content"].(string)
+	return content, nil
+}
+
+func (c *HostAgentClient) WriteHosts(content string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "WriteHosts",
+		Params: map[string]interface{}{"content": content},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}

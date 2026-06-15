@@ -98,6 +98,12 @@ pub enum Action {
         host: String,
     },
 
+    // /etc/hosts editor (dedicated, validated; fixed path).
+    ReadHosts,
+    WriteHosts {
+        content: String,
+    },
+
     Ping,
 }
 

@@ -1,5 +1,6 @@
 import { group, row } from '../core/sections';
 import type { SettingsContext } from '../core/sections';
+import { createHostsProvider } from './hostsProvider';
 import type {
     NetworkStatus,
     NetworkInterface,
@@ -22,7 +23,7 @@ const REVERT_SECONDS = 60;
  * a safe-apply window: the agent reverts after REVERT_SECONDS unless the user
  * confirms — so changing the IP you are connected through can't lock you out.
  */
-export function renderNetwork(container: Element, _ctx: SettingsContext): () => void {
+export function renderNetwork(container: Element, ctx: SettingsContext): () => void {
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let modalOpen = false;
     let interfaces: NetworkInterface[] = [];
@@ -82,7 +83,7 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
         stopPoll();
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
         if (tab === 'status') {
-            void renderStatus(body);
+            void renderStatus(body, ctx);
         } else if (tab === 'interfaces') {
             void refreshInterfaces();
             pollTimer = setInterval(() => {
@@ -702,7 +703,7 @@ function formatBytes(bytes: number): string {
 
 // --- Status tab ------------------------------------------------------------
 
-async function renderStatus(body: HTMLElement): Promise<void> {
+async function renderStatus(body: HTMLElement, ctx: SettingsContext): Promise<void> {
     const res = await getJSON<NetworkStatus>('/api/system/network/status');
     if (!res.ok || !res.data) {
         body.innerHTML = unavailable(res.status, res.error);
@@ -722,7 +723,20 @@ async function renderStatus(body: HTMLElement): Promise<void> {
                 : '<span class="net-pill net-offline">No gateway</span>')}
             ${row('Default gateway', escapeHtml(s.gateway ?? '—'))}
             ${row('DNS servers', s.dns.length ? s.dns.map(escapeHtml).join('<br>') : '—')}
+        `) +
+        group('Name resolution', `
+            ${row('Static hosts (/etc/hosts)',
+                `<button class="set-btn net-hosts-edit">Edit hosts file</button>`)}
         `);
+
+    body.querySelector<HTMLButtonElement>('.net-hosts-edit')?.addEventListener('click', () => {
+        if (!ctx.appManager) {
+            alert('Cannot open the editor: application manager unavailable.');
+            return;
+        }
+        ctx.appManager.launch('atol', { args: { provider: createHostsProvider() } })
+            .catch(err => alert(`Could not open hosts editor: ${err instanceof Error ? err.message : String(err)}`));
+    });
 
     const input = body.querySelector<HTMLInputElement>('.net-host-input');
     const saveBtn = body.querySelector<HTMLButtonElement>('.net-host-save');
@@ -742,7 +756,7 @@ async function renderStatus(body: HTMLElement): Promise<void> {
                 const err = await res.json().catch(() => ({})) as { error?: string };
                 alert(`Could not change hostname: ${err.error ?? res.status}`);
             } else {
-                void renderStatus(body);
+                void renderStatus(body, ctx);
                 return;
             }
         } catch {

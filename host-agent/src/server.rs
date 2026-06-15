@@ -463,6 +463,26 @@ async fn process_request(
             },
         },
 
+        Action::ReadHosts => match handlers::hosts::read_hosts() {
+            Ok((content, size)) => {
+                ResponseResult::Success(ResponseData::FileContent { content, size })
+            }
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 500,
+            },
+        },
+
+        Action::WriteHosts { content } => match handlers::hosts::write_hosts(&content) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "hosts file updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),
             code: 501,

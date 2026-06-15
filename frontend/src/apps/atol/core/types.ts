@@ -94,6 +94,31 @@ export interface EditorSearch {
 }
 
 /**
+ * A document source Atol can be opened against. The default (when none is
+ * given) is Atol's own Store-backed rich-text notes buffer; a provider lets
+ * Atol act as an editor for some external document — e.g. a system file
+ * exposed through a dedicated, validated backend endpoint.
+ *
+ * Providers are passed via launch args: `appManager.launch('atol', { args: {
+ * provider } })`. A provider-launched Atol opens in its own window and never
+ * touches the notes buffer.
+ */
+export interface DocumentProvider {
+    /** Stable identifier (also used as a window/instance discriminator). */
+    id: string;
+    /** Window title. */
+    title: string;
+    /** 'text' = plain-text mode (no rich formatting); 'rich' = default. */
+    mode?: 'text' | 'rich';
+    /** When true, the editor is read-only and Save is hidden. */
+    readOnly?: boolean;
+    /** Load the current document content. */
+    load(): Promise<string>;
+    /** Persist the edited content. Rejects with an Error on failure. */
+    save(content: string): Promise<void>;
+}
+
+/**
  * The editor surface exposed to modules. Modules never touch the host DOM
  * directly; everything goes through this facade.
  */

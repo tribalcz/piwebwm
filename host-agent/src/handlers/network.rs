@@ -233,7 +233,7 @@ pub struct PrevConfig {
     pub ip6_dns: String,
 }
 
-fn valid_ipv4(s: &str) -> bool {
+pub(crate) fn valid_ipv4(s: &str) -> bool {
     let parts: Vec<&str> = s.split('.').collect();
     parts.len() == 4 && parts.iter().all(|p| {
         !p.is_empty() && p.len() <= 3 && p.chars().all(|c| c.is_ascii_digit())
@@ -244,7 +244,7 @@ fn valid_ipv4(s: &str) -> bool {
 /// Lightweight IPv6 literal check: hex groups, ':' and (for embedded v4) '.'.
 /// nmcli does the authoritative parsing; this just blocks anything that could
 /// be read as a flag or shell-unsafe input.
-fn valid_ipv6(s: &str) -> bool {
+pub(crate) fn valid_ipv6(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 45
         && s.contains(':')

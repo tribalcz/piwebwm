@@ -388,6 +388,43 @@ func setMtu(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func getHosts(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	content, err := hostClient.ReadHosts()
+	if err != nil {
+		log.Printf("Error reading hosts file: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read hosts file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"content": content})
+}
+
+func setHosts(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.WriteHosts(req.Content); err != nil {
+		log.Printf("Error writing hosts file: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func dhcpLease(c *gin.Context) {
 	if !requireHostAgent(c) {
 		return

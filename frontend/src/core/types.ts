@@ -45,6 +45,12 @@ export interface AppContext {
     store: Store | null;
     logger: Console;
     appId: string;
+    /**
+     * Optional launch arguments. Present when an app is opened for a specific
+     * task rather than as the plain singleton (e.g. Atol opened to edit a
+     * specific document). Apps that don't expect args ignore this.
+     */
+    args?: Record<string, unknown>;
 }
 
 /**

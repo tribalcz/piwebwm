@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- Network ▸ Status gains a **Name resolution** group with an **Edit hosts file**
+  button that opens `/etc/hosts` in Atol (file mode). Backed by a dedicated,
+  validated agent endpoint (`GET/POST /api/system/hosts`) — atomic write with a
+  `/etc/hosts.bak` backup and per-line `IP hostname` validation; the generic
+  file allowlist is unchanged.
+
 ## 1.3.0
 
 - Network phase 2 completed: editable **Routing** tab (add/delete static routes)

@@ -115,6 +115,8 @@ func main() {
 				system.POST("/network/wifi/connect", wifiConnect)
 				system.POST("/network/wifi/forget", wifiForget)
 				system.POST("/network/diagnostic", networkDiagnostic)
+				system.GET("/hosts", getHosts)
+				system.POST("/hosts", setHosts)
 			}
 		}
 	}

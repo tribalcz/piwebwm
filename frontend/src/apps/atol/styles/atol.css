@@ -111,6 +111,25 @@
     min-width: max-content;
 }
 
+/* File mode: plain-text editing of an external document (e.g. /etc/hosts).
+   Monospace, no rich formatting; the toolbar carries Save/Reload + the path. */
+.atol-text-mode .atol-editor {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    white-space: pre;
+}
+
+.atol-file-toolbar {
+    align-items: center;
+    gap: 8px;
+}
+
+.atol-file-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
 .atol-editor h1 { font-size: 22px; margin: 0.4em 0; }
 .atol-editor h2 { font-size: 18px; margin: 0.4em 0; }
 .atol-editor p { margin: 0.3em 0; }
