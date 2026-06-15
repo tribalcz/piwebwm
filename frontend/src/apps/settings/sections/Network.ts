@@ -48,7 +48,7 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
     const refreshInterfaces = async () => {
         const res = await getJSON<NetworkInterfacesResponse>('/api/system/network/interfaces');
         if (!res.ok || !res.data) {
-            body.innerHTML = unavailable(res.status);
+            body.innerHTML = unavailable(res.status, res.error);
             interfaces = [];
             return;
         }
@@ -214,10 +214,19 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
 
 // --- shared helpers --------------------------------------------------------
 
-async function getJSON<T>(url: string): Promise<{ ok: boolean; status: number; data?: T }> {
+async function getJSON<T>(url: string): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
     try {
         const res = await fetch(url, { credentials: 'same-origin' });
-        if (!res.ok) return { ok: false, status: res.status };
+        if (!res.ok) {
+            let error: string | undefined;
+            try {
+                const body = await res.json() as { error?: string };
+                error = body.error;
+            } catch {
+                /* non-JSON error body (e.g. 404 HTML) */
+            }
+            return { ok: false, status: res.status, error };
+        }
         return { ok: true, status: res.status, data: (await res.json()) as T };
     } catch {
         return { ok: false, status: 0 };
@@ -232,11 +241,20 @@ function modal(innerHtml: string): HTMLElement {
     return overlay;
 }
 
-function unavailable(status: number): string {
-    const msg = status === 503
-        ? 'Host agent unavailable — start the agent to see network details.'
-        : 'Could not read network information.';
-    return `<p class="set-note">${msg}</p>`;
+function unavailable(status: number, error?: string): string {
+    let msg: string;
+    if (status === 503) {
+        msg = 'Host agent unavailable — start the agent (its status is in Settings ▸ System).';
+    } else if (status === 404) {
+        msg = 'Endpoint not found (404) — the backend is an older build without the network API. Rebuild the backend container.';
+    } else if (status === 0) {
+        msg = 'No response from the server (network error).';
+    } else if (status >= 500) {
+        msg = `Server/agent error (${status})${error ? `: ${error}` : ''}. Check the host-agent log — is iproute2 (and NetworkManager) installed?`;
+    } else {
+        msg = `Could not read network information (HTTP ${status})${error ? `: ${error}` : ''}.`;
+    }
+    return `<p class="set-note">${escapeHtml(msg)}</p>`;
 }
 
 function escapeHtml(text: string): string {
@@ -262,7 +280,7 @@ function formatBytes(bytes: number): string {
 async function renderStatus(body: HTMLElement): Promise<void> {
     const res = await getJSON<NetworkStatus>('/api/system/network/status');
     if (!res.ok || !res.data) {
-        body.innerHTML = unavailable(res.status);
+        body.innerHTML = unavailable(res.status, res.error);
         return;
     }
     const s = res.data;
@@ -365,7 +383,7 @@ function renderInterfaceCard(
 async function renderRouting(body: HTMLElement): Promise<void> {
     const res = await getJSON<RoutesResponse>('/api/system/network/routes');
     if (!res.ok || !res.data) {
-        body.innerHTML = unavailable(res.status);
+        body.innerHTML = unavailable(res.status, res.error);
         return;
     }
 
