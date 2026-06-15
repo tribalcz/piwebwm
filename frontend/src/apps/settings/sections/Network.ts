@@ -73,7 +73,116 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
                 if (!modalOpen) void refreshInterfaces();
             }, POLL_MS);
         } else {
-            void renderRouting(body);
+            void renderRouting();
+        }
+    };
+
+    const renderRouting = async () => {
+        const res = await getJSON<RoutesResponse>('/api/system/network/routes');
+        if (!res.ok || !res.data) {
+            body.innerHTML = unavailable(res.status, res.error);
+            return;
+        }
+
+        const rows = res.data.routes.map((r: RouteEntry) => `
+            <tr>
+                <td>${escapeHtml(r.dst)}</td>
+                <td>${escapeHtml(r.gateway ?? '—')}</td>
+                <td>${escapeHtml(r.dev)}</td>
+                <td>${escapeHtml(r.protocol ?? '—')}</td>
+                <td class="net-route-actions">${
+                    r.protocol === 'static' || r.protocol == null || r.protocol === 'boot'
+                        ? `<button class="set-btn net-route-del" data-dst="${escapeHtml(r.dst)}" data-dev="${escapeHtml(r.dev)}" data-gw="${escapeHtml(r.gateway ?? '')}">Delete</button>`
+                        : ''
+                }</td>
+            </tr>
+        `).join('');
+
+        body.innerHTML = `
+            <div class="net-routes-head">
+                <button class="set-btn net-route-add" style="background:var(--accent);color:#fff;border-color:var(--accent)">Add route</button>
+            </div>
+            ${res.data.routes.length === 0
+                ? `<p class="set-note">No routes.</p>`
+                : `<table class="net-routes">
+                    <thead>
+                        <tr><th>Destination</th><th>Gateway</th><th>Interface</th><th>Protocol</th><th></th></tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>`}
+        `;
+
+        body.querySelector('.net-route-add')?.addEventListener('click', () => void openRouteModal());
+        body.querySelectorAll<HTMLElement>('.net-route-del').forEach(btn => {
+            btn.addEventListener('click', () => void deleteRoute(
+                btn.dataset.dev!, btn.dataset.dst!, btn.dataset.gw || undefined,
+            ));
+        });
+    };
+
+    const openRouteModal = async () => {
+        // The add-route form needs the interface list to bind the route to a
+        // connection; fetch it if the Interfaces tab hasn't loaded yet.
+        if (interfaces.length === 0) {
+            const res = await getJSON<NetworkInterfacesResponse>('/api/system/network/interfaces');
+            if (res.ok && res.data) interfaces = res.data.interfaces;
+        }
+        const usable = interfaces.filter(i => i.kind === 'ethernet' || i.kind === 'wifi');
+        if (usable.length === 0) {
+            alert('No configurable interfaces available to attach a route to.');
+            return;
+        }
+
+        modalOpen = true;
+        const overlay = modal(`
+            <h3>Add route</h3>
+            <label>Destination (CIDR)</label>
+            <input type="text" class="net-r-dst" placeholder="10.0.0.0/24" />
+            <label>Gateway (optional)</label>
+            <input type="text" class="net-r-gw" placeholder="192.168.1.1" />
+            <label>Interface</label>
+            <select class="net-r-iface">
+                ${usable.map(i => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)}</option>`).join('')}
+            </select>
+            <div class="net-modal-actions">
+                <button class="set-btn net-cancel">Cancel</button>
+                <button class="set-btn net-add" style="background:var(--accent);color:#fff;border-color:var(--accent)">Add</button>
+            </div>
+        `);
+        const close = () => { overlay.remove(); modalOpen = false; };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.querySelector('.net-cancel')?.addEventListener('click', close);
+        overlay.querySelector('.net-add')?.addEventListener('click', async () => {
+            const dst = overlay.querySelector<HTMLInputElement>('.net-r-dst')!.value.trim();
+            const gw = overlay.querySelector<HTMLInputElement>('.net-r-gw')!.value.trim();
+            const iface = overlay.querySelector<HTMLSelectElement>('.net-r-iface')!.value;
+            if (!dst) { alert('Destination is required.'); return; }
+            close();
+            await routeRequest('POST', { iface, dst, gateway: gw || undefined });
+            void renderRouting();
+        });
+    };
+
+    const deleteRoute = async (dev: string, dst: string, gateway?: string) => {
+        if (!confirm(`Delete route ${dst}${gateway ? ` via ${gateway}` : ''} on ${dev}?`)) return;
+        await routeRequest('DELETE', { iface: dev, dst, gateway });
+        void renderRouting();
+    };
+
+    const routeRequest = async (method: 'POST' | 'DELETE', payload: Record<string, unknown>) => {
+        try {
+            const res = await fetch('/api/system/network/route', {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({})) as { error?: string };
+                alert(`Route operation failed: ${err.error ?? res.status}`);
+            }
+        } catch {
+            alert('Route operation failed.');
         }
     };
 
@@ -104,7 +213,9 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
             </div>
             <label>DNS servers (space or comma separated)</label>
             <input type="text" class="net-f-dns" value="${escapeHtml((status?.dns ?? []).join(' '))}" placeholder="1.1.1.1 8.8.8.8" />
-            <p class="set-note">Applied with a ${REVERT_SECONDS}s safety timer — if this is the interface you're connected through, the connection may drop and the change will revert automatically.</p>
+            <label>DNS search domains (optional, space or comma separated)</label>
+            <input type="text" class="net-f-search" value="" placeholder="example.lan corp.internal" />
+            <p class="set-note">Leave search domains blank to keep the existing ones. Applied with a ${REVERT_SECONDS}s safety timer — if this is the interface you're connected through, the connection may drop and the change will revert automatically.</p>
             <div class="net-modal-actions">
                 <button class="set-btn net-cancel">Cancel</button>
                 <button class="set-btn net-apply" style="background:var(--accent);color:#fff;border-color:var(--accent)">Apply</button>
@@ -130,6 +241,13 @@ export function renderNetwork(container: Element, _ctx: SettingsContext): () => 
                 dns,
                 revert_seconds: REVERT_SECONDS,
             };
+            // Only send dns_search when filled in; an empty field means
+            // "leave existing search domains unchanged" (agent treats
+            // null as no-op, [] as clear).
+            const searchRaw = overlay.querySelector<HTMLInputElement>('.net-f-search')!.value.trim();
+            if (searchRaw) {
+                payload.dns_search = searchRaw.split(/[\s,]+/).filter(Boolean);
+            }
             if (method === 'manual') {
                 payload.address = overlay.querySelector<HTMLInputElement>('.net-f-address')!.value.trim();
                 payload.prefixlen = parseInt(overlay.querySelector<HTMLInputElement>('.net-f-prefix')!.value, 10) || 24;
@@ -378,35 +496,3 @@ function renderInterfaceCard(
     `;
 }
 
-// --- Routing tab -----------------------------------------------------------
-
-async function renderRouting(body: HTMLElement): Promise<void> {
-    const res = await getJSON<RoutesResponse>('/api/system/network/routes');
-    if (!res.ok || !res.data) {
-        body.innerHTML = unavailable(res.status, res.error);
-        return;
-    }
-
-    if (res.data.routes.length === 0) {
-        body.innerHTML = `<p class="set-note">No routes.</p>`;
-        return;
-    }
-
-    const rows = res.data.routes.map((r: RouteEntry) => `
-        <tr>
-            <td>${escapeHtml(r.dst)}</td>
-            <td>${escapeHtml(r.gateway ?? '—')}</td>
-            <td>${escapeHtml(r.dev)}</td>
-            <td>${escapeHtml(r.protocol ?? '—')}</td>
-        </tr>
-    `).join('');
-
-    body.innerHTML = `
-        <table class="net-routes">
-            <thead>
-                <tr><th>Destination</th><th>Gateway</th><th>Interface</th><th>Protocol</th></tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    `;
-}

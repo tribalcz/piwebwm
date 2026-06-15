@@ -430,6 +430,22 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.net-routes-head {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.net-route-actions {
+    text-align: right;
+    font-family: inherit;
+}
+
+.net-route-del {
+    padding: 2px 9px;
+    font-size: 12px;
+}
+
 /* Network edit modal + interface configure button */
 .net-iface-spacer { flex: 1; }
 

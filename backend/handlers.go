@@ -237,6 +237,7 @@ func setInterfaceConfig(c *gin.Context) {
 		Prefixlen     *int     `json:"prefixlen"`
 		Gateway       *string  `json:"gateway"`
 		DNS           []string `json:"dns"`
+		DNSSearch     []string `json:"dns_search"`
 		RevertSeconds uint64   `json:"revert_seconds"`
 	}
 	if err := c.BindJSON(&req); err != nil {
@@ -251,6 +252,7 @@ func setInterfaceConfig(c *gin.Context) {
 		Prefixlen:     req.Prefixlen,
 		Gateway:       req.Gateway,
 		DNS:           req.DNS,
+		DNSSearch:     req.DNSSearch,
 		RevertSeconds: req.RevertSeconds,
 	})
 	if err != nil {
@@ -278,6 +280,54 @@ func confirmNetworkConfig(c *gin.Context) {
 	if err := hostClient.ConfirmNetworkConfig(req.Token); err != nil {
 		log.Printf("Error confirming network config: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to confirm"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func addRoute(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface   string  `json:"iface"`
+		Dst     string  `json:"dst"`
+		Gateway *string `json:"gateway"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.AddRoute(req.Iface, req.Dst, req.Gateway); err != nil {
+		log.Printf("Error adding route: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func deleteRoute(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Iface   string  `json:"iface"`
+		Dst     string  `json:"dst"`
+		Gateway *string `json:"gateway"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.DeleteRoute(req.Iface, req.Dst, req.Gateway); err != nil {
+		log.Printf("Error deleting route: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

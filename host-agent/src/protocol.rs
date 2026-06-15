@@ -36,10 +36,23 @@ pub enum Action {
         prefixlen: Option<u8>,
         gateway: Option<String>,
         dns: Option<Vec<String>>,
+        dns_search: Option<Vec<String>>,
         revert_seconds: u64, // 0 = apply immediately, no revert
     },
     ConfirmNetworkConfig {
         token: String,
+    },
+
+    // Static route management (NetworkManager, persistent).
+    AddRoute {
+        iface: String,
+        dst: String, // CIDR, e.g. 10.0.0.0/24
+        gateway: Option<String>,
+    },
+    DeleteRoute {
+        iface: String,
+        dst: String,
+        gateway: Option<String>,
     },
 
     Ping,

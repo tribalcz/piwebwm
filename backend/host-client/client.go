@@ -461,6 +461,7 @@ type InterfaceConfigRequest struct {
 	Prefixlen     *int
 	Gateway       *string
 	DNS           []string
+	DNSSearch     []string
 	RevertSeconds uint64
 }
 
@@ -483,6 +484,9 @@ func (c *HostAgentClient) SetInterfaceConfig(req InterfaceConfigRequest) (*strin
 	}
 	if req.DNS != nil {
 		params["dns"] = req.DNS
+	}
+	if req.DNSSearch != nil {
+		params["dns_search"] = req.DNSSearch
 	}
 
 	resp, err := c.sendRequest(Action{Type: "SetInterfaceConfig", Params: params})
@@ -514,6 +518,36 @@ func (c *HostAgentClient) ConfirmNetworkConfig(token string) error {
 		Type:   "ConfirmNetworkConfig",
 		Params: map[string]interface{}{"token": token},
 	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) AddRoute(iface, dst string, gateway *string) error {
+	params := map[string]interface{}{"iface": iface, "dst": dst}
+	if gateway != nil {
+		params["gateway"] = *gateway
+	}
+	resp, err := c.sendRequest(Action{Type: "AddRoute", Params: params})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) DeleteRoute(iface, dst string, gateway *string) error {
+	params := map[string]interface{}{"iface": iface, "dst": dst}
+	if gateway != nil {
+		params["gateway"] = *gateway
+	}
+	resp, err := c.sendRequest(Action{Type: "DeleteRoute", Params: params})
 	if err != nil {
 		return err
 	}

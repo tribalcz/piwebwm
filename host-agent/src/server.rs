@@ -292,6 +292,7 @@ async fn process_request(
             prefixlen,
             gateway,
             dns,
+            dns_search,
             revert_seconds,
         } => {
             let cfg = network::InterfaceConfig {
@@ -301,6 +302,7 @@ async fn process_request(
                 prefixlen,
                 gateway,
                 dns,
+                dns_search,
             };
             match network::apply_interface_config(&cfg) {
                 Ok(prev) => {
@@ -350,6 +352,26 @@ async fn process_request(
                 },
             })
         }
+
+        Action::AddRoute { iface, dst, gateway } => match network::add_route(&iface, &dst, &gateway) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "Route added".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
+
+        Action::DeleteRoute { iface, dst, gateway } => match network::delete_route(&iface, &dst, &gateway) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "Route deleted".to_string(),
+            }),
+            Err(e) => ResponseResult::Error {
+                error: e.to_string(),
+                code: 400,
+            },
+        },
 
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),

@@ -106,6 +106,8 @@ func main() {
 				system.POST("/network/hostname", setHostname)
 				system.POST("/network/interface", setInterfaceConfig)
 				system.POST("/network/confirm", confirmNetworkConfig)
+				system.POST("/network/route", addRoute)
+				system.DELETE("/network/route", deleteRoute)
 			}
 		}
 	}

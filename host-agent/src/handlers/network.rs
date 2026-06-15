@@ -204,6 +204,7 @@ pub struct InterfaceConfig {
     pub prefixlen: Option<u8>,
     pub gateway: Option<String>,
     pub dns: Option<Vec<String>>,
+    pub dns_search: Option<Vec<String>>,
 }
 
 /// Snapshot of a connection's IPv4 settings, used to revert.
@@ -214,6 +215,7 @@ pub struct PrevConfig {
     pub addresses: String,
     pub gateway: String,
     pub dns: String,
+    pub dns_search: String,
 }
 
 fn valid_ipv4(s: &str) -> bool {
@@ -241,7 +243,7 @@ fn capture_prev(con: &str) -> Result<PrevConfig> {
     // -g with multiple fields prints one value per line, in order.
     let out = run(
         "nmcli",
-        &["-g", "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns", "con", "show", con],
+        &["-g", "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,ipv4.dns-search", "con", "show", con],
     )?;
     let lines: Vec<&str> = out.lines().collect();
     Ok(PrevConfig {
@@ -250,12 +252,18 @@ fn capture_prev(con: &str) -> Result<PrevConfig> {
         addresses: lines.get(1).unwrap_or(&"").trim().to_string(),
         gateway: lines.get(2).unwrap_or(&"").trim().to_string(),
         dns: lines.get(3).unwrap_or(&"").trim().to_string(),
+        dns_search: lines.get(4).unwrap_or(&"").trim().to_string(),
     })
 }
 
 /// Applies the desired config and returns the previous one (for revert).
 pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
     // Validate first — never pass unchecked input to nmcli.
+    //
+    // DNS / search semantics: `None` means "leave the existing value
+    // untouched"; `Some(list)` overwrites it (an empty list clears it). This
+    // way a plain IP change never silently wipes pre-existing DNS or search
+    // domains the caller didn't intend to touch.
     let dns_joined = match &cfg.dns {
         Some(list) => {
             for d in list {
@@ -263,23 +271,38 @@ pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
                     return Err(AgentError::InvalidRequest(format!("invalid DNS server: {}", d)));
                 }
             }
-            list.join(" ")
+            Some(list.join(" "))
         }
-        None => String::new(),
+        None => None,
+    };
+
+    // Search domains are validated lightly (no whitespace; nmcli rejects the rest).
+    let search_joined = match &cfg.dns_search {
+        Some(list) => {
+            for d in list {
+                if d.contains(char::is_whitespace) {
+                    return Err(AgentError::InvalidRequest(format!("invalid search domain: {}", d)));
+                }
+            }
+            Some(list.join(" "))
+        }
+        None => None,
     };
 
     let con = con_for_iface(&cfg.iface)?;
     let prev = capture_prev(&con)?;
 
+    // Build the `con mod` argument vector dynamically so that fields the caller
+    // didn't specify (DNS / search) are simply omitted rather than cleared.
+    let mut args: Vec<String> = vec!["con".into(), "mod".into(), con.clone()];
+
     match cfg.method.as_str() {
         "auto" => {
-            run("nmcli", &[
-                "con", "mod", &con,
-                "ipv4.method", "auto",
-                "ipv4.addresses", "",
-                "ipv4.gateway", "",
-                "ipv4.dns", &dns_joined,
-            ])?;
+            args.extend([
+                "ipv4.method".into(), "auto".into(),
+                "ipv4.addresses".into(), "".into(),
+                "ipv4.gateway".into(), "".into(),
+            ]);
         }
         "manual" => {
             let address = cfg.address.as_deref().unwrap_or("");
@@ -295,18 +318,26 @@ pub fn apply_interface_config(cfg: &InterfaceConfig) -> Result<PrevConfig> {
                 return Err(AgentError::InvalidRequest("invalid gateway".to_string()));
             }
             let cidr = format!("{}/{}", address, prefix);
-            run("nmcli", &[
-                "con", "mod", &con,
-                "ipv4.method", "manual",
-                "ipv4.addresses", &cidr,
-                "ipv4.gateway", gateway,
-                "ipv4.dns", &dns_joined,
-            ])?;
+            args.extend([
+                "ipv4.method".into(), "manual".into(),
+                "ipv4.addresses".into(), cidr,
+                "ipv4.gateway".into(), gateway.to_string(),
+            ]);
         }
         other => {
             return Err(AgentError::InvalidRequest(format!("unknown method: {}", other)));
         }
     }
+
+    if let Some(dns) = &dns_joined {
+        args.extend(["ipv4.dns".into(), dns.clone()]);
+    }
+    if let Some(search) = &search_joined {
+        args.extend(["ipv4.dns-search".into(), search.clone()]);
+    }
+
+    let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    run("nmcli", &arg_refs)?;
 
     run("nmcli", &["con", "up", &con])?;
     info!("Applied network config to {} ({})", cfg.iface, cfg.method);
@@ -321,9 +352,51 @@ pub fn restore_interface_config(prev: &PrevConfig) -> Result<()> {
         "ipv4.addresses", &prev.addresses,
         "ipv4.gateway", &prev.gateway,
         "ipv4.dns", &prev.dns,
+        "ipv4.dns-search", &prev.dns_search,
     ])?;
     run("nmcli", &["con", "up", &prev.con])?;
     info!("Reverted network config on {}", prev.con);
+    Ok(())
+}
+
+fn valid_cidr(s: &str) -> bool {
+    match s.split_once('/') {
+        Some((ip, prefix)) => valid_ipv4(ip) && prefix.parse::<u8>().map(|p| p <= 32).unwrap_or(false),
+        None => false,
+    }
+}
+
+/// Builds the nmcli route value ("dst" or "dst gw").
+fn route_value(dst: &str, gateway: &Option<String>) -> Result<String> {
+    if !valid_cidr(dst) {
+        return Err(AgentError::InvalidRequest(format!("invalid route destination (use CIDR): {}", dst)));
+    }
+    match gateway {
+        Some(gw) if !gw.is_empty() => {
+            if !valid_ipv4(gw) {
+                return Err(AgentError::InvalidRequest(format!("invalid gateway: {}", gw)));
+            }
+            Ok(format!("{} {}", dst, gw))
+        }
+        _ => Ok(dst.to_string()),
+    }
+}
+
+pub fn add_route(iface: &str, dst: &str, gateway: &Option<String>) -> Result<()> {
+    let value = route_value(dst, gateway)?;
+    let con = con_for_iface(iface)?;
+    run("nmcli", &["con", "mod", &con, "+ipv4.routes", &value])?;
+    run("nmcli", &["con", "up", &con])?;
+    info!("Added route {} on {}", value, con);
+    Ok(())
+}
+
+pub fn delete_route(iface: &str, dst: &str, gateway: &Option<String>) -> Result<()> {
+    let value = route_value(dst, gateway)?;
+    let con = con_for_iface(iface)?;
+    run("nmcli", &["con", "mod", &con, "-ipv4.routes", &value])?;
+    run("nmcli", &["con", "up", &con])?;
+    info!("Deleted route {} on {}", value, con);
     Ok(())
 }
 
