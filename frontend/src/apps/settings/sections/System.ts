@@ -159,7 +159,7 @@ function meterRow(label: string, pct: number, caption: string, muted = false): s
     const hot = width >= 90 ? ' sys-meter-hot' : '';
     return `
         <div class="sys-res-row">
-            <span class="sys-res-label">${label}</span>
+            <span class="sys-res-label" title="${label}">${label}</span>
             <span class="sys-meter${muted ? ' sys-meter-muted' : ''}">
                 <span class="sys-meter-fill${hot}" style="width:${width.toFixed(1)}%"></span>
             </span>
