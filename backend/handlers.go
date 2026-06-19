@@ -388,6 +388,154 @@ func setMtu(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func getTimeSettings(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	s, err := hostClient.GetTimeSettings()
+	if err != nil {
+		log.Printf("Error reading time settings: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read time settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, s)
+}
+
+func getTimezones(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	zones, err := hostClient.ListTimezones()
+	if err != nil {
+		log.Printf("Error listing timezones: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list timezones"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"timezones": zones})
+}
+
+func setTimezone(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Timezone string `json:"timezone"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetTimezone(req.Timezone); err != nil {
+		log.Printf("Error setting timezone: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func setNtp(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetNtp(req.Enabled); err != nil {
+		log.Printf("Error setting NTP: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func setTime(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Time string `json:"time"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetTime(req.Time); err != nil {
+		log.Printf("Error setting time: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func getLocale(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	s, err := hostClient.GetLocale()
+	if err != nil {
+		log.Printf("Error reading locale: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read locale"})
+		return
+	}
+
+	c.JSON(http.StatusOK, s)
+}
+
+func getLocales(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	locales, err := hostClient.ListLocales()
+	if err != nil {
+		log.Printf("Error listing locales: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list locales"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"locales": locales})
+}
+
+func setLocale(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	var req struct {
+		Lang string `json:"lang"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := hostClient.SetLocale(req.Lang); err != nil {
+		log.Printf("Error setting locale: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func getHosts(c *gin.Context) {
 	if !requireHostAgent(c) {
 		return

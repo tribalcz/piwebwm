@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0
+
+- New **Date & Time** section: system time zone (searchable list), automatic
+  time over NTP with a sync indicator, manual clock setting when NTP is off,
+  and the system locale (`LANG`, searchable list). Backed by new
+  `/api/system/{time,timezones,timezone,ntp,locale,locales}` endpoints driving
+  `timedatectl` / `localectl` on the host; timezone and locale are validated
+  against the system lists before being applied.
+
 ## 1.4.0
 
 - Network ▸ Status gains a **Name resolution** group with an **Edit hosts file**

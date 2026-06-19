@@ -1,9 +1,9 @@
 use crate::error::{AgentError, Result};
+use crate::handlers::exec::run;
 use crate::protocol::{NetworkAddress, NetworkInterface, NetworkStatus, RouteEntry, WifiNetwork};
 use log::info;
 use serde::Deserialize;
 use std::fs;
-use std::process::Command;
 
 // --- iproute2 JSON shapes (subset of `ip -j addr` / `ip -j route`) ----------
 
@@ -35,22 +35,6 @@ struct IpRouteEntry {
     dev: Option<String>,
     #[serde(default)]
     protocol: Option<String>,
-}
-
-/// Runs a fixed command with a fixed argument vector (no shell → no injection).
-fn run(cmd: &str, args: &[&str]) -> Result<String> {
-    let output = Command::new(cmd)
-        .args(args)
-        .output()
-        .map_err(|e| AgentError::Internal(format!("failed to run {}: {}", cmd, e)))?;
-    if !output.status.success() {
-        return Err(AgentError::Internal(format!(
-            "{} failed: {}",
-            cmd,
-            String::from_utf8_lossy(&output.stderr).trim()
-        )));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 fn read_u64(path: &str) -> u64 {

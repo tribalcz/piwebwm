@@ -173,6 +173,26 @@
     font-size: 13px;
 }
 
+.set-input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    min-width: 200px;
+}
+
+.set-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dt-clock {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 /* Danger button */
 .set-btn-danger {
     padding: 6px 14px;

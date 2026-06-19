@@ -104,6 +104,16 @@ pub enum Action {
         content: String,
     },
 
+    // Date/time + locale (timedatectl / localectl).
+    GetTimeSettings,
+    ListTimezones,
+    SetTimezone { tz: String },
+    SetNtp { enabled: bool },
+    SetTime { time: String },
+    GetLocale,
+    ListLocales,
+    SetLocale { lang: String },
+
     Ping,
 }
 
@@ -134,6 +144,9 @@ pub enum ResponseData {
     NetworkApplied { token: Option<String>, revert_seconds: u64 },
     WifiNetworks { networks: Vec<WifiNetwork> },
     CommandOutput { output: String },
+    TimeSettingsData(TimeSettings),
+    LocaleSettingsData(LocaleSettings),
+    StringList { items: Vec<String> },
     Pong,
 }
 
@@ -212,4 +225,18 @@ pub struct RouteEntry {
     pub gateway: Option<String>,
     pub dev: String,
     pub protocol: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TimeSettings {
+    pub timezone: String,
+    pub ntp: bool,        // NTP (automatic time) enabled
+    pub ntp_synced: bool, // clock currently synchronized
+    pub time: String,     // local wall-clock, "YYYY-MM-DD HH:MM:SS"
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct LocaleSettings {
+    pub lang: String,   // e.g. "en_US.UTF-8"
+    pub keymap: String, // VC keymap (informational)
 }

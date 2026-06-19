@@ -750,3 +750,123 @@ func (c *HostAgentClient) WriteHosts(content string) error {
 	}
 	return nil
 }
+
+// --- Date/time + locale ----------------------------------------------------
+
+type TimeSettings struct {
+	Timezone  string `json:"timezone"`
+	NTP       bool   `json:"ntp"`
+	NTPSynced bool   `json:"ntp_synced"`
+	Time      string `json:"time"`
+}
+
+type LocaleSettings struct {
+	Lang   string `json:"lang"`
+	Keymap string `json:"keymap"`
+}
+
+// stringList unmarshals a StringList response (used for timezones and locales).
+func (c *HostAgentClient) stringList(actionType string) ([]string, error) {
+	resp, err := c.sendRequest(Action{Type: actionType})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["items"])
+	if err != nil {
+		return nil, err
+	}
+	var items []string
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (c *HostAgentClient) GetTimeSettings() (*TimeSettings, error) {
+	resp, err := c.sendRequest(Action{Type: "GetTimeSettings"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var s TimeSettings
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) ListTimezones() ([]string, error) {
+	return c.stringList("ListTimezones")
+}
+
+func (c *HostAgentClient) SetTimezone(tz string) error {
+	return c.simpleAction(Action{Type: "SetTimezone", Params: map[string]interface{}{"tz": tz}})
+}
+
+func (c *HostAgentClient) SetNtp(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetNtp", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetTime(value string) error {
+	return c.simpleAction(Action{Type: "SetTime", Params: map[string]interface{}{"time": value}})
+}
+
+func (c *HostAgentClient) GetLocale() (*LocaleSettings, error) {
+	resp, err := c.sendRequest(Action{Type: "GetLocale"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var s LocaleSettings
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) ListLocales() ([]string, error) {
+	return c.stringList("ListLocales")
+}
+
+func (c *HostAgentClient) SetLocale(lang string) error {
+	return c.simpleAction(Action{Type: "SetLocale", Params: map[string]interface{}{"lang": lang}})
+}
+
+// simpleAction sends an action that returns only success/error.
+func (c *HostAgentClient) simpleAction(action Action) error {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}

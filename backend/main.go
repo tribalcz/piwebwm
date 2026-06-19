@@ -117,6 +117,14 @@ func main() {
 				system.POST("/network/diagnostic", networkDiagnostic)
 				system.GET("/hosts", getHosts)
 				system.POST("/hosts", setHosts)
+				system.GET("/time", getTimeSettings)
+				system.GET("/timezones", getTimezones)
+				system.POST("/timezone", setTimezone)
+				system.POST("/ntp", setNtp)
+				system.POST("/time", setTime)
+				system.GET("/locale", getLocale)
+				system.GET("/locales", getLocales)
+				system.POST("/locale", setLocale)
 			}
 		}
 	}

@@ -121,3 +121,27 @@ export interface WifiScanResponse {
 export interface DiagnosticResponse {
     output: string;
 }
+
+/** GET /api/system/time */
+export interface TimeSettings {
+    timezone: string;
+    ntp: boolean;
+    ntp_synced: boolean;
+    time: string;
+}
+
+/** GET /api/system/timezones */
+export interface TimezonesResponse {
+    timezones: string[];
+}
+
+/** GET /api/system/locale */
+export interface LocaleSettings {
+    lang: string;
+    keymap: string;
+}
+
+/** GET /api/system/locales */
+export interface LocalesResponse {
+    locales: string[];
+}

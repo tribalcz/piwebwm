@@ -7,6 +7,7 @@ import type { Store } from '@core/Store';
 import type { SettingsContext, SettingsSection } from './core/sections';
 import { renderAppearance } from './sections/Appearance';
 import { renderNetwork } from './sections/Network';
+import { renderDateTime } from './sections/DateTime';
 import { renderWindows } from './sections/Windows';
 import { renderTaskbarClock } from './sections/TaskbarClock';
 import { renderSystem } from './sections/System';
@@ -15,6 +16,7 @@ import { renderAbout } from './sections/About';
 const SECTIONS: SettingsSection[] = [
     { id: 'appearance', label: 'Appearance', icon: 'settings', render: renderAppearance },
     { id: 'network', label: 'Network', icon: 'network', render: renderNetwork },
+    { id: 'datetime', label: 'Date & Time', icon: 'globe', render: renderDateTime },
     { id: 'windows', label: 'Windows', icon: 'windowsStats', render: renderWindows },
     { id: 'taskbar-clock', label: 'Taskbar & Clock', icon: 'clock', render: renderTaskbarClock },
     { id: 'system', label: 'System', icon: 'systemMonitor', render: renderSystem },

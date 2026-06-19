@@ -483,6 +483,54 @@ async fn process_request(
             },
         },
 
+        Action::GetTimeSettings => match handlers::datetime::get_time_settings() {
+            Ok(s) => ResponseResult::Success(ResponseData::TimeSettingsData(s)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::ListTimezones => match handlers::datetime::list_timezones() {
+            Ok(items) => ResponseResult::Success(ResponseData::StringList { items }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::SetTimezone { tz } => match handlers::datetime::set_timezone(&tz) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "timezone updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::SetNtp { enabled } => match handlers::datetime::set_ntp(enabled) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "NTP updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::SetTime { time } => match handlers::datetime::set_time(&time) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "time updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::GetLocale => match handlers::datetime::get_locale() {
+            Ok(s) => ResponseResult::Success(ResponseData::LocaleSettingsData(s)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::ListLocales => match handlers::datetime::list_locales() {
+            Ok(items) => ResponseResult::Success(ResponseData::StringList { items }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::SetLocale { lang } => match handlers::datetime::set_locale(&lang) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "locale updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),
             code: 501,
