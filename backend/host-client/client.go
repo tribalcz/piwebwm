@@ -859,6 +859,86 @@ func (c *HostAgentClient) SetLocale(lang string) error {
 	return c.simpleAction(Action{Type: "SetLocale", Params: map[string]interface{}{"lang": lang}})
 }
 
+// --- System information ----------------------------------------------------
+
+type SystemOverview struct {
+	Device     string   `json:"device"`
+	OS         string   `json:"os"`
+	Kernel     string   `json:"kernel"`
+	Arch       string   `json:"arch"`
+	Hostname   string   `json:"hostname"`
+	UptimeSecs uint64   `json:"uptime_secs"`
+	CPUTempC   *float64 `json:"cpu_temp_c"`
+	CPUModel   string   `json:"cpu_model"`
+	CPUCores   uint32   `json:"cpu_cores"`
+}
+
+type DiskUsage struct {
+	Mount string `json:"mount"`
+	Total uint64 `json:"total"`
+	Used  uint64 `json:"used"`
+}
+
+type Resources struct {
+	CPUTotal  uint64      `json:"cpu_total"`
+	CPUIdle   uint64      `json:"cpu_idle"`
+	Load1     float64     `json:"load1"`
+	Load5     float64     `json:"load5"`
+	Load15    float64     `json:"load15"`
+	CPUCores  uint32      `json:"cpu_cores"`
+	MemTotal  uint64      `json:"mem_total"`
+	MemUsed   uint64      `json:"mem_used"`
+	SwapTotal uint64      `json:"swap_total"`
+	SwapUsed  uint64      `json:"swap_used"`
+	Disks     []DiskUsage `json:"disks"`
+}
+
+func (c *HostAgentClient) GetSystemOverview() (*SystemOverview, error) {
+	resp, err := c.sendRequest(Action{Type: "GetSystemOverview"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var o SystemOverview
+	if err := json.Unmarshal(raw, &o); err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (c *HostAgentClient) GetResources() (*Resources, error) {
+	resp, err := c.sendRequest(Action{Type: "GetResources"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var r Resources
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
 // simpleAction sends an action that returns only success/error.
 func (c *HostAgentClient) simpleAction(action Action) error {
 	resp, err := c.sendRequest(action)

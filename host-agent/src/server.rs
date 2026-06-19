@@ -531,6 +531,16 @@ async fn process_request(
             Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
         },
 
+        Action::GetSystemOverview => match handlers::sysinfo::get_system_overview() {
+            Ok(o) => ResponseResult::Success(ResponseData::SystemOverviewData(o)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::GetResources => match handlers::sysinfo::get_resources() {
+            Ok(r) => ResponseResult::Success(ResponseData::ResourcesData(r)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),
             code: 501,

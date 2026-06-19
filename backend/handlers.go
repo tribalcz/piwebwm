@@ -153,6 +153,36 @@ func getSystemInfo(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
 }
 
+func getSystemOverview(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	o, err := hostClient.GetSystemOverview()
+	if err != nil {
+		log.Printf("Error reading system overview: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read system overview"})
+		return
+	}
+
+	c.JSON(http.StatusOK, o)
+}
+
+func getResources(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+
+	r, err := hostClient.GetResources()
+	if err != nil {
+		log.Printf("Error reading resources: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read resources"})
+		return
+	}
+
+	c.JSON(http.StatusOK, r)
+}
+
 func getProcesses(c *gin.Context) {
 	// TODO: Implement real process list
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})

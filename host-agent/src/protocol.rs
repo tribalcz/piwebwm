@@ -114,6 +114,10 @@ pub enum Action {
     ListLocales,
     SetLocale { lang: String },
 
+    // System information (read-only).
+    GetSystemOverview,
+    GetResources,
+
     Ping,
 }
 
@@ -147,6 +151,8 @@ pub enum ResponseData {
     TimeSettingsData(TimeSettings),
     LocaleSettingsData(LocaleSettings),
     StringList { items: Vec<String> },
+    SystemOverviewData(SystemOverview),
+    ResourcesData(Resources),
     Pong,
 }
 
@@ -239,4 +245,40 @@ pub struct TimeSettings {
 pub struct LocaleSettings {
     pub lang: String,   // e.g. "en_US.UTF-8"
     pub keymap: String, // VC keymap (informational)
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SystemOverview {
+    pub device: String,
+    pub os: String,
+    pub kernel: String,
+    pub arch: String,
+    pub hostname: String,
+    pub uptime_secs: u64,
+    pub cpu_temp_c: Option<f64>,
+    pub cpu_model: String,
+    pub cpu_cores: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DiskUsage {
+    pub mount: String,
+    pub total: u64,
+    pub used: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Resources {
+    // Raw /proc/stat counters; the client computes CPU % from deltas.
+    pub cpu_total: u64,
+    pub cpu_idle: u64,
+    pub load1: f64,
+    pub load5: f64,
+    pub load15: f64,
+    pub cpu_cores: u32,
+    pub mem_total: u64,
+    pub mem_used: u64,
+    pub swap_total: u64,
+    pub swap_used: u64,
+    pub disks: Vec<DiskUsage>,
 }

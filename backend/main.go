@@ -99,6 +99,8 @@ func main() {
 			system := authed.Group("/system")
 			{
 				system.GET("/info", getSystemInfo)
+				system.GET("/overview", getSystemOverview)
+				system.GET("/resources", getResources)
 				system.GET("/processes", getProcesses)
 				system.GET("/network/status", getNetworkStatus)
 				system.GET("/network/interfaces", getNetworkInterfaces)

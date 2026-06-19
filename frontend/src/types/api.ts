@@ -145,3 +145,37 @@ export interface LocaleSettings {
 export interface LocalesResponse {
     locales: string[];
 }
+
+/** GET /api/system/overview */
+export interface SystemOverview {
+    device: string;
+    os: string;
+    kernel: string;
+    arch: string;
+    hostname: string;
+    uptime_secs: number;
+    cpu_temp_c: number | null;
+    cpu_model: string;
+    cpu_cores: number;
+}
+
+export interface DiskUsage {
+    mount: string;
+    total: number;
+    used: number;
+}
+
+/** GET /api/system/resources */
+export interface Resources {
+    cpu_total: number;
+    cpu_idle: number;
+    load1: number;
+    load5: number;
+    load15: number;
+    cpu_cores: number;
+    mem_total: number;
+    mem_used: number;
+    swap_total: number;
+    swap_used: number;
+    disks: DiskUsage[];
+}

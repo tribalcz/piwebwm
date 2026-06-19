@@ -193,6 +193,65 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* System ▸ Resources meters */
+.sys-res-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+}
+
+.sys-res-label {
+    flex: 0 0 70px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.sys-meter {
+    flex: 1;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--surface-sunken, rgba(127, 127, 127, 0.18));
+    overflow: hidden;
+}
+
+.sys-meter-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+.sys-meter-fill.sys-meter-hot {
+    background: var(--danger, #d9534f);
+}
+
+.sys-meter-muted .sys-meter-fill {
+    opacity: 0.4;
+}
+
+.sys-res-value {
+    flex: 0 0 auto;
+    min-width: 96px;
+    text-align: right;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text);
+}
+
+.sys-subline {
+    font-size: 12px;
+    color: var(--text-faint);
+    padding: 2px 0 6px 82px;
+}
+
+.sys-storage-label {
+    padding-left: 0;
+    margin-top: 4px;
+    color: var(--text-muted);
+}
+
 /* Danger button */
 .set-btn-danger {
     padding: 6px 14px;

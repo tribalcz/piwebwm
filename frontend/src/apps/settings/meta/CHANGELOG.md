@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0
+
+- **System** section expanded with real host data: an **Overview** group
+  (device model, OS, kernel/arch, hostname, uptime, CPU model/cores, CPU
+  temperature) and a live **Resources** group (CPU %, load average, memory,
+  swap and per-filesystem disk usage with meters, polled every 2 s). CPU % is
+  derived from /proc/stat deltas between polls. Backed by new read-only agent
+  endpoints `GET /api/system/{overview,resources}`. Backend/Account/Developer
+  groups are unchanged.
+
 ## 1.5.0
 
 - New **Date & Time** section: system time zone (searchable list), automatic
