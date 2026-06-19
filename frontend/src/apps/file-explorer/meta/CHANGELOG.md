@@ -5,6 +5,14 @@ All notable changes to File Explorer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-15
+
+### Added
+- Text files now open in Atol (editable, plain-text mode) on double-click,
+  via a generic file DocumentProvider over the file API; a new "Open in Atol"
+  context-menu item forces it for any file. Unknown/binary files still open in
+  the read-only viewer.
+
 ## [1.0.0] - 2025-01-15
 
 ### Added

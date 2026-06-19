@@ -12,9 +12,27 @@ import { Toolbar } from './components/Toolbar';
 import { FileList, type SelectedFileItem } from './components/FileList';
 import { StatusBar } from './components/StatusBar';
 import { FileOperations } from './utils/FileOperations';
+import { createFileProvider } from './utils/fileProvider';
 
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+/** File extensions that open in Atol (editable) rather than the read-only viewer. */
+const TEXT_EXTENSIONS = new Set([
+    'txt', 'md', 'markdown', 'rst', 'log', 'conf', 'cfg', 'ini', 'toml', 'env', 'properties',
+    'json', 'yaml', 'yml', 'xml', 'csv', 'tsv',
+    'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat',
+    'js', 'ts', 'jsx', 'tsx', 'mjs', 'cjs', 'css', 'scss', 'less', 'html', 'htm', 'svg', 'vue',
+    'py', 'rb', 'go', 'rs', 'c', 'h', 'cpp', 'hpp', 'cc', 'java', 'kt', 'php', 'pl', 'lua', 'sql',
+    'gitignore', 'dockerignore', 'editorconfig', 'gitconfig', 'service', 'desktop',
+]);
+
+function isTextFile(path: string): boolean {
+    const name = path.split('/').pop() || '';
+    const dot = name.lastIndexOf('.');
+    if (dot <= 0) return false; // no (real) extension — leave to the viewer
+    return TEXT_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
 }
 
 /**
@@ -240,6 +258,33 @@ export default class FileExplorer implements WebDeskApp {
     }
 
     private async openFile(path: string): Promise<void> {
+        // Text files open in Atol (editable); everything else falls back to the
+        // read-only viewer, which is safer for unknown/binary content.
+        if (isTextFile(path)) {
+            this.openInAtol(path);
+            return;
+        }
+        await this.openInViewer(path);
+    }
+
+    /** Opens a file in Atol's plain-text editor via the generic file provider. */
+    private openInAtol(path: string): void {
+        const appManager = window.webdesk?.appManager;
+        if (!appManager) {
+            this.openInViewer(path);
+            return;
+        }
+        this.components.statusBar?.setStatus('Opening in Atol...');
+        appManager.launch('atol', { args: { provider: createFileProvider(path) } })
+            .then(() => this.components.statusBar?.showReady())
+            .catch((error: unknown) => {
+                console.error('Failed to open in Atol:', error);
+                this.components.statusBar?.showError('Failed to open in Atol');
+                alert('Failed to open in Atol: ' + errorMessage(error));
+            });
+    }
+
+    private async openInViewer(path: string): Promise<void> {
         this.components.statusBar?.setStatus('Opening file...');
 
         try {
@@ -286,7 +331,8 @@ export default class FileExplorer implements WebDeskApp {
             );
         } else {
             items.push(
-                { icon: getIcon('openFile', 18), label: 'Open', action: 'open', handler: () => this.contextOpen(selectedItem) }
+                { icon: getIcon('openFile', 18), label: 'Open', action: 'open', handler: () => this.contextOpen(selectedItem) },
+                { icon: getIcon('txt', 18), label: 'Open in Atol', action: 'open-atol', handler: () => { if (selectedItem) this.openInAtol(selectedItem.path); } }
             );
         }
 
