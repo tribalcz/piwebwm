@@ -566,6 +566,248 @@ func setLocale(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// --- SSH -------------------------------------------------------------------
+
+func getSshStatus(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	s, err := hostClient.SshStatus()
+	if err != nil {
+		log.Printf("Error reading SSH status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read SSH status"})
+		return
+	}
+	c.JSON(http.StatusOK, s)
+}
+
+func setSshEnabled(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.SetSshEnabled(req.Enabled); err != nil {
+		log.Printf("Error setting SSH enabled: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func setSshPasswordAuth(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.SetSshPasswordAuth(req.Enabled); err != nil {
+		log.Printf("Error setting SSH password auth: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func setSshPort(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Port uint32 `json:"port"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.SetSshPort(req.Port); err != nil {
+		log.Printf("Error setting SSH port: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// --- Firewall --------------------------------------------------------------
+
+func getFirewallStatus(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	s, err := hostClient.FirewallStatus()
+	if err != nil {
+		log.Printf("Error reading firewall status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read firewall status"})
+		return
+	}
+	c.JSON(http.StatusOK, s)
+}
+
+func setFirewallEnabled(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Enabled       bool   `json:"enabled"`
+		RevertSeconds uint64 `json:"revert_seconds"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	token, secs, err := hostClient.SetFirewallEnabled(req.Enabled, req.RevertSeconds)
+	if err != nil {
+		log.Printf("Error setting firewall enabled: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"token": token, "revert_seconds": secs})
+}
+
+func confirmFirewall(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.ConfirmFirewall(req.Token); err != nil {
+		log.Printf("Error confirming firewall: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to confirm"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func addFirewallRule(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Action string  `json:"action"`
+		Port   uint32  `json:"port"`
+		Proto  string  `json:"proto"`
+		From   *string `json:"from"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.AddFirewallRule(req.Action, req.Port, req.Proto, req.From); err != nil {
+		log.Printf("Error adding firewall rule: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func deleteFirewallRule(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Number uint32 `json:"number"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.DeleteFirewallRule(req.Number); err != nil {
+		log.Printf("Error deleting firewall rule: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// --- WireGuard -------------------------------------------------------------
+
+func getWireguardStatus(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	ifaces, err := hostClient.WireguardStatus()
+	if err != nil {
+		log.Printf("Error reading WireGuard status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read WireGuard status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"interfaces": ifaces})
+}
+
+func setWireguardInterface(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Iface string `json:"iface"`
+		Up    bool   `json:"up"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.SetWireguardInterface(req.Iface, req.Up); err != nil {
+		log.Printf("Error setting WireGuard interface: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func importWireguardConfig(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Name   string `json:"name"`
+		Config string `json:"config"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.ImportWireguardConfig(req.Name, req.Config); err != nil {
+		log.Printf("Error importing WireGuard config: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func removeWireguardConfig(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.RemoveWireguardConfig(req.Name); err != nil {
+		log.Printf("Error removing WireGuard config: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func getHosts(c *gin.Context) {
 	if !requireHostAgent(c) {
 		return

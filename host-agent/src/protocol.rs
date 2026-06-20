@@ -118,6 +118,25 @@ pub enum Action {
     GetSystemOverview,
     GetResources,
 
+    // SSH daemon.
+    SshStatus,
+    SetSshEnabled { enabled: bool },
+    SetSshPasswordAuth { enabled: bool },
+    SetSshPort { port: u32 },
+
+    // Firewall (ufw).
+    FirewallStatus,
+    SetFirewallEnabled { enabled: bool, revert_seconds: u64 },
+    ConfirmFirewall { token: String },
+    AddFirewallRule { action: String, port: u32, proto: String, from: Option<String> },
+    DeleteFirewallRule { number: u32 },
+
+    // WireGuard VPN.
+    WireguardStatus,
+    SetWireguardInterface { iface: String, up: bool },
+    ImportWireguardConfig { name: String, config: String },
+    RemoveWireguardConfig { name: String },
+
     Ping,
 }
 
@@ -153,6 +172,10 @@ pub enum ResponseData {
     StringList { items: Vec<String> },
     SystemOverviewData(SystemOverview),
     ResourcesData(Resources),
+    SshStatusData(SshStatus),
+    FirewallStatusData(FirewallStatus),
+    FirewallApplied { token: Option<String>, revert_seconds: u64 },
+    WireguardData { interfaces: Vec<WgInterface> },
     Pong,
 }
 
@@ -265,6 +288,49 @@ pub struct DiskUsage {
     pub mount: String,
     pub total: u64,
     pub used: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshStatus {
+    pub installed: bool,
+    pub active: bool,
+    pub enabled: bool,
+    pub port: u32,
+    pub password_auth: bool,
+    pub sessions: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FirewallRule {
+    pub number: u32,
+    pub to: String,
+    pub action: String,
+    pub from: String,
+    pub raw: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FirewallStatus {
+    pub installed: bool,
+    pub active: bool,
+    pub default_incoming: String,
+    pub default_outgoing: String,
+    pub rules: Vec<FirewallRule>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WgPeer {
+    pub endpoint: String,
+    pub latest_handshake: i64,
+    pub rx: u64,
+    pub tx: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WgInterface {
+    pub name: String,
+    pub up: bool,
+    pub peers: Vec<WgPeer>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

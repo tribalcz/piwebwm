@@ -119,6 +119,22 @@ func main() {
 				system.POST("/network/diagnostic", networkDiagnostic)
 				system.GET("/hosts", getHosts)
 				system.POST("/hosts", setHosts)
+
+				system.GET("/ssh", getSshStatus)
+				system.POST("/ssh/enabled", setSshEnabled)
+				system.POST("/ssh/password-auth", setSshPasswordAuth)
+				system.POST("/ssh/port", setSshPort)
+
+				system.GET("/firewall", getFirewallStatus)
+				system.POST("/firewall/enabled", setFirewallEnabled)
+				system.POST("/firewall/confirm", confirmFirewall)
+				system.POST("/firewall/rule", addFirewallRule)
+				system.DELETE("/firewall/rule", deleteFirewallRule)
+
+				system.GET("/wireguard", getWireguardStatus)
+				system.POST("/wireguard/interface", setWireguardInterface)
+				system.POST("/wireguard/config", importWireguardConfig)
+				system.DELETE("/wireguard/config", removeWireguardConfig)
 				system.GET("/time", getTimeSettings)
 				system.GET("/timezones", getTimezones)
 				system.POST("/timezone", setTimezone)

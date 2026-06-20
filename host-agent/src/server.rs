@@ -22,6 +22,11 @@ use crate::protocol::{Action, Request, Response, ResponseData, ResponseResult};
 /// Shared across client connections so a confirm can arrive on a new connection.
 type Reverts = Arc<Mutex<HashMap<String, network::PrevConfig>>>;
 
+/// Pending firewall-enable auto-reverts, keyed by token. Presence means "still
+/// awaiting confirmation"; the timer disables the firewall if the token is
+/// still here when it fires.
+type FwReverts = Arc<Mutex<HashMap<String, ()>>>;
+
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let socket_path = &config.server.socket_path;
 
@@ -43,6 +48,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let validator = Validator::new(config.security.clone());
     let reverts: Reverts = Arc::new(Mutex::new(HashMap::new()));
+    let fw_reverts: FwReverts = Arc::new(Mutex::new(HashMap::new()));
 
     loop {
         match listener.accept().await {
@@ -50,9 +56,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 let config = config.clone();
                 let validator = validator.clone();
                 let reverts = reverts.clone();
+                let fw_reverts = fw_reverts.clone();
 
                 tokio::spawn(async move {
-                    if let Err(e) = handle_client(stream, config, validator, reverts).await {
+                    if let Err(e) = handle_client(stream, config, validator, reverts, fw_reverts).await {
                         error!("Client error: {}", e);
                     }
                 });
@@ -102,6 +109,7 @@ async fn handle_client(
     config: Config,
     validator: Validator,
     reverts: Reverts,
+    fw_reverts: FwReverts,
 ) -> Result<()> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -139,7 +147,7 @@ async fn handle_client(
                 let line = String::from_utf8_lossy(&buf);
                 debug!("Received request ({} bytes)", n);
 
-                let response_json = process_request(&line, &config, &validator, &reverts).await;
+                let response_json = process_request(&line, &config, &validator, &reverts, &fw_reverts).await;
 
                 writer.write_all(response_json.as_bytes()).await?;
                 writer.write_all(b"\n").await?;
@@ -160,6 +168,7 @@ async fn process_request(
     _config: &Config,
     validator: &Validator,
     reverts: &Reverts,
+    fw_reverts: &FwReverts,
 ) -> String {
     // Parse request
     let request: Request = match serde_json::from_str(request_str) {
@@ -540,6 +549,137 @@ async fn process_request(
             Ok(r) => ResponseResult::Success(ResponseData::ResourcesData(r)),
             Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
         },
+
+        // --- SSH ---------------------------------------------------------
+        Action::SshStatus => match handlers::ssh::ssh_status() {
+            Ok(s) => ResponseResult::Success(ResponseData::SshStatusData(s)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::SetSshEnabled { enabled } => match handlers::ssh::set_ssh_enabled(enabled) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: format!("SSH {}", if enabled { "enabled" } else { "disabled" }),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::SetSshPasswordAuth { enabled } => match handlers::ssh::set_ssh_password_auth(enabled) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "SSH password authentication updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::SetSshPort { port } => match handlers::ssh::set_ssh_port(port) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "SSH port updated".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        // --- Firewall ----------------------------------------------------
+        Action::FirewallStatus => match handlers::firewall::firewall_status() {
+            Ok(s) => ResponseResult::Success(ResponseData::FirewallStatusData(s)),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::SetFirewallEnabled { enabled, revert_seconds } => {
+            // The active SSH port is a guardrail input (kept open on enable).
+            let ssh_port = handlers::ssh::ssh_status().map(|s| s.port).unwrap_or(22);
+            match handlers::firewall::set_firewall_enabled(enabled, ssh_port) {
+                Ok(newly_enabled) => {
+                    if newly_enabled && revert_seconds > 0 {
+                        let token = network::gen_token();
+                        fw_reverts.lock().unwrap().insert(token.clone(), ());
+                        let fw2 = fw_reverts.clone();
+                        let token2 = token.clone();
+                        tokio::spawn(async move {
+                            sleep(Duration::from_secs(revert_seconds)).await;
+                            let pending = fw2.lock().unwrap().remove(&token2).is_some();
+                            if pending {
+                                warn!("Auto-reverting firewall enable {} after {}s", token2, revert_seconds);
+                                if let Err(e) = handlers::firewall::revert_enable() {
+                                    error!("Firewall auto-revert failed: {}", e);
+                                }
+                            }
+                        });
+                        ResponseResult::Success(ResponseData::FirewallApplied {
+                            token: Some(token),
+                            revert_seconds,
+                        })
+                    } else {
+                        ResponseResult::Success(ResponseData::FirewallApplied {
+                            token: None,
+                            revert_seconds: 0,
+                        })
+                    }
+                }
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
+
+        Action::ConfirmFirewall { token } => {
+            let kept = fw_reverts.lock().unwrap().remove(&token).is_some();
+            ResponseResult::Success(ResponseData::Success {
+                message: if kept {
+                    "Firewall change kept".to_string()
+                } else {
+                    "No pending firewall change for token".to_string()
+                },
+            })
+        }
+
+        Action::AddFirewallRule { action, port, proto, from } => {
+            match handlers::firewall::add_rule(&action, port, &proto, &from) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: "Firewall rule added".to_string(),
+                }),
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
+
+        Action::DeleteFirewallRule { number } => {
+            let ssh_port = handlers::ssh::ssh_status().map(|s| s.port).unwrap_or(22);
+            match handlers::firewall::delete_rule(number, ssh_port) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: "Firewall rule deleted".to_string(),
+                }),
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
+
+        // --- WireGuard ---------------------------------------------------
+        Action::WireguardStatus => match handlers::wireguard::wireguard_status() {
+            Ok(interfaces) => ResponseResult::Success(ResponseData::WireguardData { interfaces }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::SetWireguardInterface { iface, up } => {
+            match handlers::wireguard::set_interface(&iface, up) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: format!("WireGuard {} {}", iface, if up { "up" } else { "down" }),
+                }),
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
+
+        Action::ImportWireguardConfig { name, config } => {
+            match handlers::wireguard::import_config(&name, &config) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: "WireGuard config imported".to_string(),
+                }),
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
+
+        Action::RemoveWireguardConfig { name } => {
+            match handlers::wireguard::remove_config(&name) {
+                Ok(_) => ResponseResult::Success(ResponseData::Success {
+                    message: "WireGuard config removed".to_string(),
+                }),
+                Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+            }
+        }
 
         _ => ResponseResult::Error {
             error: "Not implemented yet".to_string(),

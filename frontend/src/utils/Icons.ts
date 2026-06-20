@@ -48,6 +48,9 @@ const Icons: Record<string, string> = {
         '                        <circle cx="12" cy="12" r="9"/>\n' +
         '                        <path d="M3 12h18M12 3a14 14 0 010 18a14 14 0 010-18"/>\n' +
         '                    </svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
+        '                        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>\n' +
+        '                    </svg>',
     appStore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
         '                        <path d="M5 7l1.5-3h11L19 7v1a2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2 2 2 0 01-2 2 2 2 0 01-2-2V7z" fill="#dbeafe" stroke="#3b82f6"/>\n' +
         '                        <path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9" stroke="#3b82f6"/>\n' +

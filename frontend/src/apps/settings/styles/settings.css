@@ -206,6 +206,79 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* Remote access (SSH / firewall / WireGuard) */
+.rm-state {
+    margin-left: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.rm-rules-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 6px;
+}
+
+.rm-rules,
+.rm-wg-list {
+    padding: 0 14px 6px;
+}
+
+.rm-rule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px;
+}
+
+.rm-rule-to {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    min-width: 110px;
+}
+
+.rm-rule-from {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.rm-wg {
+    padding: 8px 0;
+    border-top: 1px solid var(--border-soft);
+}
+
+.rm-wg-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rm-wg-name {
+    font-weight: 600;
+}
+
+.rm-wg-peers {
+    margin-top: 4px;
+    padding-left: 2px;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.net-modal textarea {
+    width: 100%;
+    padding: 8px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    resize: vertical;
+}
+
 /* System ▸ Resources meters */
 #sys-resources {
     padding: 10px 14px 12px;

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.0
+
+- New **Remote access** section managing SSH, the ufw firewall and WireGuard:
+  - SSH: enable/disable the service, toggle PasswordAuthentication, change the
+    port (managed sshd_config drop-ins, validated with `sshd -t` before reload),
+    and show port / active sessions.
+  - Firewall (ufw): status, default policy, rule list with add/delete. Lockout
+    protection — enabling always allows the web and SSH ports first, deleting a
+    protective rule is refused, and enabling applies with a 60 s auto-revert
+    (confirm to keep, otherwise the firewall disables itself).
+  - WireGuard: list interfaces and peers (handshake/transfer), bring each
+    up/down, import and remove named configs.
+  - Backed by new agent handlers (ssh/firewall/wireguard) and
+    `/api/system/{ssh,firewall,wireguard}*` endpoints; all input validated,
+    commands run shell-free.
+
 ## 1.8.0
 
 - Taskbar & Clock: new **Taskbar → Size** (Normal / Compact) driving the

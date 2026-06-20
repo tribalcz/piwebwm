@@ -165,6 +165,51 @@ export interface DiskUsage {
     used: number;
 }
 
+/** GET /api/system/ssh */
+export interface SshStatus {
+    installed: boolean;
+    active: boolean;
+    enabled: boolean;
+    port: number;
+    password_auth: boolean;
+    sessions: number;
+}
+
+export interface FirewallRule {
+    number: number;
+    to: string;
+    action: string;
+    from: string;
+    raw: string;
+}
+
+/** GET /api/system/firewall */
+export interface FirewallStatus {
+    installed: boolean;
+    active: boolean;
+    default_incoming: string;
+    default_outgoing: string;
+    rules: FirewallRule[];
+}
+
+export interface WgPeer {
+    endpoint: string;
+    latest_handshake: number;
+    rx: number;
+    tx: number;
+}
+
+export interface WgInterface {
+    name: string;
+    up: boolean;
+    peers: WgPeer[];
+}
+
+/** GET /api/system/wireguard */
+export interface WireguardResponse {
+    interfaces: WgInterface[];
+}
+
 /** GET /api/system/resources */
 export interface Resources {
     cpu_total: number;

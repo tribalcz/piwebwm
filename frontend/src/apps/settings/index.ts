@@ -11,6 +11,7 @@ import { renderDateTime } from './sections/DateTime';
 import { renderWindows } from './sections/Windows';
 import { renderTaskbarClock } from './sections/TaskbarClock';
 import { renderSystem } from './sections/System';
+import { renderRemote } from './sections/RemoteAccess';
 import { renderAbout } from './sections/About';
 
 const SECTIONS: SettingsSection[] = [
@@ -20,6 +21,7 @@ const SECTIONS: SettingsSection[] = [
     { id: 'windows', label: 'Windows', icon: 'windowsStats', render: renderWindows },
     { id: 'taskbar-clock', label: 'Taskbar & Clock', icon: 'clock', render: renderTaskbarClock },
     { id: 'system', label: 'System', icon: 'systemMonitor', render: renderSystem },
+    { id: 'remote', label: 'Remote access', icon: 'shield', render: renderRemote },
     { id: 'about', label: 'About', icon: 'welcome', render: renderAbout },
 ];
 

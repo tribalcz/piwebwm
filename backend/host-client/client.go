@@ -950,3 +950,174 @@ func (c *HostAgentClient) simpleAction(action Action) error {
 	}
 	return nil
 }
+
+// structData sends an action and unmarshals its data map into out.
+func (c *HostAgentClient) structData(action Action, out interface{}) error {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, out)
+}
+
+// --- SSH -------------------------------------------------------------------
+
+type SshStatus struct {
+	Installed    bool   `json:"installed"`
+	Active       bool   `json:"active"`
+	Enabled      bool   `json:"enabled"`
+	Port         uint32 `json:"port"`
+	PasswordAuth bool   `json:"password_auth"`
+	Sessions     uint32 `json:"sessions"`
+}
+
+func (c *HostAgentClient) SshStatus() (*SshStatus, error) {
+	var s SshStatus
+	if err := c.structData(Action{Type: "SshStatus"}, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) SetSshEnabled(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetSshEnabled", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetSshPasswordAuth(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetSshPasswordAuth", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetSshPort(port uint32) error {
+	return c.simpleAction(Action{Type: "SetSshPort", Params: map[string]interface{}{"port": port}})
+}
+
+// --- Firewall --------------------------------------------------------------
+
+type FirewallRule struct {
+	Number uint32 `json:"number"`
+	To     string `json:"to"`
+	Action string `json:"action"`
+	From   string `json:"from"`
+	Raw    string `json:"raw"`
+}
+
+type FirewallStatus struct {
+	Installed       bool           `json:"installed"`
+	Active          bool           `json:"active"`
+	DefaultIncoming string         `json:"default_incoming"`
+	DefaultOutgoing string         `json:"default_outgoing"`
+	Rules           []FirewallRule `json:"rules"`
+}
+
+func (c *HostAgentClient) FirewallStatus() (*FirewallStatus, error) {
+	var s FirewallStatus
+	if err := c.structData(Action{Type: "FirewallStatus"}, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// SetFirewallEnabled toggles ufw. When enabling for the first time it returns a
+// revert token (if revertSeconds > 0) the caller must confirm before the agent
+// disables it again.
+func (c *HostAgentClient) SetFirewallEnabled(enabled bool, revertSeconds uint64) (*string, uint64, error) {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetFirewallEnabled",
+		Params: map[string]interface{}{"enabled": enabled, "revert_seconds": revertSeconds},
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	if resp.IsError() {
+		return nil, 0, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	var token *string
+	var secs uint64
+	if data != nil {
+		if t, ok := data["token"].(string); ok {
+			token = &t
+		}
+		if s, ok := data["revert_seconds"].(float64); ok {
+			secs = uint64(s)
+		}
+	}
+	return token, secs, nil
+}
+
+func (c *HostAgentClient) ConfirmFirewall(token string) error {
+	return c.simpleAction(Action{Type: "ConfirmFirewall", Params: map[string]interface{}{"token": token}})
+}
+
+func (c *HostAgentClient) AddFirewallRule(action string, port uint32, proto string, from *string) error {
+	params := map[string]interface{}{"action": action, "port": port, "proto": proto}
+	if from != nil {
+		params["from"] = *from
+	}
+	return c.simpleAction(Action{Type: "AddFirewallRule", Params: params})
+}
+
+func (c *HostAgentClient) DeleteFirewallRule(number uint32) error {
+	return c.simpleAction(Action{Type: "DeleteFirewallRule", Params: map[string]interface{}{"number": number}})
+}
+
+// --- WireGuard -------------------------------------------------------------
+
+type WgPeer struct {
+	Endpoint        string `json:"endpoint"`
+	LatestHandshake int64  `json:"latest_handshake"`
+	Rx              uint64 `json:"rx"`
+	Tx              uint64 `json:"tx"`
+}
+
+type WgInterface struct {
+	Name  string   `json:"name"`
+	Up    bool     `json:"up"`
+	Peers []WgPeer `json:"peers"`
+}
+
+func (c *HostAgentClient) WireguardStatus() ([]WgInterface, error) {
+	resp, err := c.sendRequest(Action{Type: "WireguardStatus"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["interfaces"])
+	if err != nil {
+		return nil, err
+	}
+	var ifaces []WgInterface
+	if err := json.Unmarshal(raw, &ifaces); err != nil {
+		return nil, err
+	}
+	return ifaces, nil
+}
+
+func (c *HostAgentClient) SetWireguardInterface(iface string, up bool) error {
+	return c.simpleAction(Action{Type: "SetWireguardInterface", Params: map[string]interface{}{"iface": iface, "up": up}})
+}
+
+func (c *HostAgentClient) ImportWireguardConfig(name, config string) error {
+	return c.simpleAction(Action{Type: "ImportWireguardConfig", Params: map[string]interface{}{"name": name, "config": config}})
+}
+
+func (c *HostAgentClient) RemoveWireguardConfig(name string) error {
+	return c.simpleAction(Action{Type: "RemoveWireguardConfig", Params: map[string]interface{}{"name": name}})
+}
