@@ -3,10 +3,18 @@ import type { EventBus } from '@core/EventBus';
 
 export type ThemeName = 'light' | 'dark';
 export type BackgroundPreset = 'default' | 'ocean' | 'forest' | 'sunset';
+export type TaskbarSize = 'normal' | 'compact';
 
 const THEME_KEY = 'settings.appearance.theme';
 const BACKGROUND_KEY = 'settings.appearance.background';
 const DRAG_OPACITY_KEY = 'settings.appearance.windowDragOpacity';
+const TASKBAR_SIZE_KEY = 'settings.taskbar.size';
+
+/** Taskbar heights per size, driving the --taskbar-height custom property. */
+const TASKBAR_HEIGHTS: Record<TaskbarSize, string> = {
+    normal: '48px',
+    compact: '40px',
+};
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = ['default', 'ocean', 'forest', 'sunset'];
 
@@ -35,6 +43,7 @@ export class ThemeManager {
     init(): void {
         this.apply(this.getTheme(), this.getBackground());
         this.applyWindowDragOpacity(this.getWindowDragOpacity());
+        this.applyTaskbarSize(this.getTaskbarSize());
         console.log(`ThemeManager initialized (theme: ${this.getTheme()}, background: ${this.getBackground()})`);
     }
 
@@ -73,6 +82,21 @@ export class ThemeManager {
 
     private applyWindowDragOpacity(value: number): void {
         document.documentElement.style.setProperty('--window-drag-opacity', String(value));
+    }
+
+    /** Taskbar size: 'normal' (48px) or 'compact' (40px). */
+    getTaskbarSize(): TaskbarSize {
+        const value = this.store?.get<TaskbarSize>(TASKBAR_SIZE_KEY, 'normal') ?? 'normal';
+        return value === 'compact' ? 'compact' : 'normal';
+    }
+
+    setTaskbarSize(size: TaskbarSize): void {
+        this.store?.set(TASKBAR_SIZE_KEY, size);
+        this.applyTaskbarSize(size);
+    }
+
+    private applyTaskbarSize(size: TaskbarSize): void {
+        document.documentElement.style.setProperty('--taskbar-height', TASKBAR_HEIGHTS[size]);
     }
 
     private apply(theme: ThemeName, background: BackgroundPreset): void {

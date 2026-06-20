@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.0
+
+- Taskbar & Clock: new **Taskbar → Size** (Normal / Compact) driving the
+  taskbar height via a `--taskbar-height` custom property (the desktop area
+  resizes with it), and a **Clock → Show date** toggle that prefixes the date
+  to the clock. Both persist and apply live.
+
 ## 1.7.0
 
 - Appearance: new **Window dragging** control — a slider for the opacity a
