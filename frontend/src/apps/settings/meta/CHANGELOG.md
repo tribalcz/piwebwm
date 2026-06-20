@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0
+
+- Appearance: new **Window dragging** control — a slider for the opacity a
+  window has while being dragged (50–100 %, default 90 %). Previously fixed at
+  0.9 in CSS; now driven by a `--window-drag-opacity` custom property set from
+  the ThemeManager and persisted, applied live as you drag the slider.
+
 ## 1.6.0
 
 - **System** section expanded with real host data: an **Overview** group

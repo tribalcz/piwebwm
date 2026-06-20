@@ -189,6 +189,19 @@
     gap: 8px;
 }
 
+.ap-drag-opacity {
+    width: 180px;
+    accent-color: var(--accent);
+}
+
+.ap-drag-readout {
+    min-width: 44px;
+    text-align: right;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
 .dt-clock {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }

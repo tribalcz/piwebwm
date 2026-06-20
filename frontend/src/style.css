@@ -296,7 +296,7 @@
         }
 
         .window.dragging {
-            opacity: 0.9;
+            opacity: var(--window-drag-opacity, 0.9);
         }
 
         .taskbar-button {
