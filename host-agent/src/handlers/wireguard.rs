@@ -15,12 +15,24 @@ fn installed() -> bool {
     std::path::Path::new("/usr/bin/wg").exists() || std::path::Path::new("/usr/bin/wg-quick").exists()
 }
 
-/// A WireGuard interface/config name: 1–15 chars, alphanumeric plus '-'/'_'.
-/// (Used both as the config filename and the link name.)
+/// A WireGuard interface/config name: 1–15 chars, alphanumeric plus '-'/'_',
+/// and not starting with '-' (so it can never be read as a command flag).
 fn valid_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 15
+        && !name.starts_with('-')
         && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+}
+
+/// Rejects configs carrying wg-quick command hooks. wg-quick runs PostUp/PreUp/
+/// PostDown/PreDown as root when an interface comes up or down, so an imported
+/// config with these directives would be arbitrary root code execution.
+/// Standard tunnels don't need them.
+fn has_command_hooks(config: &str) -> bool {
+    config.lines().any(|line| {
+        let key = line.split('=').next().unwrap_or("").trim().to_ascii_lowercase();
+        matches!(key.as_str(), "postup" | "preup" | "postdown" | "predown")
+    })
 }
 
 fn configured_interfaces() -> Vec<String> {
@@ -111,6 +123,11 @@ pub fn import_config(name: &str, config: &str) -> Result<()> {
     }
     if config.len() > 16 * 1024 {
         return Err(AgentError::InvalidRequest("config too large".to_string()));
+    }
+    if has_command_hooks(config) {
+        return Err(AgentError::InvalidRequest(
+            "config contains PostUp/PreUp/PostDown/PreDown command hooks, which are not allowed".to_string(),
+        ));
     }
 
     fs::create_dir_all(WG_DIR)

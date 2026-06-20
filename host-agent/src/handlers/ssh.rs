@@ -113,13 +113,24 @@ fn validate_sshd() -> Result<()> {
     run("sshd", &["-t"]).map(|_| ())
 }
 
+/// Writes a drop-in and validates the resulting sshd config. If validation
+/// fails, the drop-in is removed again so a later restart/reboot can't be
+/// broken by a config that never took effect.
+fn write_dropin_validated(path: &str, body: &str) -> Result<()> {
+    write_dropin(path, body)?;
+    if let Err(e) = validate_sshd() {
+        let _ = fs::remove_file(path);
+        return Err(e);
+    }
+    Ok(())
+}
+
 pub fn set_ssh_password_auth(enabled: bool) -> Result<()> {
     let body = format!(
         "# Managed by WebDesk OS\nPasswordAuthentication {}\n",
         if enabled { "yes" } else { "no" }
     );
-    write_dropin(PWAUTH_DROPIN, &body)?;
-    validate_sshd()?;
+    write_dropin_validated(PWAUTH_DROPIN, &body)?;
     run("systemctl", &["reload", "ssh"])?;
     info!("SSH PasswordAuthentication {}", enabled);
     Ok(())
@@ -130,8 +141,7 @@ pub fn set_ssh_port(port: u32) -> Result<()> {
         return Err(AgentError::InvalidRequest("invalid port (1–65535)".to_string()));
     }
     let body = format!("# Managed by WebDesk OS\nPort {}\n", port);
-    write_dropin(PORT_DROPIN, &body)?;
-    validate_sshd()?;
+    write_dropin_validated(PORT_DROPIN, &body)?;
     // A port change needs a full restart, not reload.
     run("systemctl", &["restart", "ssh"])?;
     info!("SSH port set to {}", port);
@@ -171,9 +181,12 @@ pub fn ssh_sessions() -> Result<Vec<SshSession>> {
 // --- Authorized keys -------------------------------------------------------
 
 /// A safe Unix user name for use as a command argument / passwd lookup.
+/// Must not start with '-' so it can never be read as a command flag (e.g. by
+/// chown). It is additionally checked against /etc/passwd before use.
 fn valid_user(user: &str) -> bool {
     !user.is_empty()
         && user.len() <= 32
+        && !user.starts_with('-')
         && user.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
 }
 
