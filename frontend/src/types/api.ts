@@ -175,6 +175,35 @@ export interface SshStatus {
     sessions: number;
 }
 
+export interface SshSession {
+    user: string;
+    from: string;
+    tty: string;
+    since: string;
+}
+
+/** GET /api/system/ssh/sessions */
+export interface SshSessionsResponse {
+    sessions: SshSession[];
+}
+
+export interface SshKey {
+    index: number;
+    kind: string;
+    comment: string;
+    preview: string;
+}
+
+/** GET /api/system/ssh/keys */
+export interface SshKeysResponse {
+    keys: SshKey[];
+}
+
+/** GET /api/system/ssh/users */
+export interface SshUsersResponse {
+    users: string[];
+}
+
 export interface FirewallRule {
     number: number;
     to: string;

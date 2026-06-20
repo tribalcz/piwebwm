@@ -124,6 +124,11 @@ func main() {
 				system.POST("/ssh/enabled", setSshEnabled)
 				system.POST("/ssh/password-auth", setSshPasswordAuth)
 				system.POST("/ssh/port", setSshPort)
+				system.GET("/ssh/sessions", getSshSessions)
+				system.GET("/ssh/users", getSshUsers)
+				system.GET("/ssh/keys", getSshKeys)
+				system.POST("/ssh/keys", addSshKey)
+				system.DELETE("/ssh/keys", deleteSshKey)
 
 				system.GET("/firewall", getFirewallStatus)
 				system.POST("/firewall/enabled", setFirewallEnabled)

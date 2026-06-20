@@ -213,6 +213,64 @@
     color: var(--text-muted);
 }
 
+.rm-sessions-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.rm-sessions-toggle:hover {
+    background: var(--surface-alt);
+}
+
+.rm-chevron {
+    color: var(--text-faint);
+    margin-left: 6px;
+}
+
+.rm-sessions-panel {
+    padding: 0 14px 8px;
+}
+
+.rm-session,
+.rm-key {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px;
+}
+
+.rm-session-user,
+.rm-key-kind {
+    font-weight: 600;
+    min-width: 90px;
+}
+
+.rm-session-from,
+.rm-key-comment {
+    color: var(--text);
+}
+
+.rm-session-tty,
+.rm-session-since,
+.rm-key-preview {
+    color: var(--text-faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.rm-keys-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 6px;
+}
+
+.rm-keys {
+    padding: 0 14px 6px;
+}
+
 .rm-rules-head {
     display: flex;
     align-items: center;

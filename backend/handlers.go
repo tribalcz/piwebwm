@@ -638,6 +638,85 @@ func setSshPort(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func getSshSessions(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	sessions, err := hostClient.SshSessions()
+	if err != nil {
+		log.Printf("Error reading SSH sessions: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read SSH sessions"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"sessions": sessions})
+}
+
+func getSshUsers(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	users, err := hostClient.ListSshUsers()
+	if err != nil {
+		log.Printf("Error listing SSH users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list users"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+func getSshKeys(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	keys, err := hostClient.ListSshKeys(c.Query("user"))
+	if err != nil {
+		log.Printf("Error listing SSH keys: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"keys": keys})
+}
+
+func addSshKey(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		User string `json:"user"`
+		Key  string `json:"key"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.AddSshKey(req.User, req.Key); err != nil {
+		log.Printf("Error adding SSH key: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func deleteSshKey(c *gin.Context) {
+	if !requireHostAgent(c) {
+		return
+	}
+	var req struct {
+		User  string `json:"user"`
+		Index uint32 `json:"index"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := hostClient.RemoveSshKey(req.User, req.Index); err != nil {
+		log.Printf("Error removing SSH key: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 // --- Firewall --------------------------------------------------------------
 
 func getFirewallStatus(c *gin.Context) {

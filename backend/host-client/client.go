@@ -1002,6 +1002,78 @@ func (c *HostAgentClient) SetSshPort(port uint32) error {
 	return c.simpleAction(Action{Type: "SetSshPort", Params: map[string]interface{}{"port": port}})
 }
 
+type SshSession struct {
+	User  string `json:"user"`
+	From  string `json:"from"`
+	Tty   string `json:"tty"`
+	Since string `json:"since"`
+}
+
+type SshKey struct {
+	Index   uint32 `json:"index"`
+	Kind    string `json:"kind"`
+	Comment string `json:"comment"`
+	Preview string `json:"preview"`
+}
+
+func (c *HostAgentClient) SshSessions() ([]SshSession, error) {
+	resp, err := c.sendRequest(Action{Type: "SshSessions"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["sessions"])
+	if err != nil {
+		return nil, err
+	}
+	var sessions []SshSession
+	if err := json.Unmarshal(raw, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+func (c *HostAgentClient) ListSshUsers() ([]string, error) {
+	return c.stringList("ListSshUsers")
+}
+
+func (c *HostAgentClient) ListSshKeys(user string) ([]SshKey, error) {
+	resp, err := c.sendRequest(Action{Type: "ListSshKeys", Params: map[string]interface{}{"user": user}})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["keys"])
+	if err != nil {
+		return nil, err
+	}
+	var keys []SshKey
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return nil, err
+	}
+	return keys, nil
+}
+
+func (c *HostAgentClient) AddSshKey(user, key string) error {
+	return c.simpleAction(Action{Type: "AddSshKey", Params: map[string]interface{}{"user": user, "key": key}})
+}
+
+func (c *HostAgentClient) RemoveSshKey(user string, index uint32) error {
+	return c.simpleAction(Action{Type: "RemoveSshKey", Params: map[string]interface{}{"user": user, "index": index}})
+}
+
 // --- Firewall --------------------------------------------------------------
 
 type FirewallRule struct {

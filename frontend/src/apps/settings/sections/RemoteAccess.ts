@@ -2,6 +2,10 @@ import { group, row, toggle } from '../core/sections';
 import type { SettingsContext } from '../core/sections';
 import type {
     SshStatus,
+    SshSessionsResponse,
+    SshUsersResponse,
+    SshKeysResponse,
+    SshKey,
     FirewallStatus,
     FirewallRule,
     WireguardResponse,
@@ -23,10 +27,11 @@ export function renderRemote(container: Element, _ctx: SettingsContext): void {
 async function load(body: HTMLElement): Promise<void> {
     body.innerHTML = `<p class="set-note">Loading…</p>`;
 
-    const [ssh, fw, wg] = await Promise.all([
+    const [ssh, fw, wg, users] = await Promise.all([
         getJSON<SshStatus>('/api/system/ssh'),
         getJSON<FirewallStatus>('/api/system/firewall'),
         getJSON<WireguardResponse>('/api/system/wireguard'),
+        getJSON<SshUsersResponse>('/api/system/ssh/users'),
     ]);
 
     // If the agent is down, every call fails the same way — show one message.
@@ -36,13 +41,16 @@ async function load(body: HTMLElement): Promise<void> {
     }
 
     const reload = () => void load(body);
+    const sshInstalled = ssh.data?.installed === true;
 
     body.innerHTML =
         renderSsh(ssh.data, ssh.ok ? undefined : (ssh.error ?? `HTTP ${ssh.status}`)) +
+        (sshInstalled ? renderKeysGroup(users.data?.users ?? []) : '') +
         renderFirewall(fw.data, fw.ok ? undefined : (fw.error ?? `HTTP ${fw.status}`)) +
         renderWireguard(wg.data?.interfaces, wg.ok ? undefined : (wg.error ?? `HTTP ${wg.status}`));
 
     wireSsh(body, ssh.data, reload);
+    if (sshInstalled) wireKeys(body, users.data?.users ?? []);
     wireFirewall(body, fw.data, reload);
     wireWireguard(body, reload);
 }
@@ -64,7 +72,11 @@ function renderSsh(s: SshStatus | undefined, err?: string): string {
                 <button class="set-btn rm-ssh-port-save">Apply</button>
             </span>`,
             'Changing the port needs a matching firewall rule and a reconnect')}
-        ${row('Active sessions', `<span>${s.sessions}</span>`)}
+        <div class="set-row rm-sessions-toggle" role="button" tabindex="0">
+            <div class="set-row-text"><span class="set-row-label">Active sessions</span></div>
+            <div class="set-row-control"><span class="rm-state">${s.sessions}</span> <span class="rm-chevron">▸</span></div>
+        </div>
+        <div class="rm-sessions-panel" hidden></div>
     `);
 }
 
@@ -88,6 +100,126 @@ function wireSsh(body: HTMLElement, s: SshStatus | undefined, reload: () => void
         if (!port || port < 1 || port > 65535) { alert('Enter a port between 1 and 65535.'); return; }
         if (!confirm(`Change the SSH port to ${port}? Make sure a firewall rule allows it, then reconnect on the new port.`)) return;
         void post('/api/system/ssh/port', { port }, reload);
+    });
+
+    // Expandable active-sessions list (fetched lazily on first open).
+    const toggleEl = body.querySelector<HTMLElement>('.rm-sessions-toggle');
+    const panel = body.querySelector<HTMLElement>('.rm-sessions-panel');
+    let loaded = false;
+    const expand = async () => {
+        if (!panel || !toggleEl) return;
+        const chev = toggleEl.querySelector('.rm-chevron');
+        const open = panel.hasAttribute('hidden');
+        if (open) {
+            panel.removeAttribute('hidden');
+            if (chev) chev.textContent = '▾';
+            if (!loaded) {
+                loaded = true;
+                panel.innerHTML = `<p class="set-note">Loading…</p>`;
+                const res = await getJSON<SshSessionsResponse>('/api/system/ssh/sessions');
+                panel.innerHTML = renderSessions(res.ok ? (res.data?.sessions ?? []) : null);
+            }
+        } else {
+            panel.setAttribute('hidden', '');
+            if (chev) chev.textContent = '▸';
+        }
+    };
+    toggleEl?.addEventListener('click', () => void expand());
+    toggleEl?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void expand(); }
+    });
+}
+
+function renderSessions(sessions: SshSessionsResponse['sessions'] | null): string {
+    if (sessions === null) return `<p class="set-note">Could not read sessions.</p>`;
+    if (sessions.length === 0) return `<p class="set-note">No active remote sessions.</p>`;
+    const rows = sessions.map(s => `
+        <div class="rm-session">
+            <span class="rm-session-user">${escapeHtml(s.user)}</span>
+            <span class="rm-session-from">${escapeHtml(s.from)}</span>
+            <span class="rm-session-tty">${escapeHtml(s.tty)}</span>
+            <span class="net-iface-spacer"></span>
+            <span class="rm-session-since">${escapeHtml(s.since)}</span>
+        </div>
+    `).join('');
+    return `<div class="rm-sessions">${rows}</div>`;
+}
+
+// --- SSH keys (authorized_keys) --------------------------------------------
+
+function renderKeysGroup(users: string[]): string {
+    const options = users.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+    const userControl = users.length
+        ? `<select class="set-select rm-keys-user">${options}</select>`
+        : `<span class="set-note">No login users found.</span>`;
+    return group('SSH keys (authorized_keys)', `
+        ${row('User', userControl, 'Public keys allowed to log in as this user')}
+        <div class="rm-keys-head">
+            <span class="set-row-label">Keys</span>
+            <button class="set-btn rm-key-add"${users.length ? '' : ' disabled'}>Add key</button>
+        </div>
+        <div class="rm-keys"><p class="set-note">Loading…</p></div>
+    `);
+}
+
+function wireKeys(body: HTMLElement, users: string[]): void {
+    if (users.length === 0) return;
+    const userSel = body.querySelector<HTMLSelectElement>('.rm-keys-user');
+    const keysEl = body.querySelector<HTMLElement>('.rm-keys');
+    if (!userSel || !keysEl) return;
+
+    const refresh = async () => {
+        const user = userSel.value;
+        keysEl.innerHTML = `<p class="set-note">Loading…</p>`;
+        const res = await getJSON<SshKeysResponse>(`/api/system/ssh/keys?user=${encodeURIComponent(user)}`);
+        keysEl.innerHTML = renderKeys(res.ok ? (res.data?.keys ?? []) : null);
+        keysEl.querySelectorAll<HTMLElement>('[data-key-del]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.keyDel!, 10);
+                if (!confirm(`Remove this key for ${user}? That login will no longer be possible with it.`)) return;
+                void post('/api/system/ssh/keys', { user, index }, refresh, 'DELETE');
+            });
+        });
+    };
+
+    userSel.addEventListener('change', () => void refresh());
+    body.querySelector('.rm-key-add')?.addEventListener('click', () => openKeyModal(userSel.value, refresh));
+    void refresh();
+}
+
+function renderKeys(keys: SshKey[] | null): string {
+    if (keys === null) return `<p class="set-note">Could not read keys.</p>`;
+    if (keys.length === 0) return `<p class="set-note">No authorized keys.</p>`;
+    return keys.map(k => `
+        <div class="rm-key">
+            <span class="rm-key-kind">${escapeHtml(k.kind)}</span>
+            <span class="rm-key-comment">${escapeHtml(k.comment || '(no comment)')}</span>
+            <span class="rm-key-preview">${escapeHtml(k.preview)}</span>
+            <span class="net-iface-spacer"></span>
+            <button class="set-btn net-route-del" data-key-del="${k.index}">Remove</button>
+        </div>
+    `).join('');
+}
+
+function openKeyModal(user: string, reload: () => void): void {
+    const overlay = modal(`
+        <h3>Add SSH key for ${escapeHtml(user)}</h3>
+        <label>Public key</label>
+        <textarea class="rm-key-in" rows="4" placeholder="ssh-ed25519 AAAA... user@host"></textarea>
+        <p class="set-note">Paste a single OpenSSH public key line (.pub).</p>
+        <div class="net-modal-actions">
+            <button class="set-btn rm-cancel">Cancel</button>
+            <button class="set-btn rm-add" style="background:var(--accent);color:#fff;border-color:var(--accent)">Add</button>
+        </div>
+    `);
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    overlay.querySelector('.rm-cancel')?.addEventListener('click', close);
+    overlay.querySelector('.rm-add')?.addEventListener('click', () => {
+        const key = overlay.querySelector<HTMLTextAreaElement>('.rm-key-in')!.value.trim();
+        if (!key) { alert('Paste a public key.'); return; }
+        close();
+        void post('/api/system/ssh/keys', { user, key }, reload);
     });
 }
 

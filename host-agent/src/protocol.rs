@@ -123,6 +123,11 @@ pub enum Action {
     SetSshEnabled { enabled: bool },
     SetSshPasswordAuth { enabled: bool },
     SetSshPort { port: u32 },
+    SshSessions,
+    ListSshUsers,
+    ListSshKeys { user: String },
+    AddSshKey { user: String, key: String },
+    RemoveSshKey { user: String, index: u32 },
 
     // Firewall (ufw).
     FirewallStatus,
@@ -173,6 +178,8 @@ pub enum ResponseData {
     SystemOverviewData(SystemOverview),
     ResourcesData(Resources),
     SshStatusData(SshStatus),
+    SshSessionsData { sessions: Vec<SshSession> },
+    SshKeysData { keys: Vec<SshKey> },
     FirewallStatusData(FirewallStatus),
     FirewallApplied { token: Option<String>, revert_seconds: u64 },
     WireguardData { interfaces: Vec<WgInterface> },
@@ -298,6 +305,22 @@ pub struct SshStatus {
     pub port: u32,
     pub password_auth: bool,
     pub sessions: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshSession {
+    pub user: String,
+    pub from: String,
+    pub tty: String,
+    pub since: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshKey {
+    pub index: u32, // line number in authorized_keys (for removal)
+    pub kind: String,
+    pub comment: String,
+    pub preview: String, // short tail of the key body, to tell keys apart
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

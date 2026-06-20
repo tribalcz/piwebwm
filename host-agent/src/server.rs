@@ -577,6 +577,35 @@ async fn process_request(
             Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
         },
 
+        Action::SshSessions => match handlers::ssh::ssh_sessions() {
+            Ok(sessions) => ResponseResult::Success(ResponseData::SshSessionsData { sessions }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::ListSshUsers => match handlers::ssh::list_ssh_users() {
+            Ok(items) => ResponseResult::Success(ResponseData::StringList { items }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 500 },
+        },
+
+        Action::ListSshKeys { user } => match handlers::ssh::list_ssh_keys(&user) {
+            Ok(keys) => ResponseResult::Success(ResponseData::SshKeysData { keys }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::AddSshKey { user, key } => match handlers::ssh::add_ssh_key(&user, &key) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "SSH key added".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
+        Action::RemoveSshKey { user, index } => match handlers::ssh::remove_ssh_key(&user, index) {
+            Ok(_) => ResponseResult::Success(ResponseData::Success {
+                message: "SSH key removed".to_string(),
+            }),
+            Err(e) => ResponseResult::Error { error: e.to_string(), code: 400 },
+        },
+
         // --- Firewall ----------------------------------------------------
         Action::FirewallStatus => match handlers::firewall::firewall_status() {
             Ok(s) => ResponseResult::Success(ResponseData::FirewallStatusData(s)),

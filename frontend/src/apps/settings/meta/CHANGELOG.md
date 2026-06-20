@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.10.0
+
+- Remote access ▸ SSH: **Active sessions** is now an expandable row listing each
+  remote login (user, source, tty, login time), fetched on demand.
+- New **SSH keys (authorized_keys)** group: pick a login user and view, add and
+  remove their authorized public keys. Keys are validated (OpenSSH format), the
+  user's `~/.ssh` is created with correct mode/ownership, and authorized_keys is
+  written atomically — the companion to disabling password authentication.
+- Backed by new agent ops (ssh sessions/users/keys) and
+  `/api/system/ssh/{sessions,users,keys}` endpoints.
+
 ## 1.9.0
 
 - New **Remote access** section managing SSH, the ufw firewall and WireGuard:
