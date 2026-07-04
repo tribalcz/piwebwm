@@ -190,7 +190,12 @@ fn valid_user(user: &str) -> bool {
         && user.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
 }
 
-/// Users with a real login shell (root and regular accounts), from /etc/passwd.
+/// Regular login users (UID 1000–64999 with a real shell), from /etc/passwd.
+///
+/// root/system accounts (UID 0 and < 1000) are deliberately excluded: managing
+/// root's authorized_keys from the web panel would let a single compromised
+/// session install a persistent remote-root key. Administer root keys out of
+/// band.
 pub fn list_ssh_users() -> Result<Vec<String>> {
     let content = fs::read_to_string("/etc/passwd")
         .map_err(|e| AgentError::Internal(format!("failed to read /etc/passwd: {}", e)))?;
@@ -204,7 +209,7 @@ pub fn list_ssh_users() -> Result<Vec<String>> {
         let uid: u32 = f[2].parse().unwrap_or(99999);
         let shell = f[6];
         let real_shell = !shell.ends_with("nologin") && !shell.ends_with("/false") && !shell.is_empty();
-        if real_shell && (uid == 0 || (uid >= 1000 && uid < 65000)) {
+        if real_shell && uid >= 1000 && uid < 65000 {
             users.push(name.to_string());
         }
     }

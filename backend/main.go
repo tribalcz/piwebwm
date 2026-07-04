@@ -38,6 +38,22 @@ func main() {
 
 	r := gin.Default()
 
+	// Client IP is used for the login rate limiter, so it must not be
+	// spoofable. By default trust no proxies (derive the IP from the direct
+	// peer, ignoring X-Forwarded-For). Set WEBDESK_TRUSTED_PROXIES to the real
+	// reverse-proxy CIDR(s) when running behind one.
+	if tp := os.Getenv("WEBDESK_TRUSTED_PROXIES"); tp != "" {
+		proxies := strings.Split(tp, ",")
+		for i := range proxies {
+			proxies[i] = strings.TrimSpace(proxies[i])
+		}
+		if err := r.SetTrustedProxies(proxies); err != nil {
+			log.Fatalf("❌ Invalid WEBDESK_TRUSTED_PROXIES: %v", err)
+		}
+	} else if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("❌ Failed to disable trusted proxies: %v", err)
+	}
+
 	// CORS: locked down by default. Cross-origin browser access is only
 	// enabled when WEBDESK_ALLOWED_ORIGINS (comma-separated) is set, and then
 	// with credentials so the session cookie is allowed. In the default setup

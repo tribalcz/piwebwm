@@ -58,7 +58,7 @@ export class CatalogList {
         const stateLabel = entry.installed ? 'Installed' : 'Available';
 
         return `
-            <div class="store-card${selected}" data-key="${key}">
+            <div class="store-card${selected}" data-key="${escapeHtml(key)}">
                 <span class="store-card-icon">${getIcon(entry.icon, 28)}</span>
                 <span class="store-card-main">
                     <span class="store-card-name">${escapeHtml(entry.name)} <small>v${escapeHtml(entry.version)}</small></span>
@@ -71,7 +71,5 @@ export class CatalogList {
 }
 
 function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

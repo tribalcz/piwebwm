@@ -149,13 +149,13 @@ export class StartMenu {
 
         return `
         <button class="menu-item ${disabled}"
-                data-app="${manifest.id}"
+                data-app="${this.escapeHtml(manifest.id)}"
                 data-name="${this.escapeHtml(name)}"
                 data-display-name="${this.escapeHtml(displayName)}"
                 data-description="${this.escapeHtml(description)}"
                 data-keywords="${this.escapeHtml(keywords)}">
                 <span class="menu-icon">${icon}</span>
-                <span class="menu-label">${manifest.ui?.displayName || manifest.name}</span>
+                <span class="menu-label">${this.escapeHtml(manifest.ui?.displayName || manifest.name || '')}</span>
                 ${badge}
         </button>
     `;
@@ -394,8 +394,6 @@ export class StartMenu {
      * Escape HTML special characters
      */
     private escapeHtml(text: string): string {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 }

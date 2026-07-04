@@ -13,14 +13,20 @@ services:
       - GIN_MODE=release
       # Authentication (temporary, until PAM). If a users file exists at
       # WEBDESK_USERS_FILE (default /etc/webdesk/users) it takes precedence;
-      # otherwise these env credentials are used. Override in a .env file or
-      # your shell — do not ship these defaults to production.
+      # otherwise these env credentials are used.
+      # WEBDESK_PASSWORD has NO default on purpose: the backend refuses to start
+      # with an empty/weak/default password, so you must set a strong one (e.g.
+      # in a .env file) before first boot. Prefer a users file (tools/hashpw.sh).
       - WEBDESK_USER=${WEBDESK_USER:-admin}
-      - WEBDESK_PASSWORD=${WEBDESK_PASSWORD:-changeme}
+      - WEBDESK_PASSWORD=${WEBDESK_PASSWORD:-}
       # To use a users file instead, mount it and point WEBDESK_USERS_FILE at it:
       # - WEBDESK_USERS_FILE=/etc/webdesk/users
-      # Set to 1 when serving over HTTPS so the session cookie gets the Secure flag.
+      # Cookies are Secure by default. This LAN/dev compose serves plain HTTP,
+      # so it opts out; set to 1 (and terminate TLS in front) for production.
       - WEBDESK_SECURE_COOKIE=${WEBDESK_SECURE_COOKIE:-0}
+      # When behind a reverse proxy, set its CIDR(s) so the login rate limiter
+      # reads the real client IP (otherwise X-Forwarded-For is ignored).
+      # - WEBDESK_TRUSTED_PROXIES=172.16.0.0/12
     # volumes example for a users file:
     #   - ./webdesk-users:/etc/webdesk/users:ro
     restart: unless-stopped

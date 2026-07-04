@@ -144,12 +144,33 @@ func buildAuthenticator() (Authenticator, error) {
 	envUser := os.Getenv("WEBDESK_USER")
 	envPass := os.Getenv("WEBDESK_PASSWORD")
 	if envUser != "" && envPass != "" {
+		// Refuse to start with a known default/weak password so a deployment
+		// can't ship publicly reachable with guessable credentials. This can be
+		// overridden for throwaway local testing.
+		if isWeakPassword(envPass) && os.Getenv("WEBDESK_ALLOW_WEAK_PASSWORD") != "1" {
+			return nil, errors.New(
+				"refusing to start: WEBDESK_PASSWORD is empty, too short, or a known default. " +
+					"Set a strong password (or create a users file with tools/hashpw.sh). " +
+					"For throwaway local testing only, set WEBDESK_ALLOW_WEAK_PASSWORD=1")
+		}
 		return &EnvAuthenticator{username: envUser, password: envPass}, nil
 	}
 
 	return nil, errors.New(
 		"no authentication configured: create a users file (default /etc/webdesk/users, " +
 			"or set WEBDESK_USERS_FILE) or set WEBDESK_USER and WEBDESK_PASSWORD")
+}
+
+// isWeakPassword flags empty, too-short, or well-known default passwords.
+func isWeakPassword(pass string) bool {
+	if len(pass) < 8 {
+		return true
+	}
+	switch strings.ToLower(pass) {
+	case "changeme", "password", "admin", "raspberry", "changeme123", "webdesk":
+		return true
+	}
+	return false
 }
 
 // --- Sessions ---------------------------------------------------------------
@@ -274,10 +295,15 @@ func (l *loginLimiter) reset(ip string) {
 // --- HTTP handlers / middleware ---------------------------------------------
 
 // secureCookies reports whether the session cookie should carry the Secure
-// flag. Off by default (dev has no TLS); set WEBDESK_SECURE_COOKIE=1 in any
-// TLS-terminated deployment.
+// flag. Secure by default; only a plain-HTTP deployment (e.g. LAN dev without
+// TLS) should explicitly opt out with WEBDESK_SECURE_COOKIE=0.
 func secureCookies() bool {
-	return os.Getenv("WEBDESK_SECURE_COOKIE") == "1"
+	switch strings.ToLower(os.Getenv("WEBDESK_SECURE_COOKIE")) {
+	case "0", "false", "no":
+		return false
+	default:
+		return true
+	}
 }
 
 func loginHandler(auth Authenticator, sessions *SessionStore, limiter *loginLimiter) gin.HandlerFunc {
