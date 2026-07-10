@@ -213,4 +213,28 @@ mod tests {
         // This would pass if /tmp exists
         // assert!(validator.validate_path("/tmp/tests.txt").is_ok());
     }
+
+    #[test]
+    fn test_dangerous_write_targets_blocked() {
+        // Shell init / login files.
+        assert!(is_dangerous_write_target(Path::new("/home/user/.bashrc")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.profile")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.zshrc")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.gitconfig")));
+        // Autostart / user services / env / fish / git config dirs.
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/autostart/evil.desktop")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/systemd/user/x.service")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/environment.d/x.conf")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/fish/config.fish")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/git/config")));
+    }
+
+    #[test]
+    fn test_normal_writes_allowed() {
+        // Ordinary files and non-dangerous dotfiles/dirs stay writable.
+        assert!(!is_dangerous_write_target(Path::new("/home/user/notes.txt")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/project/src/main.rs")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/.config/app/settings.json")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/.bashrc.bak")));
+    }
 }
