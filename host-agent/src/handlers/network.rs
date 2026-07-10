@@ -540,6 +540,7 @@ pub fn dhcp_lease(iface: &str) -> Result<String> {
 fn valid_ssid(ssid: &str) -> bool {
     !ssid.is_empty()
         && ssid.len() <= 32
+        && !ssid.starts_with('-') // never read as an nmcli flag
         && !ssid.chars().any(|c| c.is_control())
 }
 

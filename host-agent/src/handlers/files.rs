@@ -107,7 +107,7 @@ impl FileHandler {
     pub fn write_file(&self, path: &str, content: &str) -> Result<()> {
         info!("Writing file: {}", path);
 
-        let validated_path = self.validator.validate_path(path)?;
+        let validated_path = self.validator.validate_write_path(path)?;
 
         if content.len() as u64 > self.validator.config.max_file_size {
             return Err(AgentError::PermissionDenied(
@@ -124,7 +124,7 @@ impl FileHandler {
     pub fn create_dir(&self, path: &str) -> Result<()> {
         info!("Creating directory: {}", path);
 
-        let validated_path = self.validator.validate_path(path)?;
+        let validated_path = self.validator.validate_write_path(path)?;
 
         fs::create_dir_all(&validated_path)?;
 
@@ -155,7 +155,7 @@ impl FileHandler {
         info!("Copying from {} to {}", from, to);
 
         let from_path = self.validator.validate_path(from)?;
-        let to_path = self.validator.validate_path(to)?;
+        let to_path = self.validator.validate_write_path(to)?;
 
         if !from_path.exists() {
             return Err(AgentError::FileNotFound(from.to_string()));
@@ -175,7 +175,7 @@ impl FileHandler {
         info!("Moving from {} to {}", from, to);
 
         let from_path = self.validator.validate_path(from)?;
-        let to_path = self.validator.validate_path(to)?;
+        let to_path = self.validator.validate_write_path(to)?;
 
         if !from_path.exists() {
             return Err(AgentError::FileNotFound(from.to_string()));
@@ -196,7 +196,12 @@ impl FileHandler {
             let from_path = entry.path();
             let to_path = to.join(entry.file_name());
 
-            if file_type.is_dir() {
+            if file_type.is_symlink() {
+                // Don't follow symlinks: copying one would duplicate the
+                // target's contents (e.g. a link to /etc/... ) into an
+                // allowlisted, user-readable destination.
+                continue;
+            } else if file_type.is_dir() {
                 self.copy_dir_recursive(&from_path, &to_path)?;
             } else {
                 fs::copy(&from_path, &to_path)?;
