@@ -10,6 +10,7 @@
 # Usage:
 #   ./install.sh            # run checks only
 #   ./install.sh --start    # run checks, then `compose up -d --build`
+#   ./install.sh --update   # rebuild the host-agent + backend (no full preflight)
 #   ./install.sh --help
 #
 # Exit status: 0 if no [FAIL], 1 otherwise.
@@ -26,6 +27,7 @@ FRONTEND_PORT=3000
 AGENT_SOCKET="/var/run/webdesk.sock"
 
 DO_START=0
+DO_UPDATE=0
 
 # --- output helpers ---------------------------------------------------------
 
@@ -48,10 +50,13 @@ usage() {
     cat <<EOF
 WebDesk OS preflight check
 
-Usage: $0 [--start] [--help]
+Usage: $0 [--start | --update] [--help]
 
-  --start   After all checks pass, run the stack (compose up -d --build).
-  --help    Show this help.
+  --start    After all checks pass, run the stack (compose up -d --build).
+  --update   Rebuild the Rust host-agent and the Go backend, then recreate
+             the backend container. Skips the full preflight (the stack is
+             already running). The frontend hot-reloads from a bind mount.
+  --help     Show this help.
 EOF
 }
 
@@ -60,6 +65,7 @@ EOF
 for arg in "$@"; do
     case "$arg" in
         --start) DO_START=1 ;;
+        --update) DO_UPDATE=1 ;;
         -h|--help) usage; exit 0 ;;
         *) printf 'Unknown argument: %s\n\n' "$arg" >&2; usage >&2; exit 2 ;;
     esac
@@ -84,6 +90,57 @@ detect_compose() {
     if command -v docker-compose >/dev/null 2>&1; then COMPOSE="docker-compose"; return 0; fi
     return 1
 }
+
+# --- update mode ------------------------------------------------------------
+# Rebuild the privileged Rust host-agent and the Go backend image, then recreate
+# the backend container. This intentionally skips the full preflight: the stack
+# is normally already running during an update, so the port-availability checks
+# would misfire. The frontend serves from a bind mount with hot reload, so it
+# needs no rebuild here.
+if [ "$DO_UPDATE" -eq 1 ]; then
+    printf '%s=== WebDesk OS update ===%s\n' "$BOLD" "$RESET"
+
+    section "Host agent (Rust)"
+    if command -v cargo >/dev/null 2>&1; then
+        printf 'Building: cargo build --release (in host-agent)\n'
+        if ( cd "$SCRIPT_DIR/host-agent" && cargo build --release ); then
+            pass "host-agent rebuilt → host-agent/target/release/host-agent"
+            hint "Restart the running agent to pick up the new binary, e.g."
+            hint "'sudo systemctl restart webdesk-agent' or however you launched it."
+        else
+            fail "cargo build failed (see output above)"
+        fi
+    else
+        fail "cargo not found — install the Rust toolchain (https://rustup.rs)"
+    fi
+
+    section "Backend (Go, Docker)"
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        fail "docker-compose.yml not found at $COMPOSE_FILE"
+        hint "Run this script from inside the cloned repository."
+    elif command -v docker >/dev/null 2>&1 && detect_compose; then
+        printf 'Running: %s up -d --build backend\n' "$COMPOSE"
+        # shellcheck disable=SC2086
+        if $COMPOSE -f "$COMPOSE_FILE" up -d --build backend; then
+            pass "backend image rebuilt and container recreated"
+        else
+            fail "backend rebuild failed (see output above)"
+        fi
+    else
+        fail "docker / compose unavailable — cannot rebuild the backend"
+        hint "Install Docker + Compose, or rebuild manually with your toolchain."
+    fi
+
+    section "Summary"
+    printf '%d step(s) failed, %d warning(s).\n' "$FAIL_COUNT" "$WARN_COUNT"
+    if [ "$FAIL_COUNT" -gt 0 ]; then
+        printf '%sUpdate incomplete — resolve the [FAIL] items above.%s\n' "$RED" "$RESET"
+        exit 1
+    fi
+    printf '%sUpdate complete.%s\n' "$GREEN" "$RESET"
+    printf 'Frontend runs from a bind mount (hot reload) — no rebuild needed.\n'
+    exit 0
+fi
 
 printf '%s=== WebDesk OS preflight ===%s\n' "$BOLD" "$RESET"
 

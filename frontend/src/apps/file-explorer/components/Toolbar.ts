@@ -100,7 +100,7 @@ export class Toolbar {
             const isLast = index === parts.length - 1;
 
             html += `<span class="breadcrumb-separator">/</span>`;
-            html += `<span class="breadcrumb-item ${isLast ? 'active' : ''}" data-path="${currentPath}">
+            html += `<span class="breadcrumb-item ${isLast ? 'active' : ''}" data-path="${this.escapeHtml(currentPath)}">
                 ${this.escapeHtml(part)}
             </span>`;
         });
@@ -122,9 +122,7 @@ export class Toolbar {
      * Escape HTML to prevent XSS
      */
     private escapeHtml(text: string): string {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     /**

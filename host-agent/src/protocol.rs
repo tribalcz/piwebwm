@@ -22,6 +22,126 @@ pub enum Action {
     ListProcesses,
     KillProcess { pid: u32 },
 
+    // Network (reads + hostname write)
+    NetworkStatus,
+    NetworkInterfaces,
+    RoutingTable,
+    SetHostname { name: String },
+
+    // Network configuration (NetworkManager) with optional auto-revert.
+    SetInterfaceConfig {
+        iface: String,
+        method: String, // "auto" (DHCP) | "manual" (static)
+        address: Option<String>,
+        prefixlen: Option<u8>,
+        gateway: Option<String>,
+        dns: Option<Vec<String>>, // IPv4 and/or IPv6 servers, split by family
+        dns_search: Option<Vec<String>>,
+        // IPv6: when ipv6_method is None, IPv6 settings are left untouched.
+        ipv6_method: Option<String>, // "auto" | "manual" | "disabled" | "ignore"
+        ipv6_address: Option<String>,
+        ipv6_prefixlen: Option<u8>,
+        ipv6_gateway: Option<String>,
+        revert_seconds: u64, // 0 = apply immediately, no revert
+    },
+    ConfirmNetworkConfig {
+        token: String,
+    },
+
+    // Static route management (NetworkManager, persistent).
+    AddRoute {
+        iface: String,
+        dst: String, // CIDR, e.g. 10.0.0.0/24
+        gateway: Option<String>,
+    },
+    DeleteRoute {
+        iface: String,
+        dst: String,
+        gateway: Option<String>,
+    },
+
+    // Interface link controls (runtime, via `ip link`).
+    SetInterfaceState {
+        iface: String,
+        up: bool,
+    },
+    SetMtu {
+        iface: String,
+        mtu: u32,
+    },
+    DhcpLease {
+        iface: String,
+    },
+
+    // Wi-Fi management (NetworkManager).
+    WifiScan {
+        iface: String,
+    },
+    WifiConnect {
+        iface: String,
+        ssid: String,
+        password: Option<String>,
+    },
+    WifiForget {
+        ssid: String,
+    },
+
+    // Network diagnostics (bounded, fixed-arg external tools).
+    Ping4 {
+        host: String,
+        count: u8,
+    },
+    Traceroute {
+        host: String,
+    },
+    DnsLookup {
+        host: String,
+    },
+
+    // /etc/hosts editor (dedicated, validated; fixed path).
+    ReadHosts,
+    WriteHosts {
+        content: String,
+    },
+
+    // Date/time + locale (timedatectl / localectl).
+    GetTimeSettings,
+    ListTimezones,
+    SetTimezone { tz: String },
+    SetNtp { enabled: bool },
+    SetTime { time: String },
+    GetLocale,
+    ListLocales,
+    SetLocale { lang: String },
+
+    // System information (read-only).
+    GetSystemOverview,
+    GetResources,
+
+    // SSH daemon.
+    SshStatus,
+    SetSshEnabled { enabled: bool },
+    SetSshPasswordAuth { enabled: bool },
+    SetSshPort { port: u32 },
+    SshSessions,
+    ListSshUsers,
+    ListSshKeys { user: String },
+    AddSshKey { user: String, key: String },
+    RemoveSshKey { user: String, index: u32 },
+
+    // Firewall (ufw).
+    FirewallStatus,
+    SetFirewallEnabled { enabled: bool, revert_seconds: u64 },
+    ConfirmFirewall { token: String },
+    AddFirewallRule { action: String, port: u32, proto: String, from: Option<String> },
+    DeleteFirewallRule { number: u32 },
+
+    // WireGuard VPN.
+    WireguardStatus,
+    SetWireguardInterface { iface: String, up: bool },
+    ImportWireguardConfig { name: String, config: String },
+    RemoveWireguardConfig { name: String },
+
     Ping,
 }
 
@@ -46,6 +166,23 @@ pub enum ResponseData {
     Success { message: String },
     SystemInfo(SystemInfo),
     Processes { processes: Vec<ProcessInfo> },
+    NetworkStatusData(NetworkStatus),
+    Interfaces { interfaces: Vec<NetworkInterface> },
+    Routes { routes: Vec<RouteEntry> },
+    NetworkApplied { token: Option<String>, revert_seconds: u64 },
+    WifiNetworks { networks: Vec<WifiNetwork> },
+    CommandOutput { output: String },
+    TimeSettingsData(TimeSettings),
+    LocaleSettingsData(LocaleSettings),
+    StringList { items: Vec<String> },
+    SystemOverviewData(SystemOverview),
+    ResourcesData(Resources),
+    SshStatusData(SshStatus),
+    SshSessionsData { sessions: Vec<SshSession> },
+    SshKeysData { keys: Vec<SshKey> },
+    FirewallStatusData(FirewallStatus),
+    FirewallApplied { token: Option<String>, revert_seconds: u64 },
+    WireguardData { interfaces: Vec<WgInterface> },
     Pong,
 }
 
@@ -76,4 +213,161 @@ pub struct ProcessInfo {
     pub cpu: f32,
     pub memory: u64,
     pub status: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkStatus {
+    pub hostname: String,
+    pub gateway: Option<String>,
+    pub dns: Vec<String>,
+    pub online: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkAddress {
+    pub family: String, // "ipv4" | "ipv6"
+    pub address: String,
+    pub prefixlen: u8,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct NetworkInterface {
+    pub name: String,
+    pub kind: String, // "ethernet" | "wifi" | "loopback" | "other"
+    pub state: String, // "up" | "down" | "unknown"
+    pub mac: Option<String>,
+    pub addresses: Vec<NetworkAddress>,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+    pub speed_mbps: Option<i64>,
+    pub mtu: u32,
+    pub rx_errors: u64,
+    pub tx_errors: u64,
+    pub rx_dropped: u64,
+    pub tx_dropped: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WifiNetwork {
+    pub ssid: String,
+    pub signal: u8,      // 0–100
+    pub security: String, // "WPA2", "open", …
+    pub in_use: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RouteEntry {
+    pub dst: String,
+    pub gateway: Option<String>,
+    pub dev: String,
+    pub protocol: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TimeSettings {
+    pub timezone: String,
+    pub ntp: bool,        // NTP (automatic time) enabled
+    pub ntp_synced: bool, // clock currently synchronized
+    pub time: String,     // local wall-clock, "YYYY-MM-DD HH:MM:SS"
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct LocaleSettings {
+    pub lang: String,   // e.g. "en_US.UTF-8"
+    pub keymap: String, // VC keymap (informational)
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SystemOverview {
+    pub device: String,
+    pub os: String,
+    pub kernel: String,
+    pub arch: String,
+    pub hostname: String,
+    pub uptime_secs: u64,
+    pub cpu_temp_c: Option<f64>,
+    pub cpu_model: String,
+    pub cpu_cores: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DiskUsage {
+    pub mount: String,
+    pub total: u64,
+    pub used: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshStatus {
+    pub installed: bool,
+    pub active: bool,
+    pub enabled: bool,
+    pub port: u32,
+    pub password_auth: bool,
+    pub sessions: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshSession {
+    pub user: String,
+    pub from: String,
+    pub tty: String,
+    pub since: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SshKey {
+    pub index: u32, // line number in authorized_keys (for removal)
+    pub kind: String,
+    pub comment: String,
+    pub preview: String, // short tail of the key body, to tell keys apart
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FirewallRule {
+    pub number: u32,
+    pub to: String,
+    pub action: String,
+    pub from: String,
+    pub raw: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FirewallStatus {
+    pub installed: bool,
+    pub active: bool,
+    pub default_incoming: String,
+    pub default_outgoing: String,
+    pub rules: Vec<FirewallRule>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WgPeer {
+    pub endpoint: String,
+    pub latest_handshake: i64,
+    pub rx: u64,
+    pub tx: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WgInterface {
+    pub name: String,
+    pub up: bool,
+    pub peers: Vec<WgPeer>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Resources {
+    // Raw /proc/stat counters; the client computes CPU % from deltas.
+    pub cpu_total: u64,
+    pub cpu_idle: u64,
+    pub load1: f64,
+    pub load5: f64,
+    pub load15: f64,
+    pub cpu_cores: u32,
+    pub mem_total: u64,
+    pub mem_used: u64,
+    pub swap_total: u64,
+    pub swap_used: u64,
+    pub disks: Vec<DiskUsage>,
 }

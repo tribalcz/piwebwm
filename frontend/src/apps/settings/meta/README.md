@@ -11,6 +11,19 @@ applies immediately.
   `<html>`; the CSS design tokens in `style.css` cascade from there into every
   window, the taskbar, menus and the login screen. No WindowManager changes
   were needed.
+- **Network** — host network from the agent. Status: hostname (editable),
+  gateway, DNS, connectivity. Interfaces: per-NIC state, IPv4/IPv6, MAC, link
+  speed, live throughput, and **Configure** (DHCP/static IPv4 + gateway + DNS
+  via NetworkManager). Routing: routing table (read-only).
+  - Reads use `ip -j addr/route`, `/sys`, `/etc/resolv.conf`; hostname via
+    `hostnamectl`; interface config via `nmcli` (requires iproute2 +
+    NetworkManager on the host).
+  - **Safe-apply:** an interface change applies with a 60s timer — the agent
+    reverts unless the UI confirms (`POST /network/confirm`). Changing the IP of
+    the interface you're connected through will drop the session and auto-revert,
+    so you can't lock yourself out.
+  - Endpoints: `GET /api/system/network/{status,interfaces,routes}`,
+    `POST /api/system/network/{hostname,interface,confirm}`.
 - **Windows** — restore persistent windows on startup
   (`settings.windows.restoreOnStartup`, read by `StateManager`).
 - **Taskbar & Clock** — 12/24-hour format and seconds visibility

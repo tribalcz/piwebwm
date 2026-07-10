@@ -17,11 +17,16 @@ git clone https://github.com/[username]/webdesk-os.git
 cd webdesk-os
 ./install.sh          # check prerequisites (Docker, Compose, ports, …)
 ./install.sh --start  # check, then bring the stack up
+./install.sh --update # rebuild the host-agent + backend after pulling changes
 ```
 
 `install.sh` only inspects the system unless you pass `--start`; it reports each
 prerequisite as `[ OK ] / [WARN] / [FAIL]` and refuses to start if anything
 hard-fails. You can also start manually with `docker-compose up -d`.
+
+`--update` rebuilds the Rust host-agent (`cargo build --release`) and the Go
+backend image, then recreates the backend container — use it after pulling new
+changes. The frontend hot-reloads from a bind mount, so it needs no rebuild.
 
 ## Authentication
 

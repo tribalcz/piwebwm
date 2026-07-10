@@ -38,6 +38,22 @@ func main() {
 
 	r := gin.Default()
 
+	// Client IP is used for the login rate limiter, so it must not be
+	// spoofable. By default trust no proxies (derive the IP from the direct
+	// peer, ignoring X-Forwarded-For). Set WEBDESK_TRUSTED_PROXIES to the real
+	// reverse-proxy CIDR(s) when running behind one.
+	if tp := os.Getenv("WEBDESK_TRUSTED_PROXIES"); tp != "" {
+		proxies := strings.Split(tp, ",")
+		for i := range proxies {
+			proxies[i] = strings.TrimSpace(proxies[i])
+		}
+		if err := r.SetTrustedProxies(proxies); err != nil {
+			log.Fatalf("❌ Invalid WEBDESK_TRUSTED_PROXIES: %v", err)
+		}
+	} else if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("❌ Failed to disable trusted proxies: %v", err)
+	}
+
 	// CORS: locked down by default. Cross-origin browser access is only
 	// enabled when WEBDESK_ALLOWED_ORIGINS (comma-separated) is set, and then
 	// with credentials so the session cookie is allowed. In the default setup
@@ -99,7 +115,55 @@ func main() {
 			system := authed.Group("/system")
 			{
 				system.GET("/info", getSystemInfo)
+				system.GET("/overview", getSystemOverview)
+				system.GET("/resources", getResources)
 				system.GET("/processes", getProcesses)
+				system.GET("/network/status", getNetworkStatus)
+				system.GET("/network/interfaces", getNetworkInterfaces)
+				system.GET("/network/routes", getNetworkRoutes)
+				system.POST("/network/hostname", setHostname)
+				system.POST("/network/interface", setInterfaceConfig)
+				system.POST("/network/confirm", confirmNetworkConfig)
+				system.POST("/network/route", addRoute)
+				system.DELETE("/network/route", deleteRoute)
+				system.POST("/network/interface/state", setInterfaceState)
+				system.POST("/network/interface/mtu", setMtu)
+				system.GET("/network/interface/lease", dhcpLease)
+				system.GET("/network/wifi/scan", wifiScan)
+				system.POST("/network/wifi/connect", wifiConnect)
+				system.POST("/network/wifi/forget", wifiForget)
+				system.POST("/network/diagnostic", networkDiagnostic)
+				system.GET("/hosts", getHosts)
+				system.POST("/hosts", setHosts)
+
+				system.GET("/ssh", getSshStatus)
+				system.POST("/ssh/enabled", setSshEnabled)
+				system.POST("/ssh/password-auth", setSshPasswordAuth)
+				system.POST("/ssh/port", setSshPort)
+				system.GET("/ssh/sessions", getSshSessions)
+				system.GET("/ssh/users", getSshUsers)
+				system.GET("/ssh/keys", getSshKeys)
+				system.POST("/ssh/keys", addSshKey)
+				system.DELETE("/ssh/keys", deleteSshKey)
+
+				system.GET("/firewall", getFirewallStatus)
+				system.POST("/firewall/enabled", setFirewallEnabled)
+				system.POST("/firewall/confirm", confirmFirewall)
+				system.POST("/firewall/rule", addFirewallRule)
+				system.DELETE("/firewall/rule", deleteFirewallRule)
+
+				system.GET("/wireguard", getWireguardStatus)
+				system.POST("/wireguard/interface", setWireguardInterface)
+				system.POST("/wireguard/config", importWireguardConfig)
+				system.DELETE("/wireguard/config", removeWireguardConfig)
+				system.GET("/time", getTimeSettings)
+				system.GET("/timezones", getTimezones)
+				system.POST("/timezone", setTimezone)
+				system.POST("/ntp", setNtp)
+				system.POST("/time", setTime)
+				system.GET("/locale", getLocale)
+				system.GET("/locales", getLocales)
+				system.POST("/locale", setLocale)
 			}
 		}
 	}

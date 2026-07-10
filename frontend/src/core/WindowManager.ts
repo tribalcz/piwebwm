@@ -2,6 +2,17 @@ import type { EventBus } from '@core/EventBus';
 import type { Store } from '@core/Store';
 import type { WindowConfig, WindowData } from '@core/types';
 
+/** Escapes text for safe interpolation into HTML (window titles come from
+ *  untrusted sources such as file names). */
+function escapeText(text: string): string {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export interface WindowManagerStats {
     total: number;
     active: string | null;
@@ -51,7 +62,7 @@ export class WindowManager {
 
         windowEl.innerHTML = `
             <div class="window-header">
-                <span class="window-title">${config.title}</span>
+                <span class="window-title">${escapeText(config.title)}</span>
                 <div class="window-controls">
                     <button data-action="minimize">_</button>
                     <button data-action="maximize">□</button>

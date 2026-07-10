@@ -1,5 +1,110 @@
 # Changelog
 
+## 1.10.0
+
+- Remote access ▸ SSH: **Active sessions** is now an expandable row listing each
+  remote login (user, source, tty, login time), fetched on demand.
+- New **SSH keys (authorized_keys)** group: pick a login user and view, add and
+  remove their authorized public keys. Keys are validated (OpenSSH format), the
+  user's `~/.ssh` is created with correct mode/ownership, and authorized_keys is
+  written atomically — the companion to disabling password authentication.
+- Backed by new agent ops (ssh sessions/users/keys) and
+  `/api/system/ssh/{sessions,users,keys}` endpoints.
+
+## 1.9.0
+
+- New **Remote access** section managing SSH, the ufw firewall and WireGuard:
+  - SSH: enable/disable the service, toggle PasswordAuthentication, change the
+    port (managed sshd_config drop-ins, validated with `sshd -t` before reload),
+    and show port / active sessions.
+  - Firewall (ufw): status, default policy, rule list with add/delete. Lockout
+    protection — enabling always allows the web and SSH ports first, deleting a
+    protective rule is refused, and enabling applies with a 60 s auto-revert
+    (confirm to keep, otherwise the firewall disables itself).
+  - WireGuard: list interfaces and peers (handshake/transfer), bring each
+    up/down, import and remove named configs.
+  - Backed by new agent handlers (ssh/firewall/wireguard) and
+    `/api/system/{ssh,firewall,wireguard}*` endpoints; all input validated,
+    commands run shell-free.
+
+## 1.8.0
+
+- Taskbar & Clock: new **Taskbar → Size** (Normal / Compact) driving the
+  taskbar height via a `--taskbar-height` custom property (the desktop area
+  resizes with it), and a **Clock → Show date** toggle that prefixes the date
+  to the clock. Both persist and apply live.
+
+## 1.7.0
+
+- Appearance: new **Window dragging** control — a slider for the opacity a
+  window has while being dragged (50–100 %, default 90 %). Previously fixed at
+  0.9 in CSS; now driven by a `--window-drag-opacity` custom property set from
+  the ThemeManager and persisted, applied live as you drag the slider.
+
+## 1.6.0
+
+- **System** section expanded with real host data: an **Overview** group
+  (device model, OS, kernel/arch, hostname, uptime, CPU model/cores, CPU
+  temperature) and a live **Resources** group (CPU %, load average, memory,
+  swap and per-filesystem disk usage with meters, polled every 2 s). CPU % is
+  derived from /proc/stat deltas between polls. Backed by new read-only agent
+  endpoints `GET /api/system/{overview,resources}`. Backend/Account/Developer
+  groups are unchanged.
+
+## 1.5.0
+
+- New **Date & Time** section: system time zone (searchable list), automatic
+  time over NTP with a sync indicator, manual clock setting when NTP is off,
+  and the system locale (`LANG`, searchable list). Backed by new
+  `/api/system/{time,timezones,timezone,ntp,locale,locales}` endpoints driving
+  `timedatectl` / `localectl` on the host; timezone and locale are validated
+  against the system lists before being applied.
+
+## 1.4.0
+
+- Network ▸ Status gains a **Name resolution** group with an **Edit hosts file**
+  button that opens `/etc/hosts` in Atol (file mode). Backed by a dedicated,
+  validated agent endpoint (`GET/POST /api/system/hosts`) — atomic write with a
+  `/etc/hosts.bak` backup and per-line `IP hostname` validation; the generic
+  file allowlist is unchanged.
+
+## 1.3.0
+
+- Network phase 2 completed: editable **Routing** tab (add/delete static routes)
+  and **DNS search domains** in the Configure dialog. DNS/search now use
+  "leave unchanged unless specified" semantics so an IP edit never wipes them.
+- Interface controls: **Enable/Disable** (with lockout confirmation) and
+  **MTU** change, plus MTU and error/dropped counters on each card.
+- New **Wi-Fi** tab: scan (signal strength), connect (password prompt for
+  secured networks) and forget saved networks.
+- New **Diagnostics** tab: ping, traceroute and DNS lookup with an output pane.
+- **IPv6** interface configuration (auto/manual/disabled/ignore) in the
+  Configure dialog; the DNS field accepts IPv4 and IPv6 servers together.
+- Polish: inline **throughput sparkline** per interface and a **DHCP lease**
+  viewer.
+- New agent actions and `/api/system/network/*` endpoints back all of the
+  above; static routes and IPv6 are included in the safe-apply auto-revert.
+
+## 1.2.0
+
+- Network phase 2: per-interface IPv4 configuration (DHCP/static + gateway +
+  DNS) via NetworkManager, from the Interfaces tab's "Configure" dialog.
+- Safe-apply with auto-revert: the agent reverts the change after 60s unless
+  confirmed, preventing lockout when changing the management interface.
+  New agent actions SetInterfaceConfig / ConfirmNetworkConfig and endpoints
+  `POST /api/system/network/{interface,confirm}`.
+- Routing remains read-only (route editing deferred).
+
+## 1.1.0
+
+- New **Network** section (Status / Interfaces / Routing) reading live host
+  network data via the agent; hostname is editable, the rest is read-only in
+  this iteration. Interfaces tab shows live throughput (polled).
+- Sections may now return a cleanup function from `render` (used to stop the
+  Network polling when the section is left or Settings closes).
+- Fix: `/health` is now proxied by the Vite dev server, so the System tab shows
+  the host-agent status in dev too.
+
 ## 1.0.0
 
 - Initial Settings app with a GNOME-like sidebar layout.

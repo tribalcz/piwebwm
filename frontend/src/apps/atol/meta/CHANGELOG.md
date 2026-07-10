@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0
+
+- File mode: Atol can be opened against an external document through a
+  `DocumentProvider` (`appManager.launch('atol', { args: { provider } })`).
+  Provider-launched Atol opens in its own window — plain-text editing with
+  explicit Save/Reload, line numbers, no rich formatting and no autosave —
+  alongside (not replacing) the notes buffer. First consumer: the /etc/hosts
+  editor in Settings ▸ Network.
+
 ## 1.4.0
 
 - Host editor capabilities: `EditorAPI.search` (find/next/prev/replace/

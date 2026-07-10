@@ -69,6 +69,21 @@ impl Validator {
         Ok(canonical)
     }
 
+    /// Like `validate_path`, but additionally refuses paths that would let a
+    /// write turn into code execution as the owning user (shell init files,
+    /// desktop autostart, user systemd units, git config, etc.). Reads are not
+    /// affected — only destinations of write/create/move/copy go through here.
+    pub fn validate_write_path(&self, path: &str) -> Result<PathBuf> {
+        let canonical = self.validate_path(path)?;
+        if is_dangerous_write_target(&canonical) {
+            warn!("Refused write to sensitive location: {:?}", canonical);
+            return Err(AgentError::PermissionDenied(
+                "writing to this location is not allowed (it could run code on login)".to_string(),
+            ));
+        }
+        Ok(canonical)
+    }
+
     fn is_path_allowed(&self, path: &Path) -> bool {
         self.config
             .allowed_paths
@@ -138,6 +153,33 @@ impl Validator {
     }
 }
 
+/// Files whose contents are executed on login/shell start (writing them =
+/// code execution as that user), matched on the final path component.
+const DANGEROUS_WRITE_FILES: &[&str] = &[
+    ".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".bash_aliases",
+    ".profile", ".zshrc", ".zprofile", ".zlogin", ".zlogout", ".zshenv",
+    ".kshrc", ".cshrc", ".tcshrc", ".login", ".logout",
+    ".xprofile", ".xinitrc", ".xsession", ".xsessionrc",
+    ".inputrc", ".gitconfig", ".netrc", ".forward", ".pam_environment",
+];
+
+/// Path segments under which any file is auto-executed (autostart entries,
+/// user services, shell configs, git config with `pager`/`!cmd` aliases).
+const DANGEROUS_WRITE_SEGMENTS: &[&str] = &[
+    "/.config/autostart/", "/.config/systemd/user/", "/.local/share/systemd/",
+    "/.config/environment.d/", "/.config/fish/", "/.config/git/",
+];
+
+fn is_dangerous_write_target(path: &Path) -> bool {
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        if DANGEROUS_WRITE_FILES.contains(&name) {
+            return true;
+        }
+    }
+    let s = path.to_string_lossy();
+    DANGEROUS_WRITE_SEGMENTS.iter().any(|seg| s.contains(seg))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,5 +212,29 @@ mod tests {
         let validator = Validator::new(test_config());
         // This would pass if /tmp exists
         // assert!(validator.validate_path("/tmp/tests.txt").is_ok());
+    }
+
+    #[test]
+    fn test_dangerous_write_targets_blocked() {
+        // Shell init / login files.
+        assert!(is_dangerous_write_target(Path::new("/home/user/.bashrc")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.profile")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.zshrc")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.gitconfig")));
+        // Autostart / user services / env / fish / git config dirs.
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/autostart/evil.desktop")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/systemd/user/x.service")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/environment.d/x.conf")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/fish/config.fish")));
+        assert!(is_dangerous_write_target(Path::new("/home/user/.config/git/config")));
+    }
+
+    #[test]
+    fn test_normal_writes_allowed() {
+        // Ordinary files and non-dangerous dotfiles/dirs stay writable.
+        assert!(!is_dangerous_write_target(Path::new("/home/user/notes.txt")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/project/src/main.rs")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/.config/app/settings.json")));
+        assert!(!is_dangerous_write_target(Path::new("/home/user/.bashrc.bak")));
     }
 }

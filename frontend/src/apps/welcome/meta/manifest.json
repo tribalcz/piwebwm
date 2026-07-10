@@ -1,27 +1,28 @@
 {
     "id": "welcome",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "name": "Welcome",
-    "description": "Welcome screen introducing WebDesk OS features and capabilities",
+    "description": "Welcome screen introducing WebDesk OS apps and desktop features",
     "author": "marsuch",
 
     "entryPoint": "index.ts",
+    "styles": ["./styles/welcome.css"],
 
     "ui": {
-    "displayName": "Welcome to WebDesk OS",
+        "displayName": "Welcome to WebDesk OS",
         "icon": "welcome",
         "category": "about",
         "keywords": ["welcome", "intro", "about", "help", "getting started"]
-},
+    },
 
     "window": {
-    "defaultWidth": 500,
-        "defaultHeight": 350,
-        "minWidth": 400,
-        "minHeight": 300,
+        "defaultWidth": 540,
+        "defaultHeight": 480,
+        "minWidth": 420,
+        "minHeight": 320,
         "resizable": true,
         "persistent": true
-},
+    },
 
     "permissions": [],
 

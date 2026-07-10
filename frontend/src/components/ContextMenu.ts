@@ -1,3 +1,12 @@
+function escapeMenuText(text: string): string {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export interface ContextMenuItem {
     label?: string;
     action?: string;
@@ -68,13 +77,15 @@ export class ContextMenu {
             }
 
             const disabled = item.disabled ? 'disabled' : '';
+            // item.icon is trusted SVG markup (from getIcon); label/shortcut may
+            // carry dynamic text (e.g. file names) so must be escaped.
             const icon = item.icon ? `<span class="context-menu-icon">${item.icon}</span>` : '';
 
             return `
-            <div class="context-menu-item ${disabled}" data-action="${item.action || ''}">
+            <div class="context-menu-item ${disabled}" data-action="${escapeMenuText(item.action || '')}">
                 ${icon}
-                <span class="context-menu-label">${item.label}</span>
-                ${item.shortcut ? `<span class="context-menu-shortcut">${item.shortcut}</span>` : ''}
+                <span class="context-menu-label">${escapeMenuText(item.label || '')}</span>
+                ${item.shortcut ? `<span class="context-menu-shortcut">${escapeMenuText(item.shortcut)}</span>` : ''}
             </div>
             `;
         }).join('');

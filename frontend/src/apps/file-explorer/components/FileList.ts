@@ -125,8 +125,11 @@ export class FileList {
             item.classList.remove('selected');
         });
 
-        // Add selection to clicked item
-        const clickedItem = this.fileListEl.querySelector(`[data-path="${path}"]`);
+        // Add selection to clicked item. Match by dataset value rather than
+        // interpolating the path into a selector (a filename with a quote would
+        // break the selector / allow injection).
+        const clickedItem = Array.from(this.fileListEl.querySelectorAll<HTMLElement>('.file-item'))
+            .find(el => el.dataset.path === path);
         if (clickedItem) {
             clickedItem.classList.add('selected');
             this.selectedItem = {
@@ -185,7 +188,7 @@ export class FileList {
 
         return `
             <div class="file-item ${file.is_dir ? 'folder' : 'file'}"
-                 data-path="${file.path}"
+                 data-path="${this.escapeHtml(file.path)}"
                  data-type="${file.is_dir ? 'dir' : 'file'}">
                 <span class="file-icon">${icon}</span>
                 <span class="file-name">${this.escapeHtml(file.name)}</span>
@@ -259,9 +262,7 @@ export class FileList {
      * Escape HTML
      */
     private escapeHtml(text: string): string {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     /**

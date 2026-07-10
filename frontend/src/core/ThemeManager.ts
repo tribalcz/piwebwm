@@ -3,11 +3,25 @@ import type { EventBus } from '@core/EventBus';
 
 export type ThemeName = 'light' | 'dark';
 export type BackgroundPreset = 'default' | 'ocean' | 'forest' | 'sunset';
+export type TaskbarSize = 'normal' | 'compact';
 
 const THEME_KEY = 'settings.appearance.theme';
 const BACKGROUND_KEY = 'settings.appearance.background';
+const DRAG_OPACITY_KEY = 'settings.appearance.windowDragOpacity';
+const TASKBAR_SIZE_KEY = 'settings.taskbar.size';
+
+/** Taskbar heights per size, driving the --taskbar-height custom property. */
+const TASKBAR_HEIGHTS: Record<TaskbarSize, string> = {
+    normal: '48px',
+    compact: '40px',
+};
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = ['default', 'ocean', 'forest', 'sunset'];
+
+/** Window-drag opacity bounds (1 = opaque). */
+export const DRAG_OPACITY_MIN = 0.5;
+export const DRAG_OPACITY_MAX = 1;
+export const DRAG_OPACITY_DEFAULT = 0.9;
 
 /**
  * Applies the visual theme. Theming is implemented purely with CSS custom
@@ -28,6 +42,8 @@ export class ThemeManager {
     /** Apply the persisted (or default) theme. Call early, before first paint. */
     init(): void {
         this.apply(this.getTheme(), this.getBackground());
+        this.applyWindowDragOpacity(this.getWindowDragOpacity());
+        this.applyTaskbarSize(this.getTaskbarSize());
         console.log(`ThemeManager initialized (theme: ${this.getTheme()}, background: ${this.getBackground()})`);
     }
 
@@ -52,6 +68,37 @@ export class ThemeManager {
         this.apply(this.getTheme(), preset);
     }
 
+    /** Opacity applied to a window while it is being dragged (0.5–1). */
+    getWindowDragOpacity(): number {
+        const value = this.store?.get<number>(DRAG_OPACITY_KEY, DRAG_OPACITY_DEFAULT) ?? DRAG_OPACITY_DEFAULT;
+        return clampOpacity(value);
+    }
+
+    setWindowDragOpacity(value: number): void {
+        const v = clampOpacity(value);
+        this.store?.set(DRAG_OPACITY_KEY, v);
+        this.applyWindowDragOpacity(v);
+    }
+
+    private applyWindowDragOpacity(value: number): void {
+        document.documentElement.style.setProperty('--window-drag-opacity', String(value));
+    }
+
+    /** Taskbar size: 'normal' (48px) or 'compact' (40px). */
+    getTaskbarSize(): TaskbarSize {
+        const value = this.store?.get<TaskbarSize>(TASKBAR_SIZE_KEY, 'normal') ?? 'normal';
+        return value === 'compact' ? 'compact' : 'normal';
+    }
+
+    setTaskbarSize(size: TaskbarSize): void {
+        this.store?.set(TASKBAR_SIZE_KEY, size);
+        this.applyTaskbarSize(size);
+    }
+
+    private applyTaskbarSize(size: TaskbarSize): void {
+        document.documentElement.style.setProperty('--taskbar-height', TASKBAR_HEIGHTS[size]);
+    }
+
     private apply(theme: ThemeName, background: BackgroundPreset): void {
         const root = document.documentElement;
 
@@ -67,4 +114,9 @@ export class ThemeManager {
             delete root.dataset.background;
         }
     }
+}
+
+function clampOpacity(value: number): number {
+    if (!Number.isFinite(value)) return DRAG_OPACITY_DEFAULT;
+    return Math.min(DRAG_OPACITY_MAX, Math.max(DRAG_OPACITY_MIN, value));
 }

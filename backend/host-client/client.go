@@ -332,3 +332,864 @@ func (c *HostAgentClient) MoveFile(from string, to string) error {
 
 	return nil
 }
+
+// --- Network ---------------------------------------------------------------
+
+type NetworkStatus struct {
+	Hostname string   `json:"hostname"`
+	Gateway  *string  `json:"gateway"`
+	DNS      []string `json:"dns"`
+	Online   bool     `json:"online"`
+}
+
+type NetworkAddress struct {
+	Family    string `json:"family"`
+	Address   string `json:"address"`
+	Prefixlen int    `json:"prefixlen"`
+}
+
+type NetworkInterface struct {
+	Name      string           `json:"name"`
+	Kind      string           `json:"kind"`
+	State     string           `json:"state"`
+	MAC       *string          `json:"mac"`
+	Addresses []NetworkAddress `json:"addresses"`
+	RxBytes   uint64           `json:"rx_bytes"`
+	TxBytes   uint64           `json:"tx_bytes"`
+	SpeedMbps *int64           `json:"speed_mbps"`
+	MTU       uint32           `json:"mtu"`
+	RxErrors  uint64           `json:"rx_errors"`
+	TxErrors  uint64           `json:"tx_errors"`
+	RxDropped uint64           `json:"rx_dropped"`
+	TxDropped uint64           `json:"tx_dropped"`
+}
+
+type WifiNetwork struct {
+	SSID     string `json:"ssid"`
+	Signal   uint8  `json:"signal"`
+	Security string `json:"security"`
+	InUse    bool   `json:"in_use"`
+}
+
+type RouteEntry struct {
+	Dst      string  `json:"dst"`
+	Gateway  *string `json:"gateway"`
+	Dev      string  `json:"dev"`
+	Protocol *string `json:"protocol"`
+}
+
+func (c *HostAgentClient) NetworkStatus() (*NetworkStatus, error) {
+	resp, err := c.sendRequest(Action{Type: "NetworkStatus"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var status NetworkStatus
+	if err := json.Unmarshal(raw, &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
+func (c *HostAgentClient) NetworkInterfaces() ([]NetworkInterface, error) {
+	resp, err := c.sendRequest(Action{Type: "NetworkInterfaces"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["interfaces"])
+	if err != nil {
+		return nil, err
+	}
+	var interfaces []NetworkInterface
+	if err := json.Unmarshal(raw, &interfaces); err != nil {
+		return nil, err
+	}
+	return interfaces, nil
+}
+
+func (c *HostAgentClient) RoutingTable() ([]RouteEntry, error) {
+	resp, err := c.sendRequest(Action{Type: "RoutingTable"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["routes"])
+	if err != nil {
+		return nil, err
+	}
+	var routes []RouteEntry
+	if err := json.Unmarshal(raw, &routes); err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
+
+func (c *HostAgentClient) SetHostname(name string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetHostname",
+		Params: map[string]interface{}{"name": name},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Network configuration (phase 2) ---------------------------------------
+
+type InterfaceConfigRequest struct {
+	Iface         string
+	Method        string
+	Address       *string
+	Prefixlen     *int
+	Gateway       *string
+	DNS           []string
+	DNSSearch     []string
+	IPv6Method    *string
+	IPv6Address   *string
+	IPv6Prefixlen *int
+	IPv6Gateway   *string
+	RevertSeconds uint64
+}
+
+// SetInterfaceConfig applies an interface config. Returns a revert token (when
+// revert_seconds > 0) the caller must confirm before the agent reverts.
+func (c *HostAgentClient) SetInterfaceConfig(req InterfaceConfigRequest) (*string, uint64, error) {
+	params := map[string]interface{}{
+		"iface":          req.Iface,
+		"method":         req.Method,
+		"revert_seconds": req.RevertSeconds,
+	}
+	if req.Address != nil {
+		params["address"] = *req.Address
+	}
+	if req.Prefixlen != nil {
+		params["prefixlen"] = *req.Prefixlen
+	}
+	if req.Gateway != nil {
+		params["gateway"] = *req.Gateway
+	}
+	if req.DNS != nil {
+		params["dns"] = req.DNS
+	}
+	if req.DNSSearch != nil {
+		params["dns_search"] = req.DNSSearch
+	}
+	if req.IPv6Method != nil {
+		params["ipv6_method"] = *req.IPv6Method
+	}
+	if req.IPv6Address != nil {
+		params["ipv6_address"] = *req.IPv6Address
+	}
+	if req.IPv6Prefixlen != nil {
+		params["ipv6_prefixlen"] = *req.IPv6Prefixlen
+	}
+	if req.IPv6Gateway != nil {
+		params["ipv6_gateway"] = *req.IPv6Gateway
+	}
+
+	resp, err := c.sendRequest(Action{Type: "SetInterfaceConfig", Params: params})
+	if err != nil {
+		return nil, 0, err
+	}
+	if resp.IsError() {
+		return nil, 0, errors.New(resp.GetError())
+	}
+
+	data := resp.GetData()
+	var token *string
+	if data != nil {
+		if t, ok := data["token"].(string); ok {
+			token = &t
+		}
+	}
+	var secs uint64
+	if data != nil {
+		if s, ok := data["revert_seconds"].(float64); ok {
+			secs = uint64(s)
+		}
+	}
+	return token, secs, nil
+}
+
+func (c *HostAgentClient) ConfirmNetworkConfig(token string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "ConfirmNetworkConfig",
+		Params: map[string]interface{}{"token": token},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) AddRoute(iface, dst string, gateway *string) error {
+	params := map[string]interface{}{"iface": iface, "dst": dst}
+	if gateway != nil {
+		params["gateway"] = *gateway
+	}
+	resp, err := c.sendRequest(Action{Type: "AddRoute", Params: params})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) DeleteRoute(iface, dst string, gateway *string) error {
+	params := map[string]interface{}{"iface": iface, "dst": dst}
+	if gateway != nil {
+		params["gateway"] = *gateway
+	}
+	resp, err := c.sendRequest(Action{Type: "DeleteRoute", Params: params})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Interface link controls -----------------------------------------------
+
+func (c *HostAgentClient) SetInterfaceState(iface string, up bool) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetInterfaceState",
+		Params: map[string]interface{}{"iface": iface, "up": up},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) SetMtu(iface string, mtu uint32) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetMtu",
+		Params: map[string]interface{}{"iface": iface, "mtu": mtu},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) DhcpLease(iface string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "DhcpLease",
+		Params: map[string]interface{}{"iface": iface},
+	})
+}
+
+// --- Wi-Fi -----------------------------------------------------------------
+
+func (c *HostAgentClient) WifiScan(iface string) ([]WifiNetwork, error) {
+	resp, err := c.sendRequest(Action{
+		Type:   "WifiScan",
+		Params: map[string]interface{}{"iface": iface},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["networks"])
+	if err != nil {
+		return nil, err
+	}
+	var nets []WifiNetwork
+	if err := json.Unmarshal(raw, &nets); err != nil {
+		return nil, err
+	}
+	return nets, nil
+}
+
+func (c *HostAgentClient) WifiConnect(iface, ssid string, password *string) error {
+	params := map[string]interface{}{"iface": iface, "ssid": ssid}
+	if password != nil {
+		params["password"] = *password
+	}
+	resp, err := c.sendRequest(Action{Type: "WifiConnect", Params: params})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+func (c *HostAgentClient) WifiForget(ssid string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "WifiForget",
+		Params: map[string]interface{}{"ssid": ssid},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Diagnostics -----------------------------------------------------------
+
+// runDiag dispatches a diagnostic action that returns CommandOutput.
+func (c *HostAgentClient) runDiag(action Action) (string, error) {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return "", err
+	}
+	if resp.IsError() {
+		return "", errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return "", errors.New("no data in response")
+	}
+	out, _ := data["output"].(string)
+	return out, nil
+}
+
+func (c *HostAgentClient) Ping4(host string, count uint8) (string, error) {
+	return c.runDiag(Action{
+		Type:   "Ping4",
+		Params: map[string]interface{}{"host": host, "count": count},
+	})
+}
+
+func (c *HostAgentClient) Traceroute(host string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "Traceroute",
+		Params: map[string]interface{}{"host": host},
+	})
+}
+
+func (c *HostAgentClient) DnsLookup(host string) (string, error) {
+	return c.runDiag(Action{
+		Type:   "DnsLookup",
+		Params: map[string]interface{}{"host": host},
+	})
+}
+
+// --- /etc/hosts editor -----------------------------------------------------
+
+func (c *HostAgentClient) ReadHosts() (string, error) {
+	resp, err := c.sendRequest(Action{Type: "ReadHosts"})
+	if err != nil {
+		return "", err
+	}
+	if resp.IsError() {
+		return "", errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return "", errors.New("no data in response")
+	}
+	content, _ := data["content"].(string)
+	return content, nil
+}
+
+func (c *HostAgentClient) WriteHosts(content string) error {
+	resp, err := c.sendRequest(Action{
+		Type:   "WriteHosts",
+		Params: map[string]interface{}{"content": content},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// --- Date/time + locale ----------------------------------------------------
+
+type TimeSettings struct {
+	Timezone  string `json:"timezone"`
+	NTP       bool   `json:"ntp"`
+	NTPSynced bool   `json:"ntp_synced"`
+	Time      string `json:"time"`
+}
+
+type LocaleSettings struct {
+	Lang   string `json:"lang"`
+	Keymap string `json:"keymap"`
+}
+
+// stringList unmarshals a StringList response (used for timezones and locales).
+func (c *HostAgentClient) stringList(actionType string) ([]string, error) {
+	resp, err := c.sendRequest(Action{Type: actionType})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["items"])
+	if err != nil {
+		return nil, err
+	}
+	var items []string
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (c *HostAgentClient) GetTimeSettings() (*TimeSettings, error) {
+	resp, err := c.sendRequest(Action{Type: "GetTimeSettings"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var s TimeSettings
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) ListTimezones() ([]string, error) {
+	return c.stringList("ListTimezones")
+}
+
+func (c *HostAgentClient) SetTimezone(tz string) error {
+	return c.simpleAction(Action{Type: "SetTimezone", Params: map[string]interface{}{"tz": tz}})
+}
+
+func (c *HostAgentClient) SetNtp(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetNtp", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetTime(value string) error {
+	return c.simpleAction(Action{Type: "SetTime", Params: map[string]interface{}{"time": value}})
+}
+
+func (c *HostAgentClient) GetLocale() (*LocaleSettings, error) {
+	resp, err := c.sendRequest(Action{Type: "GetLocale"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var s LocaleSettings
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) ListLocales() ([]string, error) {
+	return c.stringList("ListLocales")
+}
+
+func (c *HostAgentClient) SetLocale(lang string) error {
+	return c.simpleAction(Action{Type: "SetLocale", Params: map[string]interface{}{"lang": lang}})
+}
+
+// --- System information ----------------------------------------------------
+
+type SystemOverview struct {
+	Device     string   `json:"device"`
+	OS         string   `json:"os"`
+	Kernel     string   `json:"kernel"`
+	Arch       string   `json:"arch"`
+	Hostname   string   `json:"hostname"`
+	UptimeSecs uint64   `json:"uptime_secs"`
+	CPUTempC   *float64 `json:"cpu_temp_c"`
+	CPUModel   string   `json:"cpu_model"`
+	CPUCores   uint32   `json:"cpu_cores"`
+}
+
+type DiskUsage struct {
+	Mount string `json:"mount"`
+	Total uint64 `json:"total"`
+	Used  uint64 `json:"used"`
+}
+
+type Resources struct {
+	CPUTotal  uint64      `json:"cpu_total"`
+	CPUIdle   uint64      `json:"cpu_idle"`
+	Load1     float64     `json:"load1"`
+	Load5     float64     `json:"load5"`
+	Load15    float64     `json:"load15"`
+	CPUCores  uint32      `json:"cpu_cores"`
+	MemTotal  uint64      `json:"mem_total"`
+	MemUsed   uint64      `json:"mem_used"`
+	SwapTotal uint64      `json:"swap_total"`
+	SwapUsed  uint64      `json:"swap_used"`
+	Disks     []DiskUsage `json:"disks"`
+}
+
+func (c *HostAgentClient) GetSystemOverview() (*SystemOverview, error) {
+	resp, err := c.sendRequest(Action{Type: "GetSystemOverview"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var o SystemOverview
+	if err := json.Unmarshal(raw, &o); err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (c *HostAgentClient) GetResources() (*Resources, error) {
+	resp, err := c.sendRequest(Action{Type: "GetResources"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	var r Resources
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+// simpleAction sends an action that returns only success/error.
+func (c *HostAgentClient) simpleAction(action Action) error {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	return nil
+}
+
+// structData sends an action and unmarshals its data map into out.
+func (c *HostAgentClient) structData(action Action, out interface{}) error {
+	resp, err := c.sendRequest(action)
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, out)
+}
+
+// --- SSH -------------------------------------------------------------------
+
+type SshStatus struct {
+	Installed    bool   `json:"installed"`
+	Active       bool   `json:"active"`
+	Enabled      bool   `json:"enabled"`
+	Port         uint32 `json:"port"`
+	PasswordAuth bool   `json:"password_auth"`
+	Sessions     uint32 `json:"sessions"`
+}
+
+func (c *HostAgentClient) SshStatus() (*SshStatus, error) {
+	var s SshStatus
+	if err := c.structData(Action{Type: "SshStatus"}, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (c *HostAgentClient) SetSshEnabled(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetSshEnabled", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetSshPasswordAuth(enabled bool) error {
+	return c.simpleAction(Action{Type: "SetSshPasswordAuth", Params: map[string]interface{}{"enabled": enabled}})
+}
+
+func (c *HostAgentClient) SetSshPort(port uint32) error {
+	return c.simpleAction(Action{Type: "SetSshPort", Params: map[string]interface{}{"port": port}})
+}
+
+type SshSession struct {
+	User  string `json:"user"`
+	From  string `json:"from"`
+	Tty   string `json:"tty"`
+	Since string `json:"since"`
+}
+
+type SshKey struct {
+	Index   uint32 `json:"index"`
+	Kind    string `json:"kind"`
+	Comment string `json:"comment"`
+	Preview string `json:"preview"`
+}
+
+func (c *HostAgentClient) SshSessions() ([]SshSession, error) {
+	resp, err := c.sendRequest(Action{Type: "SshSessions"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["sessions"])
+	if err != nil {
+		return nil, err
+	}
+	var sessions []SshSession
+	if err := json.Unmarshal(raw, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+func (c *HostAgentClient) ListSshUsers() ([]string, error) {
+	return c.stringList("ListSshUsers")
+}
+
+func (c *HostAgentClient) ListSshKeys(user string) ([]SshKey, error) {
+	resp, err := c.sendRequest(Action{Type: "ListSshKeys", Params: map[string]interface{}{"user": user}})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["keys"])
+	if err != nil {
+		return nil, err
+	}
+	var keys []SshKey
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return nil, err
+	}
+	return keys, nil
+}
+
+func (c *HostAgentClient) AddSshKey(user, key string) error {
+	return c.simpleAction(Action{Type: "AddSshKey", Params: map[string]interface{}{"user": user, "key": key}})
+}
+
+func (c *HostAgentClient) RemoveSshKey(user string, index uint32) error {
+	return c.simpleAction(Action{Type: "RemoveSshKey", Params: map[string]interface{}{"user": user, "index": index}})
+}
+
+// --- Firewall --------------------------------------------------------------
+
+type FirewallRule struct {
+	Number uint32 `json:"number"`
+	To     string `json:"to"`
+	Action string `json:"action"`
+	From   string `json:"from"`
+	Raw    string `json:"raw"`
+}
+
+type FirewallStatus struct {
+	Installed       bool           `json:"installed"`
+	Active          bool           `json:"active"`
+	DefaultIncoming string         `json:"default_incoming"`
+	DefaultOutgoing string         `json:"default_outgoing"`
+	Rules           []FirewallRule `json:"rules"`
+}
+
+func (c *HostAgentClient) FirewallStatus() (*FirewallStatus, error) {
+	var s FirewallStatus
+	if err := c.structData(Action{Type: "FirewallStatus"}, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// SetFirewallEnabled toggles ufw. When enabling for the first time it returns a
+// revert token (if revertSeconds > 0) the caller must confirm before the agent
+// disables it again.
+func (c *HostAgentClient) SetFirewallEnabled(enabled bool, revertSeconds uint64) (*string, uint64, error) {
+	resp, err := c.sendRequest(Action{
+		Type:   "SetFirewallEnabled",
+		Params: map[string]interface{}{"enabled": enabled, "revert_seconds": revertSeconds},
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	if resp.IsError() {
+		return nil, 0, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	var token *string
+	var secs uint64
+	if data != nil {
+		if t, ok := data["token"].(string); ok {
+			token = &t
+		}
+		if s, ok := data["revert_seconds"].(float64); ok {
+			secs = uint64(s)
+		}
+	}
+	return token, secs, nil
+}
+
+func (c *HostAgentClient) ConfirmFirewall(token string) error {
+	return c.simpleAction(Action{Type: "ConfirmFirewall", Params: map[string]interface{}{"token": token}})
+}
+
+func (c *HostAgentClient) AddFirewallRule(action string, port uint32, proto string, from *string) error {
+	params := map[string]interface{}{"action": action, "port": port, "proto": proto}
+	if from != nil {
+		params["from"] = *from
+	}
+	return c.simpleAction(Action{Type: "AddFirewallRule", Params: params})
+}
+
+func (c *HostAgentClient) DeleteFirewallRule(number uint32) error {
+	return c.simpleAction(Action{Type: "DeleteFirewallRule", Params: map[string]interface{}{"number": number}})
+}
+
+// --- WireGuard -------------------------------------------------------------
+
+type WgPeer struct {
+	Endpoint        string `json:"endpoint"`
+	LatestHandshake int64  `json:"latest_handshake"`
+	Rx              uint64 `json:"rx"`
+	Tx              uint64 `json:"tx"`
+}
+
+type WgInterface struct {
+	Name  string   `json:"name"`
+	Up    bool     `json:"up"`
+	Peers []WgPeer `json:"peers"`
+}
+
+func (c *HostAgentClient) WireguardStatus() ([]WgInterface, error) {
+	resp, err := c.sendRequest(Action{Type: "WireguardStatus"})
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, errors.New(resp.GetError())
+	}
+	data := resp.GetData()
+	if data == nil {
+		return nil, errors.New("no data in response")
+	}
+	raw, err := json.Marshal(data["interfaces"])
+	if err != nil {
+		return nil, err
+	}
+	var ifaces []WgInterface
+	if err := json.Unmarshal(raw, &ifaces); err != nil {
+		return nil, err
+	}
+	return ifaces, nil
+}
+
+func (c *HostAgentClient) SetWireguardInterface(iface string, up bool) error {
+	return c.simpleAction(Action{Type: "SetWireguardInterface", Params: map[string]interface{}{"iface": iface, "up": up}})
+}
+
+func (c *HostAgentClient) ImportWireguardConfig(name, config string) error {
+	return c.simpleAction(Action{Type: "ImportWireguardConfig", Params: map[string]interface{}{"name": name, "config": config}})
+}
+
+func (c *HostAgentClient) RemoveWireguardConfig(name string) error {
+	return c.simpleAction(Action{Type: "RemoveWireguardConfig", Params: map[string]interface{}{"name": name}})
+}

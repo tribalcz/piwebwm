@@ -57,3 +57,199 @@ export interface HealthResponse {
 export interface ApiErrorResponse {
     error: string;
 }
+
+/** GET /api/system/network/status */
+export interface NetworkStatus {
+    hostname: string;
+    gateway: string | null;
+    dns: string[];
+    online: boolean;
+}
+
+export interface NetworkAddress {
+    family: string; // "ipv4" | "ipv6"
+    address: string;
+    prefixlen: number;
+}
+
+export interface NetworkInterface {
+    name: string;
+    kind: string; // "ethernet" | "wifi" | "loopback" | "other"
+    state: string; // "up" | "down" | "unknown"
+    mac: string | null;
+    addresses: NetworkAddress[];
+    rx_bytes: number;
+    tx_bytes: number;
+    speed_mbps: number | null;
+    mtu: number;
+    rx_errors: number;
+    tx_errors: number;
+    rx_dropped: number;
+    tx_dropped: number;
+}
+
+/** GET /api/system/network/interfaces */
+export interface NetworkInterfacesResponse {
+    interfaces: NetworkInterface[];
+}
+
+export interface RouteEntry {
+    dst: string;
+    gateway: string | null;
+    dev: string;
+    protocol: string | null;
+}
+
+/** GET /api/system/network/routes */
+export interface RoutesResponse {
+    routes: RouteEntry[];
+}
+
+export interface WifiNetwork {
+    ssid: string;
+    signal: number;   // 0–100
+    security: string; // "WPA2", "open", …
+    in_use: boolean;
+}
+
+/** GET /api/system/network/wifi/scan */
+export interface WifiScanResponse {
+    networks: WifiNetwork[];
+}
+
+/** POST /api/system/network/diagnostic */
+export interface DiagnosticResponse {
+    output: string;
+}
+
+/** GET /api/system/time */
+export interface TimeSettings {
+    timezone: string;
+    ntp: boolean;
+    ntp_synced: boolean;
+    time: string;
+}
+
+/** GET /api/system/timezones */
+export interface TimezonesResponse {
+    timezones: string[];
+}
+
+/** GET /api/system/locale */
+export interface LocaleSettings {
+    lang: string;
+    keymap: string;
+}
+
+/** GET /api/system/locales */
+export interface LocalesResponse {
+    locales: string[];
+}
+
+/** GET /api/system/overview */
+export interface SystemOverview {
+    device: string;
+    os: string;
+    kernel: string;
+    arch: string;
+    hostname: string;
+    uptime_secs: number;
+    cpu_temp_c: number | null;
+    cpu_model: string;
+    cpu_cores: number;
+}
+
+export interface DiskUsage {
+    mount: string;
+    total: number;
+    used: number;
+}
+
+/** GET /api/system/ssh */
+export interface SshStatus {
+    installed: boolean;
+    active: boolean;
+    enabled: boolean;
+    port: number;
+    password_auth: boolean;
+    sessions: number;
+}
+
+export interface SshSession {
+    user: string;
+    from: string;
+    tty: string;
+    since: string;
+}
+
+/** GET /api/system/ssh/sessions */
+export interface SshSessionsResponse {
+    sessions: SshSession[];
+}
+
+export interface SshKey {
+    index: number;
+    kind: string;
+    comment: string;
+    preview: string;
+}
+
+/** GET /api/system/ssh/keys */
+export interface SshKeysResponse {
+    keys: SshKey[];
+}
+
+/** GET /api/system/ssh/users */
+export interface SshUsersResponse {
+    users: string[];
+}
+
+export interface FirewallRule {
+    number: number;
+    to: string;
+    action: string;
+    from: string;
+    raw: string;
+}
+
+/** GET /api/system/firewall */
+export interface FirewallStatus {
+    installed: boolean;
+    active: boolean;
+    default_incoming: string;
+    default_outgoing: string;
+    rules: FirewallRule[];
+}
+
+export interface WgPeer {
+    endpoint: string;
+    latest_handshake: number;
+    rx: number;
+    tx: number;
+}
+
+export interface WgInterface {
+    name: string;
+    up: boolean;
+    peers: WgPeer[];
+}
+
+/** GET /api/system/wireguard */
+export interface WireguardResponse {
+    interfaces: WgInterface[];
+}
+
+/** GET /api/system/resources */
+export interface Resources {
+    cpu_total: number;
+    cpu_idle: number;
+    load1: number;
+    load5: number;
+    load15: number;
+    cpu_cores: number;
+    mem_total: number;
+    mem_used: number;
+    swap_total: number;
+    swap_used: number;
+    disks: DiskUsage[];
+}
